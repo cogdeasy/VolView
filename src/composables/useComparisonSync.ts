@@ -548,9 +548,11 @@ export function useComparisonSync() {
       // The marker is what the store kept, read back the way the watcher will
       // read it, rather than a prediction of the merge: the config is pushed
       // into the live camera and pulled back, so a value that round-trips in
-      // another shape would leave a marker nothing can ever consume. A write
-      // that left the camera where it was moves nothing, so like the slice
-      // path it leaves no marker to outlive it either.
+      // another shape would leave a marker nothing can ever consume. That
+      // round trip is `usePersistCameraConfig`'s `syncRef`, which flushes
+      // synchronously — were it ever made asynchronous, the value read here
+      // would be the pre-merge one and the marker would name a camera the
+      // pane never holds.
       const kept = cameraStore.getConfig(target.viewID, target.imageID);
       const keptKey = cameraKey({
         ...target,
