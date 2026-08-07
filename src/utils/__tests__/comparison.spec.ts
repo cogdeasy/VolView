@@ -274,6 +274,11 @@ describe('study dates', () => {
     expect(formatStudyInterval('20240314', '20240313')).toBe('1 day earlier');
     expect(formatStudyInterval('20240314', '20240314')).toBe('same day');
     expect(formatStudyInterval('20240314', '20200314')).toBe('4 years earlier');
+    // Just short of two years is a two-year-old prior, not a 24-month one.
+    expect(formatStudyInterval('20240314', '20220316')).toBe('2 years earlier');
+    expect(formatStudyInterval('20240314', '20220814')).toBe(
+      '19 months earlier'
+    );
     // A "prior" that is actually newer is still described honestly.
     expect(formatStudyInterval('20230914', '20240314')).toBe('6 months later');
     expect(formatStudyInterval('20240314', undefined)).toBeNull();

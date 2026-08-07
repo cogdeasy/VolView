@@ -355,6 +355,10 @@ export function formatStudyInterval(
 
   if (magnitude < 14) return plural(magnitude, 'day');
   if (magnitude < 60) return plural(Math.round(magnitude / 7), 'week');
-  if (magnitude < 730) return plural(Math.round(magnitude / 30.44), 'month');
+  // Switched on the figure that would be printed rather than on the day count
+  // behind it: a prior two days short of two years rounds to twenty-four
+  // months, and no one reads a prior that way.
+  const months = Math.round(magnitude / 30.44);
+  if (months < 24) return plural(months, 'month');
   return plural(Math.round(magnitude / 365.25), 'year');
 }
