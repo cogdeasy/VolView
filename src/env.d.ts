@@ -4,8 +4,9 @@ interface ImportMetaEnv {
   readonly VITE_DICOM_WEB_URL: string;
   readonly VITE_DICOM_WEB_NAME: string;
   readonly VITE_REMOTE_SERVER_URL: string;
-  readonly VITE_DEFAULT_URLS: string;
-  readonly VITE_DEFAULT_NAMES: string;
+  // Optional: only a kiosk or demo build sets these.
+  readonly VITE_DEFAULT_URLS: string | undefined;
+  readonly VITE_DEFAULT_NAMES: string | undefined;
 }
 
 interface ImportMeta {
