@@ -23,6 +23,12 @@ export const BrandColors = {
   currentStudy: '#00A3E0',
   priorStudy: '#8A94A6',
   /**
+   * A pane holding a study that is on neither side of the pair. Dimmer than
+   * either role, so it reads as standing outside the comparison rather than
+   * as the prior study it would otherwise be coloured like.
+   */
+  unpairedStudy: '#6E7787',
+  /**
    * Chrome drawn over image data. The scrim keeps text legible on any
    * anatomy without lifting the black point of the viewport, and advisory
    * text is warm enough to read as a caveat rather than an error.

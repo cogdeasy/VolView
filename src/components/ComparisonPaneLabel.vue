@@ -41,7 +41,9 @@ const roleLabel = computed(() => {
 });
 
 const accent = computed(() => {
-  if (!inComparison.value) return BrandColors.priorStudy;
+  // Neither role's colour: a pane on neither side of the pair drawn in the
+  // prior's grey says it holds the prior, which is the one thing it does not.
+  if (!inComparison.value) return BrandColors.unpairedStudy;
   return spec.value?.role === 'prior'
     ? BrandColors.priorStudy
     : BrandColors.currentStudy;
