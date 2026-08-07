@@ -38,7 +38,7 @@ const columns: Column[] = [
 const emptyMessage = computed(() =>
   worklist.filtersActive
     ? 'No studies match the current filters.'
-    : 'No studies in the worklist.'
+    : 'No studies in the worklist. Use Open files to load one.'
 );
 
 function sortIcon(key: SortKey | null) {

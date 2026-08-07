@@ -47,6 +47,8 @@ function addLoadedVolume(volumeKey: string, overrides = {}) {
 describe('Worklist store', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
+    // Unit tests run without VITE_SHOW_SAMPLE_DATA, which hides demo content.
+    useDataBrowserStore().hideSampleData = false;
   });
 
   it('shows the worklist until data is loaded', () => {
@@ -108,8 +110,19 @@ describe('Worklist store', () => {
   it('pads the list with sample and demo entries', () => {
     const worklist = useWorklistStore();
     const origins = new Set(worklist.studies.map((entry) => entry.origin));
+    expect(origins.has('sample')).toBe(true);
     expect(origins.has('synthetic')).toBe(true);
     expect(worklist.studies.length).toBeGreaterThan(10);
+  });
+
+  it('lists nothing but real studies when demo content is off', () => {
+    const worklist = useWorklistStore();
+    useDataBrowserStore().hideSampleData = true;
+    expect(worklist.studies).toHaveLength(0);
+
+    // A build without demo data still lists what the reader opens themselves.
+    addLoadedVolume('volume-1');
+    expect(worklist.studies.map((entry) => entry.origin)).toEqual(['loaded']);
   });
 
   it('marks a study in progress when it is opened, and never regresses it', async () => {

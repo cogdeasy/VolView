@@ -212,9 +212,14 @@ export const useWorklistStore = defineStore('worklist', () => {
     );
   });
 
-  /** Fabricated rows, so the worklist reads like a real reading list. */
-  const syntheticStudies = computed<WorklistStudy[]>(() =>
-    WORKLIST_DEMO_STUDIES.map((demo) => {
+  /**
+   * Fabricated rows, so the worklist reads like a real reading list. They are
+   * demonstration content and follow the same switch as the sample datasets:
+   * a build with sample data off shows only studies that can actually open.
+   */
+  const syntheticStudies = computed<WorklistStudy[]>(() => {
+    if (dataBrowserStore.hideSampleData) return [];
+    return WORKLIST_DEMO_STUDIES.map((demo) => {
       const series = demo.series.map((entry, index) => ({
         ...entry,
         key: `demo:${demo.key}:${index}`,
@@ -230,8 +235,8 @@ export const useWorklistStore = defineStore('worklist', () => {
         series,
         ...seriesTotals(series),
       };
-    })
-  );
+    });
+  });
 
   const studies = computed<WorklistStudy[]>(() => [
     ...loadedStudies.value,
