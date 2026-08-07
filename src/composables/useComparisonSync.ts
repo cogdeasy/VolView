@@ -13,7 +13,7 @@ import {
   priorSliceToCurrentSlice,
 } from '@/src/utils/comparison';
 import type { ComparisonPane } from '@/src/store/comparison';
-import type { CameraConfig } from '@/src/store/view-configs/types';
+import type { CameraConfig, SliceConfig } from '@/src/store/view-configs/types';
 import type { Maybe } from '@/src/types';
 
 interface PaneSlice extends ComparisonPane {
@@ -197,23 +197,35 @@ export function useComparisonSync() {
     });
   }
 
+  /**
+   * A patch that lets a pane reach the whole of its study, or nothing when it
+   * already can.
+   *
+   * The slice store captures a config's range the first time anything writes
+   * one and never revisits it, and the pair is the earliest writer there is —
+   * early enough to catch a volume still streaming in, whose metadata counts
+   * only the slices that have arrived. Left alone, that short range would
+   * stand for the rest of the session and the reader could not scroll into
+   * the part that landed afterwards. Only widening is offered: a range that
+   * shrank would drag the reader's slice down with it.
+   */
+  function wideningFor(pane: ComparisonPane): Partial<SliceConfig> {
+    const metadata = comparison.metadataFor(pane.imageID);
+    if (!metadata) return {};
+    const max = maxSlice(metadata, pane.axis);
+    return max > sliceStore.getConfig(pane.viewID, pane.imageID).max
+      ? { min: 0, max }
+      : {};
+  }
+
   function driveSlices(drivers: PaneSlice[], panes: PaneSlice[]) {
     drivers.forEach((driver) => {
       const target = partnerOf(driver, panes);
       if (!target) return;
       const slice = mapSliceTo(driver, target);
       if (slice == null || slice === target.slice) return;
-      // The slice store snapshots a config's range on first write and never
-      // revisits it, and this is the one writer that can fire before the
-      // reader has touched the pane — conceivably while a streaming volume is
-      // still growing. The range the mapping was just resolved against comes
-      // along with the slice, so a pane cannot be left capped short.
-      const metadata = comparison.metadataFor(target.imageID);
-      const range = metadata
-        ? { min: 0, max: maxSlice(metadata, target.axis) }
-        : {};
       sliceStore.updateConfig(target.viewID, target.imageID, {
-        ...range,
+        ...wideningFor(target),
         slice,
       });
       // Only the echo marker is recorded: baselining the write here as well
@@ -226,6 +238,23 @@ export function useComparisonSync() {
       if (kept !== target.slice) echoes.set(paneKey(target), kept);
     });
   }
+
+  watch(
+    () =>
+      comparison.panes
+        .map((pane) => {
+          const metadata = comparison.metadataFor(pane.imageID);
+          return metadata ? maxSlice(metadata, pane.axis) : -1;
+        })
+        .join(),
+    () => {
+      comparison.panes.forEach((pane) => {
+        const widening = wideningFor(pane);
+        if (Object.keys(widening).length)
+          sliceStore.updateConfig(pane.viewID, pane.imageID, widening);
+      });
+    }
+  );
 
   watch(
     paneSlices,
