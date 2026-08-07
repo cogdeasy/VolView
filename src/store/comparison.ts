@@ -329,20 +329,23 @@ export const useComparisonStore = defineStore('comparison', () => {
       const activeData = viewStore.getView(viewStore.activeView)?.dataID;
       const beingRead =
         activeData === priorImageID.value ? undefined : activeData;
-      const pool = available.filter(
-        (study) => study.imageID !== priorImageID.value
-      );
-      const fallback = pool.length ? pool : available;
       // A cine series has no slices to align and the picker refuses to offer
       // one, so it is no more a current study than it is a prior: a workspace
-      // holding nothing else leaves the role empty and the bar unarmed.
+      // holding nothing else leaves the role empty and the bar unarmed. Cine
+      // is dropped before the prior is set aside, so a cine series lying
+      // around cannot stand in for the studies the reader could actually
+      // fall back on.
+      const usable = available.filter((study) => !study.isCine);
+      const pool = usable.filter(
+        (study) => study.imageID !== priorImageID.value
+      );
+      const fallback = pool.length ? pool : usable;
       const readable =
         stillLoaded(beingRead) &&
-        available.some((study) => study.imageID === beingRead && !study.isCine)
+        usable.some((study) => study.imageID === beingRead)
           ? beingRead
           : null;
-      currentImageID.value =
-        readable ?? fallback.find((study) => !study.isCine)?.imageID ?? null;
+      currentImageID.value = readable ?? fallback[0]?.imageID ?? null;
     }
 
     if (!currentImageID.value) {

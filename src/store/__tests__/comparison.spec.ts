@@ -228,6 +228,27 @@ describe('comparison store — cine series', () => {
     expect(comparison.priorImageID).toBe('vol-prior');
   });
 
+  it('reads the surviving study when the current one is closed beside a cine', () => {
+    const comparison = useComparisonStore();
+    seatDicomVolume('vol-2019', 'study-2019', '20190430', 'volume');
+    seatDicomVolume('vol-2018', 'study-2018', '20181031', 'volume');
+    seatDicomVolume('vol-cine', 'study-2019', '20190430', 'cine');
+    comparison.autoSelectStudies();
+    expect(comparison.currentImageID).toBe('vol-2019');
+    expect(comparison.priorImageID).toBe('vol-2018');
+
+    // Closed the way it was seated: what the pair reads is the volume list.
+    const dicomStore = useDICOMStore();
+    delete dicomStore.volumeInfo['vol-2019'];
+    delete dicomStore.volumeStudy['vol-2019'];
+    comparison.autoSelectStudies();
+
+    // The cine is no stand-in for the closed study, so the prior is promoted
+    // rather than the pair collapsing with a readable study still loaded.
+    expect(comparison.currentImageID).toBe('vol-2018');
+    expect(comparison.priorImageID).toBeNull();
+  });
+
   it('leaves both roles empty in a workspace holding only cine series', () => {
     const comparison = useComparisonStore();
     seatDicomVolume('vol-cine', 'study-2019', '20190430', 'cine');

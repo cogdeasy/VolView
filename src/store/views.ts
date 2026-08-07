@@ -269,7 +269,12 @@ export const useViewStore = defineStore('view', () => {
     slots.forEach((viewID) => {
       const view = viewByID[viewID];
       const spec = view && comparisonPaneSpec(view.name);
-      if (spec) view.name = spec.axis;
+      if (!spec) return;
+      // Named for what the view shows, not for the axis its comparison name
+      // implied: the two agree in every layout the app builds, but a restored
+      // manifest can pair them off, and a view left labelled for an axis it
+      // does not render is a caption the rest of the app would believe.
+      view.name = view.type === '2D' ? view.options.orientation : spec.axis;
     });
   }
 

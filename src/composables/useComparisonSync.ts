@@ -430,6 +430,13 @@ export function useComparisonSync() {
   const cameraEchoes = new Map<string, string>();
   let previousCameras = new Map<string, string>();
 
+  // Any field is enough to say a camera exists: a config restored from a
+  // manifest carries whatever that manifest held, and reading the sighting
+  // off `parallelScale` alone would leave such a pane forever first-seen and
+  // so forever unable to drive.
+  const hasCamera = (camera: PaneCamera) =>
+    camera.parallelScale != null || !!camera.focalPoint || !!camera.position;
+
   // A pane counts as seen only once its camera exists. `usePersistCameraConfig`
   // writes a view's camera a tick or more after the pane appears, so recording
   // an empty camera as a sighting would let the arrival of the *prior's*
@@ -439,7 +446,7 @@ export function useComparisonSync() {
   const cameraSnapshot = (cameras: PaneCamera[]) =>
     new Map(
       cameras
-        .filter((camera) => camera.parallelScale != null)
+        .filter(hasCamera)
         .map((camera) => [paneKey(camera), cameraKey(camera)])
     );
 
@@ -530,7 +537,7 @@ export function useComparisonSync() {
         // only drive from the current side, so a comparison opens with the
         // prior on the current's zoom instead of on its own auto-fit.
         if (before === undefined)
-          return camera.role === 'current' && camera.parallelScale != null;
+          return camera.role === 'current' && hasCamera(camera);
         return true;
       });
 

@@ -128,6 +128,14 @@ interface ProjectedCounterpart {
 const projected = ref<ProjectedCounterpart[]>([]);
 
 function project() {
+  // Mounted in every 2D view, so most instances have nothing to place: an
+  // ordinary pan would otherwise hand each of them a fresh empty array on
+  // every camera frame.
+  if (!counterparts.value.length) {
+    if (projected.value.length) projected.value = [];
+    return;
+  }
+
   projected.value = counterparts.value.flatMap((counterpart) => {
     const first = worldToSVG(counterpart.points[0], view!.renderer);
     const second = worldToSVG(counterpart.points[1], view!.renderer);
