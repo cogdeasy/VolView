@@ -12,6 +12,7 @@ import { useImageCacheStore } from '@/src/store/image-cache';
 import { useViewStore } from '@/src/store/views';
 import { useViewSliceStore } from '@/src/store/view-configs/slicing';
 import { useViewCameraStore } from '@/src/store/view-configs/camera';
+import { useWindowingStore } from '@/src/store/view-configs/windowing';
 import {
   ComparisonLayoutNames,
   ComparisonLayouts,
@@ -238,6 +239,83 @@ describe('useComparisonSync — pane bindings', () => {
 
     expect(comparison.priorImageID).toBe('prior');
     expect(viewStore.getView(priorViewID)?.dataID).toBe('prior');
+  });
+});
+
+describe('useComparisonSync — window/level link', () => {
+  let scope: EffectScope;
+
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    scope = effectScope(true);
+  });
+  afterEach(() => scope.stop());
+
+  const openPair = () => {
+    const viewStore = useViewStore();
+    const comparison = useComparisonStore();
+    seatImage('current', 8);
+    seatImage('prior', 8);
+    viewStore.setNamedLayoutsFromConfig(ComparisonLayouts);
+    viewStore.switchToNamedLayout(ComparisonLayoutNames.pair);
+    comparison.setCurrentImageID('current');
+    comparison.setPriorImageID('prior');
+    scope.run(() => useComparisonSync());
+    const viewIDOf = (name: string) =>
+      viewStore.visibleViews.find((view) => view?.name === name)!.id;
+    return {
+      comparison,
+      currentViewID: viewIDOf(ComparisonViewNames.currentAxial),
+      priorViewID: viewIDOf(ComparisonViewNames.priorAxial),
+    };
+  };
+
+  it('hands the prior its automatic windowing back when the link is dropped', async () => {
+    const { comparison, currentViewID, priorViewID } = openPair();
+    const windowingStore = useWindowingStore();
+    await nextTick();
+    expect(windowingStore.getConfig(priorViewID, 'prior').useAuto).toBe(true);
+
+    windowingStore.updateConfig(
+      currentViewID,
+      'current',
+      { width: 300, level: 40 },
+      true
+    );
+    expect(windowingStore.getConfig(priorViewID, 'prior').useAuto).toBe(false);
+
+    comparison.setLink('windowLevel', false);
+    await nextTick();
+
+    expect(windowingStore.getConfig(priorViewID, 'prior').useAuto).toBe(true);
+  });
+
+  it('leaves a window the reader tuned on the prior alone', async () => {
+    const { comparison, currentViewID, priorViewID } = openPair();
+    const windowingStore = useWindowingStore();
+    await nextTick();
+
+    windowingStore.updateConfig(
+      currentViewID,
+      'current',
+      { width: 300, level: 40 },
+      true
+    );
+    // The reader then retunes the prior itself, which is what they came to
+    // compare at.
+    windowingStore.updateConfig(
+      priorViewID,
+      'prior',
+      { width: 120, level: 10 },
+      true
+    );
+
+    comparison.setLink('windowLevel', false);
+    await nextTick();
+
+    const prior = windowingStore.getConfig(priorViewID, 'prior');
+    expect(prior.useAuto).toBe(false);
+    expect(prior.width).toBe(120);
   });
 });
 

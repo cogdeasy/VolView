@@ -13,7 +13,11 @@ import {
   priorSliceToCurrentSlice,
 } from '@/src/utils/comparison';
 import type { ComparisonPane } from '@/src/store/comparison';
-import type { CameraConfig, SliceConfig } from '@/src/store/view-configs/types';
+import type {
+  CameraConfig,
+  SliceConfig,
+  WindowLevelConfig,
+} from '@/src/store/view-configs/types';
 import type { Maybe } from '@/src/types';
 
 interface PaneSlice extends ComparisonPane {
@@ -395,6 +399,46 @@ export function useComparisonSync() {
   // made asynchronous, this would have to become a value comparison instead.
   let windowingEcho = false;
 
+  // The window a study wore before the pair first wrote one over it, kept per
+  // study so leaving a comparison can hand it back. A width/level patch is a
+  // hand-set window as far as the windowing store is concerned, so a linked
+  // write clears the prior's automatic windowing — and that outlives the
+  // comparison unless it is put back.
+  interface WindowingRestore {
+    viewID: string;
+    before: Pick<WindowLevelConfig, 'width' | 'level' | 'auto' | 'useAuto'>;
+    wrote: Pick<WindowLevelConfig, 'width' | 'level'>;
+  }
+  const windowingRestores = new Map<string, WindowingRestore>();
+
+  /**
+   * Hands a study back the window it had before the pair overwrote it.
+   *
+   * Only if the pair's own write is still standing: a window the reader tuned
+   * while comparing is theirs, and restoring over it would throw away the very
+   * thing they were comparing at.
+   */
+  function restoreWindowing(imageID: string) {
+    const restore = windowingRestores.get(imageID);
+    windowingRestores.delete(imageID);
+    if (!restore) return;
+    const { viewID, before, wrote } = restore;
+    const now = windowingStore.getConfig(viewID, imageID);
+    if (now.width !== wrote.width || now.level !== wrote.level) return;
+    windowingEcho = true;
+    try {
+      windowingStore.updateConfig(
+        viewID,
+        imageID,
+        before.useAuto
+          ? { useAuto: true, auto: before.auto }
+          : { width: before.width, level: before.level }
+      );
+    } finally {
+      windowingEcho = false;
+    }
+  }
+
   function copyWindowLevel(
     fromViewID: Maybe<string>,
     fromImageID: string,
@@ -419,6 +463,23 @@ export function useComparisonSync() {
       comparison.panes.find((pane) => pane.imageID === toImageID)?.viewID ??
       viewStore.getAllViews().find((view) => view.dataID === toImageID)?.id;
     if (!targetViewID) return;
+    // Only the prior is remembered. The current study is the one the reader
+    // goes on reading, and a window they set while comparing is as deliberate
+    // as any other; it is the older study, put away again afterwards, that
+    // should not be left wearing a window derived from another series.
+    if (toImageID === comparison.priorImageID) {
+      const { auto, useAuto, ...rest } = windowingStore.getConfig(
+        targetViewID,
+        toImageID
+      );
+      if (!windowingRestores.has(toImageID))
+        windowingRestores.set(toImageID, {
+          viewID: targetViewID,
+          before: { width: rest.width, level: rest.level, auto, useAuto },
+          wrote: { width, level },
+        });
+      else windowingRestores.get(toImageID)!.wrote = { width, level };
+    }
     windowingEcho = true;
     try {
       windowingStore.updateConfig(targetViewID, toImageID, { width, level });
@@ -439,7 +500,9 @@ export function useComparisonSync() {
   });
 
   // Re-entering a comparison layout re-applies the link: the current study's
-  // window may well have been retuned in a normal layout meanwhile.
+  // window may well have been retuned in a normal layout meanwhile. Any study
+  // the link no longer holds — because it was unlinked, because the pair
+  // changed, or because the reader left comparison — gets its own window back.
   watch(
     [
       () => comparison.links.windowLevel,
@@ -448,9 +511,13 @@ export function useComparisonSync() {
     ],
     ([linked]) => {
       const { currentImageID, priorImageID } = comparison;
-      if (!linked || !comparison.active || !currentImageID || !priorImageID)
-        return;
-      copyWindowLevel(null, currentImageID, priorImageID);
+      const linkedTo =
+        linked && comparison.active && currentImageID ? priorImageID : null;
+      [...windowingRestores.keys()]
+        .filter((imageID) => imageID !== linkedTo)
+        .forEach(restoreWindowing);
+      if (!linkedTo || !currentImageID) return;
+      copyWindowLevel(null, currentImageID, linkedTo);
     }
   );
 
