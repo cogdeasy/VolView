@@ -289,6 +289,8 @@ export const useFindingsStore = defineStore('findings', () => {
   /**
    * @param dataIDMap saved dataset id -> restored image id
    * @param toolIDMap saved annotation id -> restored annotation id
+   * @returns the findings whose key image was not in the archive, so the
+   *   restore notice can say so rather than losing them silently.
    */
   async function deserialize(
     manifest: Manifest,
@@ -296,8 +298,9 @@ export const useFindingsStore = defineStore('findings', () => {
     toolIDMap: Record<string, ToolID>,
     stateFiles: FileEntry[]
   ) {
+    const missingKeyImages: string[] = [];
     const section = manifest.findings;
-    if (!section) return;
+    if (!section) return { missingKeyImages };
 
     impression.value = section.impression ?? '';
     (section.types ?? []).forEach((type) => upsertFindingType(type));
@@ -324,6 +327,9 @@ export const useFindingsStore = defineStore('findings', () => {
             slice: saved.keyImage.slice,
             capturedAt: saved.keyImage.capturedAt,
           };
+        } else {
+          // A JSON-only manifest carries no archive members at all.
+          missingKeyImages.push(saved.title || 'Untitled finding');
         }
       }
 
@@ -341,6 +347,8 @@ export const useFindingsStore = defineStore('findings', () => {
       // The saved timestamp is part of the record, not of this restore.
       updateFinding(id, { createdAt: saved.createdAt });
     }
+
+    return { missingKeyImages };
   }
 
   return {

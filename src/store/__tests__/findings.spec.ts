@@ -139,6 +139,31 @@ describe('findings store', () => {
     expect(finding.keyImage?.dataURL).toBe(KEY_IMAGE_DATA_URL);
   });
 
+  it('reports a key image the archive did not carry', async () => {
+    const store = useFindingsStore();
+    const id = store.addFinding({ imageID: 'image-1', title: 'LV long axis' });
+    store.setKeyImage(id, {
+      dataURL: KEY_IMAGE_DATA_URL,
+      viewName: 'Axial',
+      slice: 5,
+      capturedAt: '2026-01-02T00:00:00.000Z',
+    });
+    const { manifest } = await serializeFindings();
+
+    setActivePinia(createPinia());
+    const restored = useFindingsStore();
+    // A JSON-only manifest restores without any archive members.
+    const { missingKeyImages } = await restored.deserialize(
+      manifest,
+      { 'image-1': 'image-77' },
+      {},
+      []
+    );
+
+    expect(missingKeyImages).toEqual(['LV long axis']);
+    expect(restored.findings[0].keyImage).toBeUndefined();
+  });
+
   it('reorders a finding past a sibling, skipping other images', () => {
     const store = useFindingsStore();
     const first = store.promoteMeasurement(

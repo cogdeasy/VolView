@@ -299,7 +299,7 @@ export async function completeStateFileRestore(
 
   // After the tools: a finding points at annotations, which are re-added under
   // fresh ids, so it needs the restore's id map to re-point them.
-  await useFindingsStore().deserialize(
+  const { missingKeyImages } = await useFindingsStore().deserialize(
     manifest,
     stateIDToStoreID,
     toolIDMap,
@@ -346,6 +346,9 @@ export async function completeStateFileRestore(
     ...failedMembers,
     ...skippedSegmentGroups.map(
       ({ name, reason }) => `- segment group: ${name} (${reason})`
+    ),
+    ...missingKeyImages.map(
+      (title) => `- key image: ${title} (finding restored without it)`
     ),
   ];
   if (missing.length > 0) {

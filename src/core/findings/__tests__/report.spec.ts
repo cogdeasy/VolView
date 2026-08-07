@@ -61,6 +61,16 @@ describe('report rendering', () => {
     expect(text).toContain('Axial slice 12 of 30');
   });
 
+  it('heads the patient, study and series groups in the text export', () => {
+    // Each group carries a Description-like label, so an unheaded flat list
+    // reads as duplicate fields.
+    const text = renderReportText(report());
+
+    expect(text).toContain('PATIENT\nName: Doe Jane');
+    expect(text).toContain('STUDY\nDescription: Cardiac MR');
+    expect(text).toContain('SERIES\nModality: MR');
+  });
+
   it('marks an empty report rather than rendering blanks', () => {
     const empty = { ...report(), impression: '  ', findings: [] };
     const text = renderReportText(empty);
@@ -79,9 +89,15 @@ describe('report rendering', () => {
   });
 
   it('escapes user text', () => {
-    const html = renderReportHtml(report());
+    const doc = report();
+    doc.findings[0].title = `Rokitansky's "sign"`;
+    const html = renderReportHtml(doc);
+
     expect(html).toContain('Dilated &lt;cavity&gt; &amp; thin wall');
     expect(html).not.toContain('<cavity>');
+    // Quotes too: the same escaping guards attribute values.
+    expect(html).toContain('Rokitansky&#39;s &quot;sign&quot;');
+    expect(html).not.toContain("Rokitansky's");
   });
 
   it('drops a key image whose source is not a raster data url', () => {

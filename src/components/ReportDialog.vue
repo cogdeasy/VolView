@@ -32,10 +32,13 @@ const documentTheme = computed<'dark' | 'light'>(() =>
 // The preview is the exported document itself, rendered in a sandboxed frame,
 // so what the radiologist signs off is byte-for-byte what leaves the app.
 // Debounced because every srcdoc change reloads the frame and its inline
-// key images; the exports re-render from live state regardless.
+// key images; the exports re-render from live state regardless. Only rendered
+// while the dialog is open, so editing findings costs nothing.
 const previewHtml = refDebounced(
   computed(() =>
-    renderReportHtml(report.value, { theme: documentTheme.value })
+    reportOpen.value
+      ? renderReportHtml(report.value, { theme: documentTheme.value })
+      : ''
   ),
   PREVIEW_DEBOUNCE_MS
 );

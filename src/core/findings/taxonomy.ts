@@ -117,7 +117,9 @@ export const CATEGORY_SCALE_LABELS: Record<FindingCategoryScale, string> = {
 
 /**
  * Types offered for a modality: those that name it, then the modality-agnostic
- * ones. An unknown modality gets the whole taxonomy rather than nothing.
+ * ones. A modality no type names falls back to the modality-agnostic ones, and
+ * the whole taxonomy only when even those are absent, so the dropdown is never
+ * empty.
  */
 export function typesForModality(
   types: FindingType[],

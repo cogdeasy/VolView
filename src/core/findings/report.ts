@@ -57,7 +57,8 @@ const escapeHtml = (value: string) =>
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 
 /**
  * A key image can come from a restored archive, so it is untrusted content
@@ -80,8 +81,15 @@ export function renderReportText(report: Report): string {
     'STRUCTURED FINDINGS REPORT',
     `Generated ${report.generatedAt}`,
     '',
+    // Headed groups: patient, study and series each carry a Description-like
+    // label, and a flat list makes those read as duplicates.
+    'PATIENT',
     ...fieldsToText(report.patient),
+    '',
+    'STUDY',
     ...fieldsToText(report.study),
+    '',
+    'SERIES',
     ...fieldsToText(report.series),
     '',
     'IMPRESSION',

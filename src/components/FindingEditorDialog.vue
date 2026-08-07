@@ -52,15 +52,21 @@ function patch(update: Parameters<typeof findingsStore.updateFinding>[1]) {
 
 // --- taxonomy --- //
 
-const offeredTypes = computed(() =>
-  typesForModality(findingsStore.findingTypes, modality.value)
-);
-
 const activeType = computed(() =>
   finding.value
     ? findingsStore.findingTypeByID[finding.value.typeID]
     : undefined
 );
+
+const offeredTypes = computed(() => {
+  const offered = typesForModality(findingsStore.findingTypes, modality.value);
+  const current = activeType.value;
+  // A finding saved under another modality keeps its own type on the list,
+  // so opening it here does not show an empty select and silently drop it.
+  return current && !offered.some((type) => type.id === current.id)
+    ? [current, ...offered]
+    : offered;
+});
 
 const categoryScale = computed<FindingCategoryScale>(
   () => activeType.value?.categoryScale ?? 'severity'
