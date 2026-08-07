@@ -6,12 +6,9 @@
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <meta name="theme-color" content="#0B5ED7" />
-    <meta
-      name="description"
-      content="Philips Volume Viewer is a browser-based radiological viewer for interactive, cinematic 3D visualization and annotation of DICOM data."
-    />
-    <title>Philips Volume Viewer</title>
+    <meta name="theme-color" content="<%- themeColor %>" />
+    <meta name="description" content="<%- description %>" />
+    <title><%- productName %></title>
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900"
@@ -23,9 +20,7 @@
   </head>
   <body>
     <noscript>
-      <strong
-        >Philips Volume Viewer requires JavaScript to be enabled.</strong
-      >
+      <strong><%- productName %> requires JavaScript to be enabled.</strong>
     </noscript>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>

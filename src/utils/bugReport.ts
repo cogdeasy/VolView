@@ -74,7 +74,7 @@ export const generateBugReport = (error?: Error): string => {
 
   const lines = [
     `--- ${Brand.productName} Bug Report ---`,
-    `Build: ${versions.app} (${sha}) | vtk.js: ${versions['vtk.js']}, itk-wasm: ${versions['itk-wasm']}`,
+    `Build: ${Brand.productName} ${versions.app} (${sha}) | vtk.js: ${versions['vtk.js']}, itk-wasm: ${versions['itk-wasm']}`,
     `Browser: ${getBrowserInfo()}`,
     '',
     'Error:',

@@ -1,23 +1,16 @@
 import { createVuetify } from 'vuetify';
 import { useLocalStorage } from '@vueuse/core';
 
-import PhilipsEmblem from '@/src/components/icons/PhilipsEmblem.vue';
 import { BrandColors } from '@/src/branding';
 import {
   DefaultTheme,
   DarkTheme,
   LightTheme,
+  LegacyThemes,
   ThemeStorageKey,
 } from '@/src/constants';
 
 const vuetify = createVuetify({
-  icons: {
-    values: {
-      philipsMark: {
-        component: PhilipsEmblem,
-      },
-    },
-  },
   theme: {
     defaultTheme: DefaultTheme,
     themes: {
@@ -52,7 +45,9 @@ const vuetify = createVuetify({
 });
 
 const theme = useLocalStorage(ThemeStorageKey, DefaultTheme);
-if (theme.value !== DarkTheme && theme.value !== LightTheme) {
+if (theme.value in LegacyThemes) {
+  theme.value = LegacyThemes[theme.value];
+} else if (theme.value !== DarkTheme && theme.value !== LightTheme) {
   theme.value = DefaultTheme;
 }
 vuetify.theme.global.name.value = theme.value;
