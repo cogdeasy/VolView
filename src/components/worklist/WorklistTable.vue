@@ -160,7 +160,10 @@ function originLabel(study: WorklistStudy) {
 
 .worklist-table {
   width: 100%;
-  border-collapse: collapse;
+  /* Not `collapse`: collapsed borders are dropped from the sticky header
+     once the body scrolls under it. */
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 0.8125rem;
   table-layout: fixed;
 }
@@ -177,7 +180,9 @@ thead th {
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  opacity: 0.72;
+  /* Dimmed via the text color, not opacity: an opaque background is what
+     keeps the scrolling rows from showing through. */
+  color: rgba(var(--v-theme-on-surface), 0.72);
   user-select: none;
   white-space: nowrap;
 }
@@ -188,7 +193,6 @@ thead th.sortable {
 
 thead th.sortable:hover,
 thead th.active {
-  opacity: 1;
   color: var(--worklist-primary);
 }
 
@@ -208,6 +212,9 @@ thead th.active .sort-icon {
 
 tbody tr {
   cursor: pointer;
+}
+
+tbody td {
   border-bottom: 1px solid rgba(var(--v-border-color), 0.12);
 }
 
