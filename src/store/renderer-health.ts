@@ -162,6 +162,10 @@ export const useRendererHealthStore = defineStore('renderer-health', () => {
 
   function reportViewHealthy(viewId: string) {
     registerView(viewId);
+    const current = viewHealth[viewId];
+    // Called on every sample tick for every view; writing an unchanged record
+    // would invalidate every dependent computed twice a second for nothing.
+    if (current.healthy && current.blankSamples === 0) return;
     viewHealth[viewId] = {
       ...viewHealth[viewId],
       healthy: true,

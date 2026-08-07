@@ -28,6 +28,10 @@
               :color="sliceProps.outlineColor"
             ></vtk-image-outline-representation>
           </template>
+          <renderer-health-overlay
+            :view-id="viewId"
+            :image-id="currentImageID"
+          />
           <slot></slot>
         </vtk-volume-view>
       </div>
@@ -43,6 +47,7 @@ import VtkVolumeView from '@/src/components/vtk/VtkVolumeView.vue';
 import { VtkViewApi } from '@/src/types/vtk-types';
 import VtkBaseObliqueSliceRepresentation from '@/src/components/vtk/VtkBaseObliqueSliceRepresentation.vue';
 import VtkImageOutlineRepresentation from '@/src/components/vtk/VtkImageOutlineRepresentation.vue';
+import RendererHealthOverlay from '@/src/components/RendererHealthOverlay.vue';
 import { useViewAnimationListener } from '@/src/composables/useViewAnimationListener';
 import useResliceCursorStore, {
   mapAxisToViewType,

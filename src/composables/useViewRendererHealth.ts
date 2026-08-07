@@ -1,4 +1,4 @@
-import { MaybeRef, computed, onScopeDispose, unref } from 'vue';
+import { MaybeRef, computed, onScopeDispose, unref, watch } from 'vue';
 import { useIntervalFn, useDocumentVisibility } from '@vueuse/core';
 import { Maybe } from '@/src/types';
 import { View } from '@/src/core/vtk/types';
@@ -93,7 +93,17 @@ export function useViewRendererHealth(options: ViewRendererHealthOptions) {
     imageId
   );
 
-  health.registerView(unref(viewId));
+  // A layout change can hand this component instance a different view id
+  // rather than remounting it, so registration follows the id: an entry left
+  // behind under the old id would keep the failure notice up for good.
+  watch(
+    () => unref(viewId),
+    (id, previousId) => {
+      if (previousId) health.unregisterView(previousId);
+      health.registerView(id);
+    },
+    { immediate: true }
+  );
   onScopeDispose(() => health.unregisterView(unref(viewId)));
 
   const canvas = computed(() => unref(view)?.renderWindowView.getCanvas());
