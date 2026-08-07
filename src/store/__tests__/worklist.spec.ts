@@ -233,6 +233,30 @@ describe('Worklist store', () => {
     );
   });
 
+  it('keeps a sample struck off while any of its series is loaded', async () => {
+    const worklist = useWorklistStore();
+    useDataBrowserStore().hideSampleData = false;
+    const sample = worklist.studies.find((entry) => entry.origin === 'sample')!;
+
+    addLoadedVolume('volume-1');
+    addLoadedVolume('volume-2', { SeriesNumber: '3' });
+    worklist.noteSampleImported(sample.sample!.name, 'volume-1');
+    await nextTick();
+
+    // Closing one series leaves the study — and so the row that owns it.
+    useDICOMStore().deleteVolume('volume-1');
+    await nextTick();
+    expect(worklist.studies.some((entry) => entry.key === sample.key)).toBe(
+      false
+    );
+
+    useDICOMStore().deleteVolume('volume-2');
+    await nextTick();
+    expect(worklist.studies.some((entry) => entry.key === sample.key)).toBe(
+      true
+    );
+  });
+
   it('treats a cleared search or filter as empty rather than null', () => {
     const worklist = useWorklistStore();
     worklist.setFilter('search', 'chest');

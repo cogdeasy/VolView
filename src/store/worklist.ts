@@ -159,13 +159,12 @@ export const useWorklistStore = defineStore('worklist', () => {
   );
 
   /**
-   * Whether a data selection is still loaded: DICOM samples resolve through
-   * the study hierarchy, plain image samples (.mha and friends) do not.
+   * Whether what a sample produced is still loaded: DICOM samples are tracked
+   * by their study, plain image samples (.mha and friends) by their image.
    */
-  function isSelectionLoaded(selection: string): boolean {
-    const studyKey = dicomStore.volumeStudy[selection];
-    if (studyKey) return !!dicomStore.studyInfo[studyKey];
-    return imageStore.idList.includes(selection);
+  function isImportLoaded(marker: string): boolean {
+    if (marker in dicomStore.studyInfo) return true;
+    return imageStore.idList.includes(marker);
   }
 
   /** Rows for downloadable sample datasets: real pixels, invented patients. */
@@ -174,8 +173,8 @@ export const useWorklistStore = defineStore('worklist', () => {
     // A sample is only struck off while the data it produced is still loaded;
     // closing that data puts the sample row back.
     return SAMPLE_DATA.filter((sample) => {
-      const selection = importedSamples[sample.name];
-      return !selection || !isSelectionLoaded(selection);
+      const marker = importedSamples[sample.name];
+      return !marker || !isImportLoaded(marker);
     }).flatMap((sample) => {
       const meta = SAMPLE_WORKLIST_METADATA[sample.name];
       if (!meta) return [];
@@ -293,10 +292,13 @@ export const useWorklistStore = defineStore('worklist', () => {
 
   /**
    * Records data a sample produced, whichever entry point downloaded it, so
-   * the sample row gives way to the real study instead of doubling it up.
+   * the sample row gives way to the real study instead of doubling it up. A
+   * multi-series sample is tracked by its study, so deleting one of its series
+   * does not bring the sample row back alongside the study it still owns.
    */
   function noteSampleImported(sampleName: string, selection: string) {
-    importedSamples[sampleName] = selection;
+    importedSamples[sampleName] =
+      dicomStore.volumeStudy[selection] || selection;
   }
 
   /** Opening a study starts a read; it never regresses a finished one. */

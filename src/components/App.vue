@@ -172,15 +172,24 @@ export default defineComponent({
     }
 
     // An import started from outside the worklist (drag and drop, the file
-    // dialog, DICOMweb) takes the reader to the viewer. Keyed on the import
-    // starting, so series landing one by one cannot close a worklist the
-    // reader opened while the import runs, and the launch-time config load —
-    // which brings no studies — leaves the worklist up.
-    let launchLoadPending = Boolean(urlParams.config);
+    // dialog) takes the reader to the viewer. Keyed on an import starting, so
+    // series landing one by one cannot close a worklist the reader opened
+    // while the import runs. Counted rather than watched as a boolean, so an
+    // import that begins while another one is still running still counts.
+    // DICOMweb imports bypass this — they call importDataSources directly —
+    // but they are only reachable from the data panel, which means the
+    // worklist is already closed.
+    let launchConfigLoad = Boolean(urlParams.config);
     watch(
-      () => loadDataStore.isLoading,
-      (loading, wasLoading) => {
-        if (launchLoadPending || !loading || wasLoading) return;
+      () => loadDataStore.loadingCount,
+      (count, previous) => {
+        if (count <= previous) return;
+        // The launch-time config load brings no studies with it, so it leaves
+        // the worklist up; it is the first load of the session.
+        if (launchConfigLoad) {
+          launchConfigLoad = false;
+          return;
+        }
         worklistStore.dismissForExternalLoad();
       }
     );
@@ -197,11 +206,7 @@ export default defineComponent({
 
     onMounted(async () => {
       await authReady;
-      try {
-        await loadUrls(urlParams);
-      } finally {
-        launchLoadPending = false;
-      }
+      await loadUrls(urlParams);
       // Feature entry points subscribe to this (see launchLoad.ts).
       await signalLaunchLoadComplete();
     });
