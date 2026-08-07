@@ -134,6 +134,8 @@ const vuetify = createVuetify({
       color: 'primary',
     },
     VTooltip: {
+      // Styling hangs off `.v-tooltip` in tokens.css, not off this class, so a
+      // call site passing its own `content-class` stays themed.
       contentClass: 'pv-tooltip',
     },
   },

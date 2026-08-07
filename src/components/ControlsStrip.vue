@@ -13,6 +13,7 @@ import MessageCenter from '@/src/components/MessageCenter.vue';
 import { MessageType, useMessageStore } from '@/src/store/messages';
 import { ConnectionState, useServerStore } from '@/src/store/server';
 import LayoutSelector from '@/src/components/LayoutSelector.vue';
+import { useUiDensityStore } from '@/src/store/ui-density';
 
 interface Props {
   hasData: boolean;
@@ -61,6 +62,18 @@ function useMessageBubble() {
   return { count, badgeColor };
 }
 
+/**
+ * The badge is pulled a quarter of the button inwards so it overlaps the icon
+ * corner rather than floating off the strip. A fraction rather than a constant,
+ * because the button follows the density token.
+ */
+function useBadgeOffset() {
+  const densityStore = useUiDensityStore();
+  return computed(() =>
+    Math.round(parseFloat(densityStore.tokens.toolButtonSize) / 4)
+  );
+}
+
 function useServerConnection() {
   const serverStore = useServerStore();
 
@@ -87,6 +100,7 @@ const messageDialog = ref(false);
 const { icon: connIcon, url: serverUrl } = useServerConnection();
 const { handleSave, saveDialog, isSaving } = useSaveControls();
 const { count: msgCount, badgeColor: msgBadgeColor } = useMessageBubble();
+const badgeOffset = useBadgeOffset();
 </script>
 
 <template>
@@ -131,8 +145,8 @@ const { count: msgCount, badgeColor: msgBadgeColor } = useMessageBubble();
       @click="settingsDialog = true"
     />
     <v-badge
-      offset-x="10"
-      offset-y="10"
+      :offset-x="badgeOffset"
+      :offset-y="badgeOffset"
       :content="msgCount"
       :color="msgBadgeColor"
       :model-value="msgCount > 0"

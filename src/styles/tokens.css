@@ -231,8 +231,11 @@ html,
   box-shadow: var(--pv-elevation-overlay);
 }
 
-/* The default tooltip was a hardcoded white slab in both themes. */
-.pv-tooltip.v-overlay__content {
+/* The default tooltip was a hardcoded white slab in both themes. Matched on
+   the component rather than the default `contentClass`, so a call site that
+   passes its own `content-class` still gets the themed tooltip; doubled to
+   outrank Vuetify's own `.v-tooltip > .v-overlay__content`. */
+.v-tooltip.v-tooltip > .v-overlay__content {
   background-color: rgb(var(--v-theme-surface-raised)) !important;
   color: rgb(var(--v-theme-on-surface-raised)) !important;
   border: var(--pv-border-width-hairline) solid
@@ -245,7 +248,10 @@ html,
   opacity: 1 !important;
 }
 
-.v-card-title {
+/* Doubled for the same reason as the surface utilities above: Vuetify sets
+   these at one class of specificity from a stylesheet injected after this one,
+   so a single class loses and the token is silently inert. */
+.v-card-title.v-card-title {
   font-size: var(--pv-font-size-title) !important;
   line-height: var(--pv-line-height-title) !important;
   font-weight: var(--pv-font-weight-title) !important;
@@ -253,7 +259,7 @@ html,
   padding: var(--pv-density-block-padding) var(--pv-density-inline-padding);
 }
 
-.v-card-text {
+.v-card-text.v-card-text {
   font-size: var(--pv-font-size-body);
   line-height: var(--pv-line-height-body);
   padding: var(--pv-density-block-padding) var(--pv-density-inline-padding);
@@ -295,12 +301,12 @@ html,
   color: rgb(var(--v-theme-on-selection));
 }
 
-.v-list-item-title {
+.v-list-item-title.v-list-item-title {
   font-size: var(--pv-font-size-body);
   line-height: var(--pv-line-height-body);
 }
 
-.v-expansion-panel-title {
+.v-expansion-panel-title.v-expansion-panel-title {
   font-size: var(--pv-font-size-label);
   font-weight: var(--pv-font-weight-label);
   letter-spacing: var(--pv-letter-spacing-label);
