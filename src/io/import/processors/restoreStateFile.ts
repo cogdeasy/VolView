@@ -15,6 +15,7 @@ import { basename } from '@/src/utils/path';
 import { leafStateId } from '@/src/io/import/dataSource';
 import { useSegmentGroupStore } from '@/src/store/segmentGroups';
 import { useToolStore } from '@/src/store/tools';
+import { useFindingsStore } from '@/src/store/findings';
 import { useLayersStore } from '@/src/store/datasets-layers';
 import { extractFilesFromZip } from '@/src/io/zip';
 import type { FileEntry } from '@/src/io/types';
@@ -290,7 +291,20 @@ export async function completeStateFileRestore(
 
   useLayersStore().deserialize(manifest, stateIDToStoreID);
 
-  useToolStore().deserialize(manifest, segmentGroupIDMap, stateIDToStoreID);
+  const toolIDMap = useToolStore().deserialize(
+    manifest,
+    segmentGroupIDMap,
+    stateIDToStoreID
+  );
+
+  // After the tools: a finding points at annotations, which are re-added under
+  // fresh ids, so it needs the restore's id map to re-point them.
+  await useFindingsStore().deserialize(
+    manifest,
+    stateIDToStoreID,
+    toolIDMap,
+    stateFiles
+  );
 
   const missingBases = unresolvedDatasets.map((ds) =>
     summarizeDataSource(

@@ -31,6 +31,9 @@
           </div>
         </v-main>
         <controls-modal />
+        <finding-editor-dialog />
+        <report-dialog />
+        <promote-measurement-prompt />
       </v-app>
       <persistent-overlay
         :disabled="!dragHover"
@@ -75,6 +78,9 @@ import ModulePanel from '@/src/components/ModulePanel.vue';
 import DragAndDrop from '@/src/components/DragAndDrop.vue';
 import PersistentOverlay from '@/src/components/PersistentOverlay.vue';
 import ControlsModal from '@/src/components/ControlsModal.vue';
+import FindingEditorDialog from '@/src/components/FindingEditorDialog.vue';
+import ReportDialog from '@/src/components/ReportDialog.vue';
+import PromoteMeasurementPrompt from '@/src/components/PromoteMeasurementPrompt.vue';
 import { useImageStore } from '@/src/store/datasets-images';
 import { useServerStore } from '@/src/store/server';
 import { useGlobalErrorHook } from '@/src/composables/useGlobalErrorHook';
@@ -100,6 +106,9 @@ export default defineComponent({
     ModulePanel,
     PersistentOverlay,
     ControlsModal,
+    FindingEditorDialog,
+    ReportDialog,
+    PromoteMeasurementPrompt,
     WelcomePage,
     AppBar,
     VtkRenderWindowParent,

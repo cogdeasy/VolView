@@ -169,6 +169,7 @@ import VtkSegmentationSliceRepresentation from '@/src/components/vtk/VtkSegmenta
 import { useSegmentGroupStore } from '@/src/store/segmentGroups';
 import VtkLayerSliceRepresentation from '@/src/components/vtk/VtkLayerSliceRepresentation.vue';
 import { useViewAnimationListener } from '@/src/composables/useViewAnimationListener';
+import { useViewApiRegistration } from '@/src/composables/useViewApiRegistration';
 import CropTool from '@/src/components/tools/crop/CropTool.vue';
 import CrosshairsTool from '@/src/components/tools/crosshairs/CrosshairsTool.vue';
 import PaintTool from '@/src/components/tools/paint/PaintTool.vue';
@@ -236,6 +237,7 @@ useResetViewsEvents().onClick(resetCamera);
 
 useWebGLWatchdog(vtkView);
 useViewAnimationListener(vtkView, viewId, '2D');
+useViewApiRegistration(viewId, vtkView);
 
 // active tool
 const { currentTool } = storeToRefs(useToolStore());

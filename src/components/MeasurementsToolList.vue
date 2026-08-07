@@ -10,6 +10,8 @@ import {
   MultipleSelectionState,
 } from '@/src/composables/useMultipleToolSelection';
 import { useToolSelectionStore } from '@/src/store/tools/toolSelection';
+import { useFindingsStore } from '@/src/store/findings';
+import { useFindingsUIStore } from '@/src/store/findings-ui';
 import type { Maybe } from '@/src/types';
 import MeasurementToolDetails from './MeasurementToolDetails.vue';
 import { AnnotationTool } from '../types/annotation-tool';
@@ -27,6 +29,8 @@ const props = defineProps<{
 }>();
 
 const { currentImageID, currentImageMetadata } = useCurrentImage();
+const findingsStore = useFindingsStore();
+const findingsUIStore = useFindingsUIStore();
 
 // Filter and add axis for specific annotation type
 const getTools = (type: AnnotationToolType) => {
@@ -68,6 +72,13 @@ const tools = computed(() => {
         },
         updateTool: (patch: Partial<AnnotationTool>) => {
           store.updateTool(tool.id, patch);
+        },
+        finding: findingsStore.findingForTool(tool.id),
+        promote: () => {
+          const existing = findingsStore.findingForTool(tool.id);
+          const findingID =
+            existing?.id ?? findingsStore.promoteMeasurement(type, tool.id);
+          if (findingID) findingsUIStore.editFinding(findingID);
         },
       }));
     }
@@ -194,6 +205,19 @@ function toggleGlobalHidden() {
         </v-list-item-title>
 
         <span class="ml-auto flex-shrink-0">
+          <v-btn
+            icon
+            variant="text"
+            :color="tool.finding ? 'primary' : undefined"
+            @click="tool.promote()"
+            data-testid="promote-to-finding-button"
+          >
+            <v-icon v-if="tool.finding">mdi-clipboard-check-outline</v-icon>
+            <v-icon v-else>mdi-clipboard-plus-outline</v-icon>
+            <v-tooltip location="top" activator="parent">
+              {{ tool.finding ? 'Edit finding' : 'Promote to finding' }}
+            </v-tooltip>
+          </v-btn>
           <v-btn icon variant="text" @click="tool.jumpTo()">
             <v-icon>mdi-target</v-icon>
             <v-tooltip location="top" activator="parent">

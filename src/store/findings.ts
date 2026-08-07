@@ -1,0 +1,329 @@
+import { defineStore } from 'pinia';
+import { computed, ref } from 'vue';
+import type { Vector3 } from '@kitware/vtk.js/types';
+
+import { useIdStore } from '@/src/store/id';
+import { useAnnotationToolStore } from '@/src/store/tools';
+import { AnnotationToolType } from '@/src/store/tools/types';
+import { onImageDeleted } from '@/src/composables/onImageDeleted';
+import { declareManifestRefs } from '@/src/core/manifestRefs';
+import { applyLocator } from '@/src/core/annotations/locator';
+import { isRecord, removeFromArray } from '@/src/utils';
+import type { Manifest, StateFile } from '@/src/io/state-file/schema';
+import type { FileEntry } from '@/src/io/types';
+import type { ToolID } from '@/src/types/annotation-tool';
+import type {
+  Finding,
+  FindingID,
+  FindingKeyImage,
+  FindingMeasurement,
+  FindingType,
+} from '@/src/types/finding';
+import { BUILTIN_FINDING_TYPES } from '@/src/core/findings/taxonomy';
+import {
+  centroid,
+  lateralityFromPoints,
+} from '@/src/core/findings/measurements';
+
+export const KEY_IMAGE_DIR = 'findings';
+
+const keyImagePath = (id: FindingID) => `${KEY_IMAGE_DIR}/${id}.png`;
+
+// The dataset references this store keeps clean through its onImageDeleted
+// cascade, declared for the dev-only save backstop.
+declareManifestRefs('findings', (manifest) => {
+  const section = isRecord(manifest.findings) ? manifest.findings : {};
+  if (!Array.isArray(section.findings)) return [];
+  return section.findings.flatMap((entry, index) =>
+    isRecord(entry) && typeof entry.imageID === 'string'
+      ? [
+          {
+            kind: 'dataset' as const,
+            id: entry.imageID,
+            where: `findings.findings[${index}].imageID`,
+          },
+        ]
+      : []
+  );
+});
+
+const blobToDataURL = (blob: Blob) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+
+const dataURLToBase64 = (dataURL: string) => dataURL.split(',')[1] ?? '';
+
+export type NewFinding = Partial<Omit<Finding, 'id' | 'createdAt'>> &
+  Pick<Finding, 'imageID'>;
+
+export const useFindingsStore = defineStore('findings', () => {
+  const findingIDs = ref<FindingID[]>([]);
+  const findingByID = ref<Record<FindingID, Finding>>(Object.create(null));
+  const findingTypes = ref<FindingType[]>([...BUILTIN_FINDING_TYPES]);
+  /** The report-level impression. One per session, as a report has one. */
+  const impression = ref('');
+
+  const findings = computed(() =>
+    findingIDs.value.map((id) => findingByID.value[id])
+  );
+
+  const findingsForImage = (imageID: string | null | undefined) =>
+    findings.value.filter((finding) => finding.imageID === imageID);
+
+  function getToolPoints(measurement: FindingMeasurement): Vector3[] {
+    const store = useAnnotationToolStore(measurement.toolType);
+    if (!(measurement.toolID in store.toolByID)) return [];
+    return store.getPoints(measurement.toolID);
+  }
+
+  function addFinding(patch: NewFinding): FindingID {
+    const id = useIdStore().nextId() as FindingID;
+    const measurements = patch.measurements ?? [];
+    const points = measurements.flatMap(getToolPoints);
+    findingByID.value[id] = {
+      title: '',
+      typeID: '',
+      bodySite: '',
+      laterality: points.length > 0 ? lateralityFromPoints(points) : 'unknown',
+      category: '',
+      description: '',
+      measurements: [],
+      slice: 0,
+      frameOfReference: { planeOrigin: [0, 0, 0], planeNormal: [0, 0, 1] },
+      ...patch,
+      id,
+      createdAt: new Date().toISOString(),
+    };
+    findingIDs.value.push(id);
+    return id;
+  }
+
+  function updateFinding(id: FindingID, patch: Partial<Omit<Finding, 'id'>>) {
+    if (!(id in findingByID.value)) return;
+    findingByID.value[id] = { ...findingByID.value[id], ...patch, id };
+  }
+
+  function removeFinding(id: FindingID) {
+    if (!(id in findingByID.value)) return;
+    removeFromArray(findingIDs.value, id);
+    delete findingByID.value[id];
+  }
+
+  function moveFinding(id: FindingID, offset: number) {
+    const from = findingIDs.value.indexOf(id);
+    const to = from + offset;
+    if (from === -1 || to < 0 || to >= findingIDs.value.length) return;
+    findingIDs.value.splice(to, 0, ...findingIDs.value.splice(from, 1));
+  }
+
+  function attachMeasurement(id: FindingID, measurement: FindingMeasurement) {
+    const finding = findingByID.value[id];
+    if (!finding) return;
+    if (finding.measurements.some((m) => m.toolID === measurement.toolID))
+      return;
+    updateFinding(id, { measurements: [...finding.measurements, measurement] });
+  }
+
+  function detachMeasurement(id: FindingID, toolID: ToolID) {
+    const finding = findingByID.value[id];
+    if (!finding) return;
+    updateFinding(id, {
+      measurements: finding.measurements.filter((m) => m.toolID !== toolID),
+    });
+  }
+
+  const findingForTool = (toolID: ToolID) =>
+    findings.value.find((finding) =>
+      finding.measurements.some((m) => m.toolID === toolID)
+    );
+
+  /**
+   * Wraps an existing measurement in a new finding, carrying over everything
+   * the annotation already knows: its label, slice, plane and laterality.
+   */
+  function promoteMeasurement(
+    toolType: AnnotationToolType,
+    toolID: ToolID
+  ): FindingID | null {
+    const store = useAnnotationToolStore(toolType);
+    const tool = store.toolByID[toolID];
+    if (!tool) return null;
+    const points = store.getPoints(toolID);
+    return addFinding({
+      imageID: tool.imageID,
+      title: tool.labelName || `${toolType} finding`,
+      measurements: [{ toolType, toolID }],
+      slice: tool.slice,
+      frameOfReference: tool.frameOfReference,
+      ...(tool.frame != null ? { frame: tool.frame } : {}),
+      laterality: lateralityFromPoints(points),
+    });
+  }
+
+  /** Navigates every 2D view to the finding's slice. */
+  function jumpToFinding(id: FindingID) {
+    const finding = findingByID.value[id];
+    if (!finding) return;
+    applyLocator(finding.imageID, {
+      id: id as unknown as ToolID,
+      imageID: finding.imageID,
+      slice: finding.slice,
+      frameOfReference: finding.frameOfReference,
+      frame: finding.frame,
+      color: '',
+      name: 'finding',
+    });
+  }
+
+  function setKeyImage(id: FindingID, keyImage: FindingKeyImage | undefined) {
+    updateFinding(id, { keyImage });
+  }
+
+  const measurementCentroid = (finding: Finding) =>
+    centroid(finding.measurements.flatMap(getToolPoints));
+
+  // --- taxonomy --- //
+
+  function upsertFindingType(type: FindingType) {
+    const index = findingTypes.value.findIndex((t) => t.id === type.id);
+    if (index === -1) findingTypes.value.push(type);
+    else findingTypes.value[index] = { ...findingTypes.value[index], ...type };
+  }
+
+  function addFindingType(type: Omit<FindingType, 'id' | 'builtin'>) {
+    const id = `custom-${useIdStore().nextId()}`;
+    findingTypes.value.push({ ...type, id });
+    return id;
+  }
+
+  function removeFindingType(id: string) {
+    const type = findingTypes.value.find((t) => t.id === id);
+    if (!type || type.builtin) return;
+    findingTypes.value = findingTypes.value.filter((t) => t.id !== id);
+  }
+
+  const findingTypeByID = computed(() =>
+    Object.fromEntries(findingTypes.value.map((type) => [type.id, type]))
+  );
+
+  // Findings are bound to an image just like annotations are, so they follow
+  // the same delete cascade — an orphaned imageID must never reach a save.
+  onImageDeleted((deletedIDs) => {
+    const deleted = new Set(deletedIDs);
+    findingIDs.value
+      .filter((id) => deleted.has(findingByID.value[id].imageID))
+      .forEach((id) => removeFinding(id));
+  });
+
+  // --- serialization --- //
+
+  function serialize(state: StateFile) {
+    const { zip, manifest } = state;
+    manifest.findings = {
+      impression: impression.value,
+      // Built-ins come from code, so only user edits need to travel.
+      types: findingTypes.value.filter((type) => !type.builtin),
+      findings: findingIDs.value.map((id) => {
+        const { keyImage, ...finding } = findingByID.value[id];
+        if (!keyImage) return finding;
+        const path = keyImagePath(id);
+        zip.file(path, dataURLToBase64(keyImage.dataURL), { base64: true });
+        return {
+          ...finding,
+          keyImage: {
+            path,
+            viewName: keyImage.viewName,
+            slice: keyImage.slice,
+            capturedAt: keyImage.capturedAt,
+          },
+        };
+      }),
+    };
+  }
+
+  /**
+   * @param dataIDMap saved dataset id -> restored image id
+   * @param toolIDMap saved annotation id -> restored annotation id
+   */
+  async function deserialize(
+    manifest: Manifest,
+    dataIDMap: Record<string, string>,
+    toolIDMap: Record<string, ToolID>,
+    stateFiles: FileEntry[]
+  ) {
+    const section = manifest.findings;
+    if (!section) return;
+
+    impression.value = section.impression ?? '';
+    (section.types ?? []).forEach((type) => upsertFindingType(type));
+
+    const fileByPath = new Map(
+      stateFiles.map((entry) => [entry.archivePath, entry.file])
+    );
+
+    for (const saved of section.findings ?? []) {
+      const imageID = dataIDMap[saved.imageID];
+      // A finding whose image did not restore has nothing to point at; the
+      // restore warning for the missing dataset already covers it.
+      if (!imageID) continue;
+
+      let keyImage: FindingKeyImage | undefined;
+      if (saved.keyImage) {
+        const file = fileByPath.get(saved.keyImage.path);
+        if (file) {
+          keyImage = {
+            dataURL: await blobToDataURL(file),
+            viewName: saved.keyImage.viewName,
+            slice: saved.keyImage.slice,
+            capturedAt: saved.keyImage.capturedAt,
+          };
+        }
+      }
+
+      const id = addFinding({
+        ...saved,
+        imageID,
+        // Annotations are re-added under fresh ids on restore; drop a
+        // measurement whose tool did not come back rather than dangling.
+        measurements: saved.measurements.flatMap((measurement) => {
+          const toolID = toolIDMap[measurement.toolID];
+          return toolID ? [{ toolType: measurement.toolType, toolID }] : [];
+        }),
+        keyImage,
+      });
+      // The saved timestamp is part of the record, not of this restore.
+      updateFinding(id, { createdAt: saved.createdAt });
+    }
+  }
+
+  return {
+    findingIDs,
+    findingByID,
+    findings,
+    findingTypes,
+    findingTypeByID,
+    impression,
+    findingsForImage,
+    findingForTool,
+    addFinding,
+    updateFinding,
+    removeFinding,
+    moveFinding,
+    attachMeasurement,
+    detachMeasurement,
+    promoteMeasurement,
+    jumpToFinding,
+    setKeyImage,
+    measurementCentroid,
+    getToolPoints,
+    addFindingType,
+    upsertFindingType,
+    removeFindingType,
+    serialize,
+    deserialize,
+  };
+});

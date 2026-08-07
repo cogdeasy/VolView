@@ -53,6 +53,9 @@ vi.mock('@/src/store/segmentGroups', () => ({
 vi.mock('@/src/store/tools', () => ({
   useToolStore: () => ({ serialize: vi.fn() }),
 }));
+vi.mock('@/src/store/findings', () => ({
+  useFindingsStore: () => ({ serialize: vi.fn() }),
+}));
 vi.mock('@/src/store/datasets-layers', () => ({
   useLayersStore: () => ({ serialize: vi.fn() }),
 }));

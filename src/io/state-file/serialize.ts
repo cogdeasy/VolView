@@ -3,6 +3,7 @@ import { useDatasetStore } from '@/src/store/datasets';
 import { useSegmentGroupStore } from '@/src/store/segmentGroups';
 import { useLayersStore } from '@/src/store/datasets-layers';
 import { useToolStore } from '@/src/store/tools';
+import { useFindingsStore } from '@/src/store/findings';
 import { Tools } from '@/src/store/tools/types';
 import { useViewStore } from '@/src/store/views';
 import {
@@ -248,6 +249,7 @@ export function normalizeManifest(manifest: Manifest, zip: JSZip) {
   // deep-copied) twice.
   const optionalRoots = [
     'tools',
+    'findings',
     'activeView',
     'isActiveViewMaximized',
     'viewByID',
@@ -322,6 +324,7 @@ export async function serialize() {
   await useViewConfigStore().serialize(stateFile);
   await labelStore.serialize(stateFile);
   toolStore.serialize(stateFile);
+  useFindingsStore().serialize(stateFile);
   await layersStore.serialize(stateFile);
   const repaired = normalizeManifest(manifest, zip);
   if (repaired.omitted.length > 0) {

@@ -8,7 +8,16 @@ import type {
 } from '@kitware/vtk.js/Proxy/Core/PiecewiseFunctionProxy';
 
 import type { ToolID } from '@/src/types/annotation-tool';
-import { Tools as ToolsEnum } from '@/src/store/tools/types';
+import {
+  AnnotationToolType,
+  Tools as ToolsEnum,
+} from '@/src/store/tools/types';
+import type {
+  Finding,
+  FindingCategoryScale,
+  FindingType,
+  Laterality,
+} from '@/src/types/finding';
 import type { Ruler } from '@/src/types/ruler';
 import type { Rectangle } from '@/src/types/rectangle';
 import type { Polygon } from '@/src/types/polygon';
@@ -443,6 +452,72 @@ const Tools = z.object({
 
 export type Tools = z.infer<typeof Tools>;
 
+const Laterality = z.enum([
+  'left',
+  'right',
+  'midline',
+  'unknown',
+] as const satisfies readonly Laterality[]);
+
+const FindingCategoryScale = z.enum([
+  'severity',
+  'birads',
+  'none',
+] as const satisfies readonly FindingCategoryScale[]);
+
+const FindingType = z.object({
+  id: z.string(),
+  label: z.string(),
+  modalities: z.string().array(),
+  defaultBodySite: z.string(),
+  categoryScale: FindingCategoryScale,
+  builtin: z.boolean().optional(),
+}) satisfies z.ZodType<FindingType>;
+
+const FindingMeasurement = z.object({
+  toolType: z.nativeEnum(AnnotationToolType),
+  toolID: z.string() as unknown as z.ZodType<ToolID>,
+});
+
+// The key image travels as a zip member, like a segment group's labelmap;
+// only its archive path lives in the manifest.
+const FindingKeyImage = z.object({
+  path: z.string(),
+  viewName: z.string(),
+  slice: z.number(),
+  capturedAt: z.string(),
+});
+
+const Finding = z.object({
+  id: z.string().optional(),
+  imageID: z.string(),
+  title: z.string(),
+  typeID: z.string(),
+  bodySite: z.string(),
+  laterality: Laterality,
+  category: z.string(),
+  description: z.string(),
+  measurements: FindingMeasurement.array(),
+  slice: z.number(),
+  frameOfReference: FrameOfReference,
+  frame: z.number().optional(),
+  createdAt: z.string(),
+  keyImage: FindingKeyImage.optional(),
+}) satisfies z.ZodType<
+  Omit<Finding, 'id' | 'keyImage'> & { id?: string; keyImage?: object }
+>;
+
+// Structured reporting state. Wholly optional and additive: a manifest saved
+// before findings existed simply has no `findings` root.
+export const Findings = z.object({
+  impression: z.string().optional(),
+  // Built-in taxonomy entries come from code; only user edits are saved.
+  types: FindingType.array().optional(),
+  findings: Finding.array().optional(),
+});
+
+export type FindingsState = z.infer<typeof Findings>;
+
 export const ParentToLayers = z
   .object({
     selectionKey: z.string(),
@@ -459,6 +534,7 @@ export const ManifestSchema = z.object({
   datasetFilePath: z.record(z.string(), z.string()).optional(),
   segmentGroups: SegmentGroup.array().optional(),
   tools: Tools.optional(),
+  findings: Findings.optional(),
   activeView: z.string().optional().nullable(),
   isActiveViewMaximized: z.boolean().optional(),
   viewByID: z.record(z.string(), View).optional(),

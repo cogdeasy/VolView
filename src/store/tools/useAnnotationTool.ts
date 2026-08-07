@@ -190,10 +190,14 @@ export const useAnnotationTool = <
     tools: PartialWithRequired<Tool, 'imageID'>[];
     labels: Labels<Tool>;
   };
+  /**
+   * @returns saved tool id -> restored tool id, for state that references
+   * annotations by id (findings) and must be re-pointed after restore.
+   */
   function deserializeTools(
     serialized: Maybe<Serialized>,
     dataIDMap: Record<string, string>
-  ) {
+  ): Record<string, ToolID> {
     if (serialized?.labels) {
       labels.clearDefaultLabels();
     }
@@ -204,6 +208,7 @@ export const useAnnotationTool = <
       })
     );
 
+    const toolIDMap: Record<string, ToolID> = {};
     serialized?.tools
       .map(
         ({ imageID, label, ...rest }) =>
@@ -213,7 +218,12 @@ export const useAnnotationTool = <
             label: (label && labelIDMap[label]) || '',
           }) as ToolPatch
       )
-      .forEach((tool) => addTool(tool));
+      .forEach((tool) => {
+        const savedID = (tool as { id?: ToolID }).id;
+        const newID = addTool(tool);
+        if (savedID) toolIDMap[savedID] = newID;
+      });
+    return toolIDMap;
   }
 
   return {

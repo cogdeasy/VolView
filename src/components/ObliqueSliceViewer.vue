@@ -78,6 +78,7 @@ import VtkSliceView from '@/src/components/vtk/VtkSliceView.vue';
 import { onVTKEvent } from '@/src/composables/onVTKEvent';
 import { useCurrentImage } from '@/src/composables/useCurrentImage';
 import { useViewAnimationListener } from '@/src/composables/useViewAnimationListener';
+import { useViewApiRegistration } from '@/src/composables/useViewApiRegistration';
 import { useWebGLWatchdog } from '@/src/composables/useWebGLWatchdog';
 import { OBLIQUE_OUTLINE_COLORS } from '@/src/constants';
 import { vtkFieldRef } from '@/src/core/vtk/vtkFieldRef';
@@ -119,6 +120,7 @@ const viewAxis = computed(() => getLPSAxisFromDir(viewDirection.value));
 
 useWebGLWatchdog(vtkView);
 useViewAnimationListener(vtkView, viewId, 'Oblique');
+useViewApiRegistration(viewId, vtkView);
 
 // active tool
 const { currentTool } = storeToRefs(useToolStore());

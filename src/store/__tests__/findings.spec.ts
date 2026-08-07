@@ -1,0 +1,193 @@
+import { beforeEach, describe, expect, it } from 'vitest';
+import { createPinia, setActivePinia } from 'pinia';
+import JSZip from 'jszip';
+
+import { useFindingsStore } from '@/src/store/findings';
+import { useRulerStore } from '@/src/store/tools/rulers';
+import { AnnotationToolType } from '@/src/store/tools/types';
+import { ManifestSchema } from '@/src/io/state-file/schema';
+import { migrateManifest } from '@/src/io/state-file/migrations';
+import { MANIFEST_VERSION } from '@/src/io/state-file/serialize';
+import type { FileEntry } from '@/src/io/types';
+import type { ToolID } from '@/src/types/annotation-tool';
+
+// ---------------------------------------------------------------------------
+// Findings are the only state that references BOTH a dataset and an annotation
+// by id, and both are renumbered on restore. These specs pin the round trip
+// through the manifest, and that a pre-findings `.volview.zip` still opens.
+// ---------------------------------------------------------------------------
+
+const KEY_IMAGE_DATA_URL =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+
+const addRuler = (imageID: string) => {
+  const store = useRulerStore();
+  const id = store.addRuler({
+    firstPoint: [0, 0, 5],
+    secondPoint: [3, 4, 5],
+    imageID,
+    name: 'Ruler',
+    labelName: 'Lesion',
+    frameOfReference: { planeNormal: [0, 0, 1], planeOrigin: [0, 0, 5] },
+    slice: 5,
+    placing: false,
+  });
+  store.updateRuler(id, { labelName: 'Lesion' });
+  return id;
+};
+
+const serializeFindings = async () => {
+  const zip = new JSZip();
+  const manifest = {
+    version: MANIFEST_VERSION,
+    dataSources: [],
+  } as unknown as Parameters<
+    ReturnType<typeof useFindingsStore>['serialize']
+  >[0]['manifest'];
+  useFindingsStore().serialize({ zip, manifest });
+  // Round-trip through JSON + zod, exactly like a real save/load.
+  const parsed = ManifestSchema.parse(JSON.parse(JSON.stringify(manifest)));
+  const stateFiles: FileEntry[] = await Promise.all(
+    Object.values(zip.files)
+      .filter((entry) => !entry.dir)
+      .map(async ({ name: path }) => ({
+        archivePath: path,
+        file: new File([await zip.file(path)!.async('blob')], path, {
+          type: 'image/png',
+        }),
+      }))
+  );
+  return { manifest: parsed, stateFiles };
+};
+
+describe('findings store', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+  });
+
+  it('promotes a measurement, carrying over what the annotation knows', () => {
+    const toolID = addRuler('image-1');
+    const store = useFindingsStore();
+
+    const id = store.promoteMeasurement(AnnotationToolType.Ruler, toolID)!;
+
+    const finding = store.findingByID[id];
+    expect(finding.imageID).toBe('image-1');
+    expect(finding.title).toBe('Lesion');
+    expect(finding.slice).toBe(5);
+    expect(finding.frameOfReference.planeNormal).toEqual([0, 0, 1]);
+    expect(finding.measurements).toEqual([
+      { toolType: AnnotationToolType.Ruler, toolID },
+    ]);
+    // +x is the patient's left in LPS.
+    expect(finding.laterality).toBe('midline');
+    expect(store.findingForTool(toolID)?.id).toBe(id);
+  });
+
+  it('round-trips findings, the impression, custom types and key images', async () => {
+    const toolID = addRuler('image-1');
+    const store = useFindingsStore();
+    const id = store.promoteMeasurement(AnnotationToolType.Ruler, toolID)!;
+    const typeID = store.addFindingType({
+      label: 'Papillary muscle',
+      modalities: ['MR'],
+      defaultBodySite: 'Left ventricle',
+      categoryScale: 'severity',
+    });
+    store.updateFinding(id, {
+      typeID,
+      bodySite: 'Left ventricle',
+      category: 'Moderate',
+      description: 'Prominent muscle',
+      laterality: 'left',
+    });
+    store.setKeyImage(id, {
+      dataURL: KEY_IMAGE_DATA_URL,
+      viewName: 'Axial',
+      slice: 5,
+      capturedAt: '2026-01-02T00:00:00.000Z',
+    });
+    store.impression = 'Enlarged left ventricle.';
+
+    const { manifest, stateFiles } = await serializeFindings();
+    expect(manifest.findings?.types).toHaveLength(1);
+
+    // A restore renumbers datasets and annotations.
+    setActivePinia(createPinia());
+    const restored = useFindingsStore();
+    const restoredToolID = 'ruler-99' as ToolID;
+    await restored.deserialize(
+      manifest,
+      { 'image-1': 'image-77' },
+      { [toolID]: restoredToolID },
+      stateFiles
+    );
+
+    expect(restored.impression).toBe('Enlarged left ventricle.');
+    expect(restored.findingTypeByID[typeID]?.label).toBe('Papillary muscle');
+    expect(restored.findings).toHaveLength(1);
+
+    const finding = restored.findings[0];
+    expect(finding.imageID).toBe('image-77');
+    expect(finding.bodySite).toBe('Left ventricle');
+    expect(finding.category).toBe('Moderate');
+    expect(finding.laterality).toBe('left');
+    expect(finding.measurements).toEqual([
+      { toolType: AnnotationToolType.Ruler, toolID: restoredToolID },
+    ]);
+    expect(finding.keyImage?.viewName).toBe('Axial');
+    expect(finding.keyImage?.dataURL).toBe(KEY_IMAGE_DATA_URL);
+  });
+
+  it('drops a measurement whose annotation did not restore', async () => {
+    const toolID = addRuler('image-1');
+    const store = useFindingsStore();
+    store.promoteMeasurement(AnnotationToolType.Ruler, toolID);
+    const { manifest, stateFiles } = await serializeFindings();
+
+    setActivePinia(createPinia());
+    const restored = useFindingsStore();
+    await restored.deserialize(
+      manifest,
+      { 'image-1': 'image-77' },
+      {},
+      stateFiles
+    );
+
+    expect(restored.findings).toHaveLength(1);
+    expect(restored.findings[0].measurements).toEqual([]);
+  });
+
+  it('skips a finding whose image did not restore', async () => {
+    const toolID = addRuler('image-1');
+    useFindingsStore().promoteMeasurement(AnnotationToolType.Ruler, toolID);
+    const { manifest, stateFiles } = await serializeFindings();
+
+    setActivePinia(createPinia());
+    const restored = useFindingsStore();
+    await restored.deserialize(manifest, {}, {}, stateFiles);
+
+    expect(restored.findings).toHaveLength(0);
+  });
+
+  it('opens a pre-findings state file unchanged', async () => {
+    const legacy = JSON.stringify({
+      version: '6.3.0',
+      dataSources: [],
+      datasets: [{ id: 'image-1', dataSourceId: 1 }],
+    });
+
+    const migrated = migrateManifest(legacy);
+    expect(migrated.version).toBe(MANIFEST_VERSION);
+
+    const manifest = ManifestSchema.parse(migrated);
+    expect(manifest.findings).toBeUndefined();
+
+    const store = useFindingsStore();
+    await store.deserialize(manifest, { 'image-1': 'image-77' }, {}, []);
+    expect(store.findings).toHaveLength(0);
+    expect(store.impression).toBe('');
+    // The built-in taxonomy is still whole.
+    expect(store.findingTypes.every((type) => type.builtin)).toBe(true);
+  });
+});
