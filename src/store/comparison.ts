@@ -290,15 +290,17 @@ export const useComparisonStore = defineStore('comparison', () => {
       return currentTime == null || time == null || time <= currentTime;
     };
     // A different study is a far better prior than another series of the
-    // study being read, so it wins even when the dates are unhelpful.
+    // study being read, so it wins even when the dates are unhelpful. A cine
+    // series is never a prior at all: the picker will not let the reader
+    // choose one, and it has no slices to align.
     const preference = [
       (study: StudyDescriptor) =>
         study.studyKey !== currentStudy?.studyKey &&
         !study.isCine &&
         notNewer(study),
-      (study: StudyDescriptor) => study.studyKey !== currentStudy?.studyKey,
+      (study: StudyDescriptor) =>
+        study.studyKey !== currentStudy?.studyKey && !study.isCine,
       (study: StudyDescriptor) => !study.isCine,
-      () => true,
     ];
     priorImageID.value =
       preference.reduce<Maybe<StudyDescriptor>>(

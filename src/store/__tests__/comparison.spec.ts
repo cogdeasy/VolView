@@ -5,6 +5,7 @@ import vtkDataArray from '@kitware/vtk.js/Common/Core/DataArray';
 
 import { useComparisonStore } from '@/src/store/comparison';
 import { useDatasetStore } from '@/src/store/datasets';
+import { useDICOMStore } from '@/src/store/datasets-dicom';
 import { useImageStore } from '@/src/store/datasets-images';
 import { useViewStore } from '@/src/store/views';
 import {
@@ -23,6 +24,36 @@ const seatImage = (id: string) => {
     })
   );
   return useImageStore().addVTKImageData(id, image, { id });
+};
+
+/** Registers a DICOM volume with the metadata the pair selection reads. */
+const seatDicomVolume = (
+  volumeID: string,
+  studyKey: string,
+  studyDate: string,
+  kind: 'volume' | 'cine'
+) => {
+  const dicomStore = useDICOMStore();
+  dicomStore.volumeInfo[volumeID] = {
+    NumberOfSlices: 10,
+    VolumeID: volumeID,
+    Modality: 'MR',
+    SeriesInstanceUID: volumeID,
+    SeriesNumber: '1',
+    SeriesDescription: volumeID,
+    WindowLevel: '',
+    WindowWidth: '',
+    kind,
+  };
+  dicomStore.volumeStudy[volumeID] = studyKey;
+  dicomStore.studyInfo[studyKey] = {
+    StudyID: studyKey,
+    StudyInstanceUID: studyKey,
+    StudyDate: studyDate,
+    StudyTime: '',
+    AccessionNumber: '',
+    StudyDescription: studyKey,
+  };
 };
 
 /** Makes the view showing `dataID` the active one, as clicking a pane does. */
@@ -122,5 +153,28 @@ describe('comparison store — pair selection', () => {
 
     expect(comparison.priorImageID).toBeNull();
     expect(comparison.sliceOffsetByPair).toEqual({});
+  });
+});
+
+describe('comparison store — cine series', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+  });
+
+  it('leaves the prior unset rather than pairing against a cine series', () => {
+    const comparison = useComparisonStore();
+    seatDicomVolume('vol-3d', 'study-2019', '20190430', 'volume');
+    seatDicomVolume('vol-cine', 'study-2019', '20190430', 'cine');
+    comparison.setCurrentImageID('vol-3d');
+
+    comparison.autoSelectStudies();
+
+    // The only other series on screen is one the picker will not offer.
+    expect(comparison.priorImageID).toBeNull();
+
+    seatDicomVolume('vol-prior', 'study-2018', '20181031', 'volume');
+    comparison.autoSelectStudies();
+
+    expect(comparison.priorImageID).toBe('vol-prior');
   });
 });

@@ -9,6 +9,7 @@ import { useWindowingStore } from '@/src/store/view-configs/windowing';
 import {
   copyInPlaneComponents,
   currentSliceToPriorSlice,
+  maxSlice,
   priorSliceToCurrentSlice,
 } from '@/src/utils/comparison';
 import type { ComparisonPane } from '@/src/store/comparison';
@@ -40,13 +41,21 @@ export function useComparisonSync() {
   // nothing else. A layout switch can swap the view sitting in a slot, and the
   // replacement inherits the dataset, so claims follow the replacement.
   const claimedViewIDs = new Set<string>();
-  viewStore.LayoutViewReplacedEvent.on((oldViewID, newViewID) => {
-    if (claimedViewIDs.delete(oldViewID)) claimedViewIDs.add(newViewID);
-  });
 
   // What this composable last wrote into each slot, so a binding that came
   // from somewhere else can be told apart from one of our own.
   const boundByPair = new Map<string, Maybe<string>>();
+
+  viewStore.LayoutViewReplacedEvent.on((oldViewID, newViewID) => {
+    if (claimedViewIDs.delete(oldViewID)) claimedViewIDs.add(newViewID);
+    // The replacement inherits the slot's dataset, so it inherits the record
+    // of who put it there — otherwise the pair reads its own binding as the
+    // reader's and the entry for a view that is gone is never dropped.
+    if (boundByPair.has(oldViewID)) {
+      boundByPair.set(newViewID, boundByPair.get(oldViewID));
+      boundByPair.delete(oldViewID);
+    }
+  });
 
   function bindPanes() {
     comparison.panes.forEach((pane) => {
@@ -192,7 +201,19 @@ export function useComparisonSync() {
       if (!target) return;
       const slice = mapSliceTo(driver, target);
       if (slice == null || slice === target.slice) return;
-      sliceStore.updateConfig(target.viewID, target.imageID, { slice });
+      // The slice store snapshots a config's range on first write and never
+      // revisits it, and this is the one writer that can fire before the
+      // reader has touched the pane — conceivably while a streaming volume is
+      // still growing. The range the mapping was just resolved against comes
+      // along with the slice, so a pane cannot be left capped short.
+      const metadata = comparison.metadataFor(target.imageID);
+      const range = metadata
+        ? { min: 0, max: maxSlice(metadata, target.axis) }
+        : {};
+      sliceStore.updateConfig(target.viewID, target.imageID, {
+        ...range,
+        slice,
+      });
       // Only the echo marker is recorded: baselining the write here as well
       // would leave the marker unconsumed, and it would later swallow a
       // genuine scroll back onto the same slice. The marker is what the store
@@ -364,14 +385,21 @@ export function useComparisonSync() {
       const patch: Partial<CameraConfig> = {};
       if (driver.parallelScale != null)
         patch.parallelScale = driver.parallelScale;
-      if (sharePatientSpace && driver.focalPoint && target.focalPoint) {
+      // Focal point and position move together or not at all: the vector
+      // between them is the direction of projection, and panning one of the
+      // two would tilt the slice out of plane rather than slide it.
+      if (
+        sharePatientSpace &&
+        driver.focalPoint &&
+        target.focalPoint &&
+        driver.position &&
+        target.position
+      ) {
         patch.focalPoint = copyInPlaneComponents(
           driver.focalPoint,
           target.focalPoint,
           driver.axis
         );
-      }
-      if (sharePatientSpace && driver.position && target.position) {
         patch.position = copyInPlaneComponents(
           driver.position,
           target.position,
