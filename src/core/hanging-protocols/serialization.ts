@@ -16,6 +16,13 @@ export const toProtocolFile = (
   protocols,
 });
 
+/**
+ * Deep copy that is safe for reactive protocols; `structuredClone` refuses to
+ * clone Vue's proxies.
+ */
+export const cloneProtocol = (protocol: HangingProtocol): HangingProtocol =>
+  JSON.parse(JSON.stringify(protocol));
+
 export const serializeProtocols = (protocols: HangingProtocol[]) =>
   JSON.stringify(toProtocolFile(protocols), null, 2);
 

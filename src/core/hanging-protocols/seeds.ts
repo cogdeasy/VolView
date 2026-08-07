@@ -72,6 +72,38 @@ export const BUILT_IN_PROTOCOLS: ReadonlyArray<HangingProtocol> = [
     },
   },
   {
+    id: 'builtin-neck-ct',
+    name: 'Neck CT with Contrast',
+    description:
+      'Soft tissue neck window with coronal and sagittal reference for nodes ' +
+      'and airway.',
+    builtIn: true,
+    enabled: true,
+    layout: {
+      direction: 'row',
+      items: [
+        { type: '2D', orientation: 'Axial' },
+        {
+          direction: 'column',
+          items: [
+            { type: '2D', orientation: 'Coronal' },
+            { type: '2D', orientation: 'Sagittal' },
+          ],
+        },
+      ],
+    },
+    windowLevel: { kind: 'preset', preset: 'ct-soft-tissue' },
+    volume: { preset: 'CT-AAA', opacityShift: 0 },
+    slicePolicy: 'middle',
+    overlays: { viewLabels: true, annotations: true },
+    focusedModule: 'Annotations',
+    match: {
+      modality: ['CT'],
+      bodyPart: ['NECK', 'THYROID', 'LARYNX'],
+      studyDescription: 'neck|soft\\s*tissue|thyroid|larynx',
+    },
+  },
+  {
     id: 'builtin-chest-ct',
     name: 'Chest CT',
     description: 'Lung window, axial-dominant, annotations ready for nodules.',

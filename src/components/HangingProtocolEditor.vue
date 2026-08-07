@@ -7,6 +7,7 @@ import {
   AUTO_RANGE_KEYS,
   SLICE_POLICY_LABELS,
   describeLayout,
+  findNamedLayout,
 } from '@/src/core/hanging-protocols/describe';
 import type {
   FocusedModule,
@@ -31,7 +32,19 @@ const patchMatch = (changes: Partial<HangingProtocol['match']>) => {
   patch({ match: { ...protocol.value.match, ...changes } });
 };
 
+const CUSTOM_LAYOUT = 'Custom';
 const namedLayoutNames = Object.keys(DefaultNamedLayouts);
+
+const layoutName = computed(
+  () =>
+    findNamedLayout(protocol.value.layout, DefaultNamedLayouts) ?? CUSTOM_LAYOUT
+);
+
+const layoutItems = computed(() =>
+  layoutName.value === CUSTOM_LAYOUT
+    ? [CUSTOM_LAYOUT, ...namedLayoutNames]
+    : namedLayoutNames
+);
 
 const selectNamedLayout = (name: string | null) => {
   if (!name) return;
@@ -125,10 +138,9 @@ const numberOrUndefined = (value: string) => {
 
     <div class="d-flex align-center mb-3 ga-2">
       <v-select
-        :model-value="null"
-        :items="namedLayoutNames"
+        :model-value="layoutName"
+        :items="layoutItems"
         label="Layout"
-        placeholder="Choose a layout"
         density="compact"
         variant="outlined"
         hide-details

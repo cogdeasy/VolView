@@ -10,7 +10,10 @@ import {
   describeMatchRules,
   describeWindowLevel,
 } from '@/src/core/hanging-protocols/describe';
-import { ProtocolParseError } from '@/src/core/hanging-protocols/serialization';
+import {
+  cloneProtocol,
+  ProtocolParseError,
+} from '@/src/core/hanging-protocols/serialization';
 import { evaluateProtocol } from '@/src/core/hanging-protocols/matching';
 import type { HangingProtocol } from '@/src/core/hanging-protocols/types';
 
@@ -42,7 +45,7 @@ const dirty = computed(
 watch(
   selected,
   (protocol) => {
-    draft.value = protocol ? structuredClone(protocol) : null;
+    draft.value = protocol ? cloneProtocol(protocol) : null;
   },
   { immediate: true }
 );
@@ -58,7 +61,7 @@ const save = () => {
 };
 
 const revert = () => {
-  draft.value = selected.value ? structuredClone(selected.value) : null;
+  draft.value = selected.value ? cloneProtocol(selected.value) : null;
 };
 
 const createFromCurrentView = () => {

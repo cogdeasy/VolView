@@ -25,6 +25,28 @@ export function describeLayout(layout: LayoutConfig): string {
   }
 }
 
+const layoutSignature = (layout: LayoutConfig) => {
+  const { layout: tree, views } = parseLayoutConfig(layout);
+  return JSON.stringify([tree, views.map((view) => [view.type, view.options])]);
+};
+
+/** The named layout equal to this one, if any. */
+export function findNamedLayout(
+  layout: LayoutConfig,
+  named: Record<string, LayoutConfig>
+): string | null {
+  try {
+    const signature = layoutSignature(layout);
+    return (
+      Object.keys(named).find(
+        (name) => layoutSignature(named[name]) === signature
+      ) ?? null
+    );
+  } catch {
+    return null;
+  }
+}
+
 export function describeWindowLevel(spec: WindowLevelSpec): string {
   switch (spec.kind) {
     case 'preset': {

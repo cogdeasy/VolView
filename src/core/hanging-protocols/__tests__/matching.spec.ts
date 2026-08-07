@@ -182,6 +182,17 @@ describe('built-in protocols', () => {
     ).toBe('builtin-chest-ct');
   });
 
+  it('hangs a soft tissue neck CT on the neck protocol', () => {
+    expect(
+      select(
+        makeContext({
+          studyDescription: 'CT NECK SOFT TISSUE W/ CONTR',
+          bodyPart: 'NECK',
+        })
+      )
+    ).toBe('builtin-neck-ct');
+  });
+
   it('hangs cardiac MR on the cardiac protocol', () => {
     expect(
       select(

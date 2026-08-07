@@ -186,7 +186,9 @@ export function selectProtocol(
 /** One-line "why did this protocol apply?" explanation. */
 export function explainSelection(selection: ProtocolSelection): string {
   const { protocol, reason, criteria, candidates } = selection;
-  if (!protocol) return 'No protocol matched this study.';
+  if (!protocol) {
+    return 'No protocol matched this study, so the viewer defaults are in use.';
+  }
 
   if (reason === 'override') {
     return `You chose ${protocol.name} for this study, so it is used instead of the matching protocol.`;

@@ -31,6 +31,7 @@ import {
   findWindowLevelPreset,
 } from '@/src/core/hanging-protocols/windowPresets';
 import {
+  cloneProtocol,
   parseProtocols,
   serializeProtocols,
 } from '@/src/core/hanging-protocols/serialization';
@@ -52,7 +53,7 @@ const defaultSettings = (): Settings => ({
 });
 
 const cloneBuiltIns = () =>
-  BUILT_IN_PROTOCOLS.map((protocol) => structuredClone(protocol));
+  BUILT_IN_PROTOCOLS.map((protocol) => cloneProtocol(protocol));
 
 /**
  * Protocols live in local storage, which is per-browser. A per-user profile
@@ -82,7 +83,8 @@ const protocolStorage = () =>
   });
 
 export interface AppliedProtocolInfo {
-  protocolId: string;
+  /** Null when nothing matched and the viewer defaults are in use. */
+  protocolId: string | null;
   reason: SelectionReason;
   criteria: CriterionResult[];
   explanation: string;
@@ -291,7 +293,16 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     });
 
     if (!selection.protocol) {
-      applied.value = null;
+      // Still report the outcome: the reader needs to know the study was not
+      // hung by a protocol, and needs one click to pick one.
+      applied.value = {
+        protocolId: null,
+        reason: 'none',
+        criteria: [],
+        explanation: explainSelection(selection),
+        studyInstanceUID: studyUID,
+      };
+      indicatorDismissed.value = false;
       return null;
     }
 
@@ -449,7 +460,7 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     const source = getProtocol(id);
     if (!source) return null;
     const copy: HangingProtocol = {
-      ...structuredClone(source),
+      ...cloneProtocol(source),
       id: nextId(),
       name: `${source.name} (copy)`,
       builtIn: false,

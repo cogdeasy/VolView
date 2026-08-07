@@ -12,14 +12,12 @@ const { currentImageID } = useCurrentImage('global');
 
 const showWhy = ref(false);
 
-const visible = computed(
-  () => !!appliedProtocol.value && !indicatorDismissed.value
-);
+const visible = computed(() => !!applied.value && !indicatorDismissed.value);
 
 const summary = computed(() =>
   appliedProtocol.value
     ? describeWindowLevel(appliedProtocol.value.windowLevel)
-    : ''
+    : 'Viewer defaults'
 );
 
 const switchTo = (protocolId: string) => {
@@ -39,9 +37,11 @@ const switchTo = (protocolId: string) => {
         <v-icon size="18" color="secondary" class="mr-2">
           mdi-view-dashboard-variant
         </v-icon>
-        <span class="text-body-2 mr-1">Hung with</span>
-        <span class="text-body-2 font-weight-medium">
-          {{ appliedProtocol?.name }}
+        <span class="text-body-2 mr-1">
+          {{ appliedProtocol ? 'Hung with' : 'No protocol matched' }}
+        </span>
+        <span v-if="appliedProtocol" class="text-body-2 font-weight-medium">
+          {{ appliedProtocol.name }}
         </span>
         <span class="text-caption text-medium-emphasis ml-2 d-none d-md-inline">
           {{ summary }}
