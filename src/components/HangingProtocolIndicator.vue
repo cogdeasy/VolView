@@ -14,11 +14,18 @@ const showWhy = ref(false);
 
 const visible = computed(() => !!applied.value && !indicatorDismissed.value);
 
-const summary = computed(() =>
-  appliedProtocol.value
-    ? describeWindowLevel(appliedProtocol.value.windowLevel)
-    : 'Viewer defaults'
-);
+const label = computed(() => {
+  if (applied.value?.reason === 'restored') return 'Restored saved session';
+  return appliedProtocol.value ? 'Hung with' : 'No protocol matched';
+});
+
+const summary = computed(() => {
+  if (appliedProtocol.value)
+    return describeWindowLevel(appliedProtocol.value.windowLevel);
+  return applied.value?.reason === 'restored'
+    ? 'Saved layout and window'
+    : 'Viewer defaults';
+});
 
 const switchTo = (protocolId: string) => {
   store.applyManually(protocolId, currentImageID.value);
@@ -37,9 +44,7 @@ const switchTo = (protocolId: string) => {
         <v-icon size="18" color="secondary" class="mr-2">
           mdi-view-dashboard-variant
         </v-icon>
-        <span class="text-body-2 mr-1">
-          {{ appliedProtocol ? 'Hung with' : 'No protocol matched' }}
-        </span>
+        <span class="text-body-2 mr-1">{{ label }}</span>
         <span v-if="appliedProtocol" class="text-body-2 font-weight-medium">
           {{ appliedProtocol.name }}
         </span>

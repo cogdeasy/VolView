@@ -42,10 +42,13 @@ const dirty = computed(
     JSON.stringify(draft.value) !== JSON.stringify(selected.value)
 );
 
+// Keyed on the id, not the object: the stored protocol is replaced whenever
+// anything else edits it (the enable switch in the list, for instance), and
+// re-cloning then would throw away the edits in progress.
 watch(
-  selected,
-  (protocol) => {
-    draft.value = protocol ? cloneProtocol(protocol) : null;
+  selectedId,
+  () => {
+    draft.value = selected.value ? cloneProtocol(selected.value) : null;
   },
   { immediate: true }
 );

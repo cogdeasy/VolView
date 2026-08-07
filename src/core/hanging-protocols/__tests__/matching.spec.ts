@@ -52,6 +52,25 @@ describe('hanging protocol matching', () => {
     expect(evaluation.criteria).toHaveLength(3);
   });
 
+  it('matches modality exactly but body part by substring', () => {
+    const protocol = makeProtocol('neck', {
+      modality: ['CT'],
+      bodyPart: ['NECK'],
+    });
+    expect(
+      evaluateProtocol(
+        protocol,
+        makeContext({ modality: 'CT', bodyPart: 'HEADNECK' })
+      ).matched
+    ).toBe(true);
+    expect(
+      evaluateProtocol(
+        protocol,
+        makeContext({ modality: 'OCT', bodyPart: 'NECK' })
+      ).matched
+    ).toBe(false);
+  });
+
   it('requires every declared rule to hold', () => {
     const protocol = makeProtocol('chest', {
       modality: ['CT'],

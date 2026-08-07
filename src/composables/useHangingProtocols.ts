@@ -1,4 +1,4 @@
-import { watch } from 'vue';
+import { computed, watch } from 'vue';
 import { useCurrentImage } from '@/src/composables/useCurrentImage';
 import { useHangingProtocolStore } from '@/src/store/hanging-protocols';
 
@@ -7,8 +7,8 @@ import { useHangingProtocolStore } from '@/src/store/hanging-protocols';
  *
  * The layout, window/level and chrome are applied as soon as the image is
  * bound to the views, so the reader sees the right arrangement immediately;
- * the settings that need pixel data (volume preset, slice position) are
- * applied again once loading finishes.
+ * the settings that need pixel data (window, volume preset, slice position)
+ * are applied again once loading finishes and once the histogram is ready.
  */
 export function useHangingProtocolAutoApply() {
   const store = useHangingProtocolStore();
@@ -28,15 +28,28 @@ export function useHangingProtocolAutoApply() {
       if (imageID === appliedFor) return;
       appliedFor = imageID;
       finalizedFor = null;
+      // A study restored from a saved session keeps the presentation the
+      // reader saved with it.
+      if (store.takeRestoredPresentation(imageID)) {
+        finalizedFor = imageID;
+        return;
+      }
       store.applyForImage(imageID);
     },
     { immediate: true }
   );
 
-  watch([currentImageID, isImageLoading], ([imageID, loading]) => {
-    if (!imageID || loading) return;
-    if (imageID !== appliedFor || imageID === finalizedFor) return;
-    finalizedFor = imageID;
-    store.applyLoadedImageSettings(imageID);
-  });
+  const autoRangesReady = computed(() =>
+    store.autoRangesReady(currentImageID.value)
+  );
+
+  watch(
+    [currentImageID, isImageLoading, autoRangesReady],
+    ([imageID, loading, ready]) => {
+      if (!imageID || loading || !ready) return;
+      if (imageID !== appliedFor || imageID === finalizedFor) return;
+      finalizedFor = imageID;
+      store.applyLoadedImageSettings(imageID);
+    }
+  );
 }

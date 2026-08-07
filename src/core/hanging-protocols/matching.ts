@@ -20,7 +20,16 @@ export interface ProtocolEvaluation {
   specificity: number;
 }
 
-export type SelectionReason = 'override' | 'match' | 'default' | 'none';
+/**
+ * `restored` is never returned by `selectProtocol`: the store uses it for a
+ * study whose presentation came back from a saved session.
+ */
+export type SelectionReason =
+  | 'override'
+  | 'match'
+  | 'default'
+  | 'none'
+  | 'restored';
 
 export interface ProtocolSelection {
   protocol: HangingProtocol | null;
@@ -32,13 +41,25 @@ export interface ProtocolSelection {
 
 const normalize = (value: string) => value.trim().toUpperCase();
 
-const anyOf = (values: string[] | undefined, actual: string) => {
+/**
+ * `exact` for coded values such as Modality, `contains` for free-text values
+ * such as Body Part Examined, where `HEAD` should match `HEADNECK`.
+ */
+const anyOf = (
+  values: string[] | undefined,
+  actual: string,
+  mode: 'exact' | 'contains'
+) => {
   const wanted = (values ?? []).filter((value) => value.trim() !== '');
   if (!wanted.length) return null;
   const target = normalize(actual);
+  const hit = (value: string) =>
+    mode === 'exact'
+      ? target === normalize(value)
+      : target.includes(normalize(value));
   return {
     expected: wanted.join(', '),
-    matched: wanted.some((value) => target.includes(normalize(value))),
+    matched: wanted.some(hit),
   };
 };
 
@@ -83,12 +104,12 @@ export function evaluateProtocol(
   push(
     'Modality',
     context.modality || '(none)',
-    anyOf(match.modality, context.modality)
+    anyOf(match.modality, context.modality, 'exact')
   );
   push(
     'Body part',
     context.bodyPart || '(none)',
-    anyOf(match.bodyPart, context.bodyPart)
+    anyOf(match.bodyPart, context.bodyPart, 'contains')
   );
   push(
     'Study description',

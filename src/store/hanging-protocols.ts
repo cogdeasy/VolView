@@ -5,10 +5,13 @@ import { Maybe } from '@/src/types';
 import { useViewStore } from '@/src/store/views';
 import { useDICOMStore } from '@/src/store/datasets-dicom';
 import { useWindowingStore } from '@/src/store/view-configs/windowing';
+import { useImageStatsStore } from '@/src/store/image-stats';
 import useViewSliceStore from '@/src/store/view-configs/slicing';
 import useVolumeColoringStore from '@/src/store/view-configs/volume-coloring';
 import { isDicomImage } from '@/src/utils/dataSelection';
 import { layoutToConfig } from '@/src/utils/layoutParsing';
+import { DefaultNamedLayouts } from '@/src/config';
+import { findNamedLayout } from '@/src/core/hanging-protocols/describe';
 import { getImageData } from '@/src/composables/useCurrentImage';
 import {
   emptyStudyContext,
@@ -55,6 +58,21 @@ const defaultSettings = (): Settings => ({
 const cloneBuiltIns = () =>
   BUILT_IN_PROTOCOLS.map((protocol) => cloneProtocol(protocol));
 
+export function readStoredProtocols(raw: string): HangingProtocol[] {
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return cloneBuiltIns();
+    // An empty list is a list the reader emptied on purpose; only an unusable
+    // stored value falls back to the shipped protocols.
+    return parsed
+      .map((entry) => hangingProtocol.safeParse(entry))
+      .filter((result) => result.success)
+      .map((result) => result.data);
+  } catch {
+    return cloneBuiltIns();
+  }
+}
+
 /**
  * Protocols live in local storage, which is per-browser. A per-user profile
  * that follows the reader between workstations would live server-side: the
@@ -65,19 +83,7 @@ const cloneBuiltIns = () =>
 const protocolStorage = () =>
   useLocalStorage<HangingProtocol[]>(STORAGE_KEY, cloneBuiltIns(), {
     serializer: {
-      read: (raw: string) => {
-        try {
-          const parsed = JSON.parse(raw);
-          if (!Array.isArray(parsed)) return cloneBuiltIns();
-          const protocols = parsed
-            .map((entry) => hangingProtocol.safeParse(entry))
-            .filter((result) => result.success)
-            .map((result) => result.data);
-          return protocols.length ? protocols : cloneBuiltIns();
-        } catch {
-          return cloneBuiltIns();
-        }
-      },
+      read: readStoredProtocols,
       write: (value: HangingProtocol[]) => JSON.stringify(value),
     },
   });
@@ -104,6 +110,11 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
 
   const applied = ref<Maybe<AppliedProtocolInfo>>(null);
   const indicatorDismissed = ref(false);
+  /**
+   * Images whose presentation came from a restored session. Their layout and
+   * view configs were saved by the reader and must not be re-hung.
+   */
+  const restoredImages = ref(new Set<string>());
   /** Whether the protocol manager dialog is open. */
   const managerOpen = ref(false);
 
@@ -229,10 +240,20 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
    */
   function applyProtocol(protocol: HangingProtocol, imageID: Maybe<string>) {
     const viewStore = useViewStore();
-    viewStore.setLayoutFromConfig(protocol.layout, protocol.name);
+    // Name the layout only when it really is one of the named ones, so the
+    // layout selector highlights it (and never highlights a bogus entry).
+    viewStore.setLayoutFromConfig(
+      protocol.layout,
+      findNamedLayout(protocol.layout, DefaultNamedLayouts)
+    );
 
     if (imageID) {
       const views = viewStore.visibleViews;
+      // A protocol with more views than the previous layout gets fresh, unbound
+      // views; without this they hang as empty panes.
+      views
+        .filter((view) => !view.dataID)
+        .forEach((view) => viewStore.setDataForView(view.id, imageID));
       const twoDViewIDs = views
         .filter((view) => view.type === '2D')
         .map((view) => view.id);
@@ -254,15 +275,23 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
   }
 
   /**
-   * Re-runs the parts of the applied protocol that need pixel data: the volume
-   * preset (which needs a scalar range) and the slice policy (which needs the
-   * image dimensions). Called once the image finishes loading.
+   * Re-runs the parts of the applied protocol that need pixel data: the window
+   * (an auto window needs the histogram, and a slice view that mounts before
+   * the histogram exists pins the config to the placeholder W/L of 1 / 0.5),
+   * the volume preset (which needs a scalar range) and the slice policy (which
+   * needs the image dimensions). Called once the image finishes loading, and
+   * again once the auto ranges are computed.
    */
   function applyLoadedImageSettings(imageID: Maybe<string>) {
     const protocol = appliedProtocol.value;
     if (!protocol || !imageID) return;
 
     const views = useViewStore().visibleViews;
+    applyWindowLevel(
+      protocol,
+      views.map((view) => view.id),
+      imageID
+    );
     applyVolumeColoring(
       protocol,
       views.filter((view) => view.type === '3D').map((view) => view.id),
@@ -273,6 +302,39 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
       views.filter((view) => view.type === '2D').map((view) => view.id),
       imageID
     );
+  }
+
+  /** Whether the histogram-derived ranges an auto window needs are ready. */
+  function autoRangesReady(imageID: Maybe<string>) {
+    if (!imageID) return false;
+    return (
+      Object.keys(useImageStatsStore().getAutoRangeValues(imageID)).length > 0
+    );
+  }
+
+  /**
+   * Records that this image's presentation was restored from a saved session,
+   * so opening it must not re-hang it.
+   */
+  function noteRestoredPresentation(imageIDs: string[]) {
+    imageIDs.forEach((imageID) => restoredImages.value.add(imageID));
+  }
+
+  /** True (once) if the image's presentation came from a restored session. */
+  function takeRestoredPresentation(imageID: Maybe<string>) {
+    if (!imageID || !restoredImages.value.has(imageID)) return false;
+    restoredImages.value.delete(imageID);
+    applied.value = {
+      protocolId: null,
+      reason: 'restored',
+      criteria: [],
+      explanation:
+        'This study was restored from a saved session, so its saved layout ' +
+        'and window are in use instead of a protocol.',
+      studyInstanceUID: getStudyUID(imageID),
+    };
+    indicatorDismissed.value = false;
+    return true;
   }
 
   /**
@@ -532,6 +594,9 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     getStudyUID,
     applyProtocol,
     applyLoadedImageSettings,
+    autoRangesReady,
+    noteRestoredPresentation,
+    takeRestoredPresentation,
     applyForImage,
     applyManually,
     clearOverride,
