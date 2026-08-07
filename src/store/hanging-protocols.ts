@@ -193,6 +193,8 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
       bodyPart: volume.BodyPartExamined ?? '',
       studyDescription: study?.StudyDescription ?? '',
       seriesDescription: volume.SeriesDescription ?? '',
+      // The series of this study loaded into the session, which is all the
+      // viewer knows about: nothing here has seen the study in the archive.
       seriesCount: studyKey
         ? (dicomStore.studyVolumes[studyKey]?.length ?? 0)
         : 0,
@@ -520,19 +522,26 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     imageID: Maybe<string>,
     options?: { force?: boolean }
   ) {
+    /**
+     * No protocol hangs this study any more. The record has to go with it:
+     * it is what the deferred phases write from and what the indicator names
+     * on a revisit, so leaving it would let a protocol the reader has just
+     * un-pinned keep claiming — and re-adjusting — the study.
+     */
+    const nothingHangsIt = () => {
+      if (imageID) hungImages.value.delete(imageID);
+      applied.value = null;
+      resetPresentationChrome();
+      return null;
+    };
+
     if (!settings.value.autoApply && !options?.force) {
       // Nothing hangs this study, so the previous study's protocol must not
       // linger in the indicator, the chrome or the after-load phase.
-      applied.value = null;
-      resetPresentationChrome();
-      return null;
+      return nothingHangsIt();
     }
 
-    if (!isMatchable(imageID)) {
-      applied.value = null;
-      resetPresentationChrome();
-      return null;
-    }
+    if (!isMatchable(imageID)) return nothingHangsIt();
 
     const context = getStudyContext(imageID);
     const studyUID = getStudyUID(imageID);
@@ -544,6 +553,7 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     if (!selection.protocol) {
       // Still report the outcome: the reader needs to know the study was not
       // hung by a protocol, and needs one click to pick one.
+      if (imageID) hungImages.value.delete(imageID);
       resetPresentationChrome();
       applied.value = {
         protocolId: null,

@@ -441,6 +441,10 @@ const countOrUndefined = (value: string) => {
         "
       />
     </div>
+    <div class="text-caption text-medium-emphasis mt-1">
+      Counts the series of the study loaded in this session, not every series
+      the study has.
+    </div>
   </div>
 </template>
 

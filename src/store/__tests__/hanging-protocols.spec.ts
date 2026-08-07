@@ -127,6 +127,25 @@ describe('hanging a study by hand', () => {
     expect(store.overlays).toEqual(picked.overlays);
     expect(store.focusedModule).toBe(picked.focusedModule);
   });
+
+  it('releases the study when un-pinning leaves nothing hanging it', () => {
+    const dicomStore = useDICOMStore();
+    // Matches no protocol: no modality, no body part, no descriptions.
+    dicomStore.volumeInfo['image-1'] =
+      {} as (typeof dicomStore.volumeInfo)['image-1'];
+    const store = useHangingProtocolStore();
+    const picked = BUILT_IN_PROTOCOLS[0];
+
+    store.applyManually(picked.id, 'image-1');
+    store.clearOverride('image-1');
+    store.applyForImage('image-1', { force: true });
+
+    // Nothing hung it, so nothing may write its window or slice later, and a
+    // revisit must not announce the protocol that was un-pinned.
+    expect(store.hungImages.has('image-1')).toBe(false);
+    store.reportForImage('image-1');
+    expect(store.applied?.protocolId).toBeNull();
+  });
 });
 
 describe('remembered study overrides', () => {
