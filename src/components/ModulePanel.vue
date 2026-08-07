@@ -50,6 +50,7 @@ import { JobsModule, useProcessingJobsStore } from '@/src/processing';
 import DataBrowser from './DataBrowser.vue';
 import RenderingModule from './RenderingModule.vue';
 import AnnotationsModule from './AnnotationsModule.vue';
+import FindingsModule from './FindingsModule.vue';
 import ServerModule from './ServerModule.vue';
 import ProbeView from './ProbeView.vue';
 import { useToolStore } from '../store/tools';
@@ -72,6 +73,11 @@ const CoreModules: Module[] = [
     name: 'Annotations',
     icon: 'pencil',
     component: AnnotationsModule,
+  },
+  {
+    name: 'Findings',
+    icon: 'clipboard-text-outline',
+    component: FindingsModule,
   },
   {
     name: 'Rendering',

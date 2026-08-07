@@ -1,5 +1,6 @@
 import { Manifest, StateFile } from '@/src/io/state-file/schema';
 import { Maybe } from '@/src/types';
+import type { ToolID } from '@/src/types/annotation-tool';
 import type { AnnotationToolStore } from '@/src/store/tools/useAnnotationTool';
 import { defineStore } from 'pinia';
 import { ref, watch } from 'vue';
@@ -138,21 +139,27 @@ export const useToolStore = defineStore('tool', () => {
     tools.current = currentTool.value;
   }
 
+  /**
+   * @returns saved annotation id -> restored annotation id, for state that
+   * references annotations by id (findings).
+   */
   function deserialize(
     manifest: Manifest,
     segmentGroupIDMap: Record<string, string>,
     dataIDMap: Record<string, string>
-  ) {
+  ): Record<string, ToolID> {
     usePaintToolStore().deserialize(manifest, segmentGroupIDMap);
 
-    Object.values(ToolStoreMap)
+    const toolIDMap = Object.values(ToolStoreMap)
       // paint store uses segmentGroupIDMap
       .filter((useStore) => useStore !== usePaintToolStore)
       .map((useStore) => useStore?.())
       .filter((store): store is IToolStore => !!store)
-      .forEach((store) => {
-        store.deserialize?.(manifest, dataIDMap);
-      });
+      .reduce<Record<string, ToolID>>(
+        (acc, store) =>
+          Object.assign(acc, store.deserialize?.(manifest, dataIDMap) ?? {}),
+        {}
+      );
 
     if (manifest.tools?.current) {
       currentTool.value = coerceForEffective(
@@ -160,6 +167,8 @@ export const useToolStore = defineStore('tool', () => {
         activeEffectiveView()
       );
     }
+
+    return toolIDMap;
   }
 
   return {

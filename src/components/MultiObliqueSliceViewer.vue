@@ -44,6 +44,7 @@ import { VtkViewApi } from '@/src/types/vtk-types';
 import VtkBaseObliqueSliceRepresentation from '@/src/components/vtk/VtkBaseObliqueSliceRepresentation.vue';
 import VtkImageOutlineRepresentation from '@/src/components/vtk/VtkImageOutlineRepresentation.vue';
 import { useViewAnimationListener } from '@/src/composables/useViewAnimationListener';
+import { useViewApiRegistration } from '@/src/composables/useViewApiRegistration';
 import useResliceCursorStore, {
   mapAxisToViewType,
 } from '@/src/store/reslice-cursor';
@@ -72,6 +73,9 @@ const props = defineProps<Props>();
 const { viewId, viewDirection, viewUp, slices } = toRefs(props);
 
 useViewAnimationListener(vtkView, viewId, 'Oblique');
+// An oblique panel has no view-store entry, so it names itself for the key
+// image capture picker.
+useViewApiRegistration(viewId, vtkView, 'Oblique 3D');
 
 // base image
 const { currentImageID } = useCurrentImage();

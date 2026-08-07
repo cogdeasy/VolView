@@ -125,6 +125,7 @@ import { VtkViewApi } from '@/src/types/vtk-types';
 import { Tools } from '@/src/store/tools/types';
 import VtkBaseSliceRepresentation from '@/src/components/vtk/VtkBaseSliceRepresentation.vue';
 import { useViewAnimationListener } from '@/src/composables/useViewAnimationListener';
+import { useViewApiRegistration } from '@/src/composables/useViewApiRegistration';
 import PolygonTool from '@/src/components/tools/polygon/PolygonTool.vue';
 import RulerTool from '@/src/components/tools/ruler/RulerTool.vue';
 import RectangleTool from '@/src/components/tools/rectangle/RectangleTool.vue';
@@ -172,6 +173,7 @@ useResetViewsEvents().onClick(resetCamera);
 
 useWebGLWatchdog(vtkView);
 useViewAnimationListener(vtkView, viewId, '2D');
+useViewApiRegistration(viewId, vtkView);
 
 const { currentTool } = storeToRefs(useToolStore());
 

@@ -53,6 +53,9 @@ vi.mock('@/src/store/segmentGroups', () => ({
 vi.mock('@/src/store/tools', () => ({
   useToolStore: () => ({ serialize: vi.fn() }),
 }));
+vi.mock('@/src/store/findings', () => ({
+  useFindingsStore: () => ({ serialize: vi.fn() }),
+}));
 vi.mock('@/src/store/datasets-layers', () => ({
   useLayersStore: () => ({ serialize: vi.fn() }),
 }));
@@ -127,6 +130,153 @@ describe('state-file serialization resilience', () => {
     expect(normalized.omitted.join('\n')).toMatch(
       /parent dataset|layer relationship/
     );
+  });
+
+  it('omits an invalid findings root with its key images', () => {
+    const zip = new JSZip();
+    zip.file('findings/finding-1.png', 'bytes');
+    const manifest = {
+      version: MANIFEST_VERSION,
+      datasets: [{ id: 'dataset-1', dataSourceId: 1 }],
+      dataSources: [{ id: 1, type: 'uri', uri: '/dataset-1' }],
+      findings: {
+        findings: [
+          {
+            id: 'finding-1',
+            keyImage: { path: 'findings/finding-1.png' },
+          },
+        ],
+      },
+    } as unknown as Manifest;
+
+    const normalized = normalizeManifest(manifest, zip);
+
+    expect(normalized.manifest).not.toHaveProperty('findings');
+    expect(zip.file('findings/finding-1.png')).toBeNull();
+    expect(normalized.omitted).toContain('findings[0]: invalid finding record');
+  });
+
+  it('takes the key images with a findings root that is not a record', () => {
+    const zip = new JSZip();
+    zip.file('findings/finding-1.png', 'bytes');
+    const manifest = {
+      version: MANIFEST_VERSION,
+      datasets: [{ id: 'dataset-1', dataSourceId: 1 }],
+      dataSources: [{ id: 1, type: 'uri', uri: '/dataset-1' }],
+      findings: 'not a record',
+    } as unknown as Manifest;
+
+    const normalized = normalizeManifest(manifest, zip);
+
+    expect(normalized.manifest).not.toHaveProperty('findings');
+    expect(zip.file('findings/finding-1.png')).toBeNull();
+    expect(normalized.omitted).toContain('findings: invalid optional state');
+  });
+
+  it('keeps the other findings when one record is malformed', () => {
+    const zip = new JSZip();
+    zip.file('findings/finding-1.png', 'bytes');
+    zip.file('findings/finding-2.png', 'bytes');
+    const good = {
+      id: 'finding-2',
+      imageID: 'dataset-1',
+      title: 'Apical lesion',
+      typeID: 'mass',
+      bodySite: 'Left ventricle',
+      laterality: 'left',
+      category: 'Mild',
+      description: '',
+      measurements: [],
+      slice: 3,
+      frameOfReference: { planeOrigin: [0, 0, 0], planeNormal: [0, 0, 1] },
+      createdAt: '2026-01-01T00:00:00.000Z',
+      keyImage: {
+        path: 'findings/finding-2.png',
+        viewName: 'Axial',
+        slice: 3,
+        capturedAt: '2026-01-01T00:00:00.000Z',
+      },
+    };
+    const manifest = {
+      version: MANIFEST_VERSION,
+      datasets: [{ id: 'dataset-1', dataSourceId: 1 }],
+      dataSources: [{ id: 1, type: 'uri', uri: '/dataset-1' }],
+      findings: {
+        impression: 'Normal study.',
+        types: [],
+        findings: [
+          { id: 'finding-1', keyImage: { path: 'findings/finding-1.png' } },
+          good,
+        ],
+      },
+    } as unknown as Manifest;
+
+    const normalized = normalizeManifest(manifest, zip);
+
+    expect(normalized.manifest.findings?.findings).toEqual([good]);
+    expect(normalized.manifest.findings?.impression).toBe('Normal study.');
+    expect(zip.file('findings/finding-1.png')).toBeNull();
+    expect(zip.file('findings/finding-2.png')).not.toBeNull();
+    expect(normalized.omitted).toContain('findings[0]: invalid finding record');
+  });
+
+  it('drops a finding whose image is gone, with its key image', () => {
+    const zip = new JSZip();
+    zip.file('findings/finding-1.png', 'bytes');
+    const orphan = {
+      id: 'finding-1',
+      imageID: 'dataset-2',
+      title: 'Orphaned lesion',
+      typeID: 'mass',
+      bodySite: 'Left ventricle',
+      laterality: 'left',
+      category: 'Mild',
+      description: '',
+      measurements: [],
+      slice: 3,
+      frameOfReference: { planeOrigin: [0, 0, 0], planeNormal: [0, 0, 1] },
+      createdAt: '2026-01-01T00:00:00.000Z',
+      keyImage: {
+        path: 'findings/finding-1.png',
+        viewName: 'Axial',
+        slice: 3,
+        capturedAt: '2026-01-01T00:00:00.000Z',
+      },
+    };
+    const manifest = {
+      version: MANIFEST_VERSION,
+      datasets: [{ id: 'dataset-1', dataSourceId: 1 }],
+      dataSources: [{ id: 1, type: 'uri', uri: '/dataset-1' }],
+      findings: { impression: 'Normal study.', types: [], findings: [orphan] },
+    } as unknown as Manifest;
+
+    const normalized = normalizeManifest(manifest, zip);
+
+    expect(normalized.manifest.findings?.findings).toEqual([]);
+    expect(normalized.manifest.findings?.impression).toBe('Normal study.');
+    expect(zip.file('findings/finding-1.png')).toBeNull();
+    expect(normalized.omitted).toContain(
+      'Orphaned lesion: image dataset-2 is missing'
+    );
+  });
+
+  it('says so when the findings list itself is malformed', () => {
+    const manifest = {
+      version: MANIFEST_VERSION,
+      datasets: [{ id: 'dataset-1', dataSourceId: 1 }],
+      dataSources: [{ id: 1, type: 'uri', uri: '/dataset-1' }],
+      findings: {
+        impression: 'Normal study.',
+        types: 'not a list',
+        findings: 'not a list',
+      },
+    } as unknown as Manifest;
+
+    const normalized = normalizeManifest(manifest, new JSZip());
+
+    expect(normalized.manifest.findings?.impression).toBe('Normal study.');
+    expect(normalized.omitted).toContain('findings list: invalid state');
+    expect(normalized.omitted).toContain('finding types: invalid state');
   });
 
   it('omits the complete view layout when viewByID is invalid', () => {

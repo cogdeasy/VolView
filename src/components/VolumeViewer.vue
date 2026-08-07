@@ -75,6 +75,7 @@ import VtkVolumeView from '@/src/components/vtk/VtkVolumeView.vue';
 import { VtkViewApi } from '@/src/types/vtk-types';
 import VtkBaseVolumeRepresentation from '@/src/components/vtk/VtkBaseVolumeRepresentation.vue';
 import { useViewAnimationListener } from '@/src/composables/useViewAnimationListener';
+import { useViewApiRegistration } from '@/src/composables/useViewApiRegistration';
 import CropTool from '@/src/components/tools/crop/CropTool.vue';
 import { useWebGLWatchdog } from '@/src/composables/useWebGLWatchdog';
 import VtkOrientationMarker from '@/src/components/vtk/VtkOrientationMarker.vue';
@@ -119,6 +120,7 @@ useResetViewsEvents().onClick(resetCamera);
 
 useWebGLWatchdog(vtkView);
 useViewAnimationListener(vtkView, viewId, viewType);
+useViewApiRegistration(viewId, vtkView);
 
 // base image
 const {

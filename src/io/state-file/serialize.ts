@@ -3,13 +3,18 @@ import { useDatasetStore } from '@/src/store/datasets';
 import { useSegmentGroupStore } from '@/src/store/segmentGroups';
 import { useLayersStore } from '@/src/store/datasets-layers';
 import { useToolStore } from '@/src/store/tools';
+import { useFindingsStore } from '@/src/store/findings';
 import { Tools } from '@/src/store/tools/types';
 import { useViewStore } from '@/src/store/views';
 import {
+  FindingRecord,
+  FindingTypeRecord,
+  KEY_IMAGE_PATH_RE,
   Manifest,
   ManifestSchema,
   ParentToLayers,
   SegmentGroup,
+  type FindingsState,
 } from '@/src/io/state-file/schema';
 
 import { retypeFile } from '@/src/io';
@@ -51,6 +56,88 @@ const coreManifestSchema = ManifestSchema.pick({
   dataSources: true,
   datasetFilePath: true,
 });
+
+/**
+ * Prunes the findings root record by record, the way segment groups are: a
+ * finding is the user's own authored content, so a malformed or orphaned one
+ * must not cost the impression, the taxonomy and the other findings as well.
+ */
+function pruneFindings(
+  raw: unknown,
+  datasetIds: Set<string>,
+  omitted: string[]
+): FindingsState | undefined {
+  if (!isRecord(raw)) {
+    omitted.push('findings: invalid optional state');
+    return undefined;
+  }
+
+  if (raw.findings !== undefined && !Array.isArray(raw.findings))
+    omitted.push('findings list: invalid state');
+  if (raw.types !== undefined && !Array.isArray(raw.types))
+    omitted.push('finding types: invalid state');
+
+  const findings = (Array.isArray(raw.findings) ? raw.findings : []).flatMap(
+    (entry, index) => {
+      const parsed = FindingRecord.safeParse(entry);
+      const reason = (() => {
+        if (!parsed.success) return 'invalid finding record';
+        // The onImageDeleted cascade keeps this clean, but an orphan that slips
+        // through would leave its key image as dead bytes in the archive.
+        if (!datasetIds.has(parsed.data.imageID))
+          return `image ${parsed.data.imageID} is missing`;
+        return null;
+      })();
+      if (parsed.success && !reason) return [parsed.data];
+      const name =
+        isRecord(entry) && typeof entry.title === 'string' && entry.title
+          ? entry.title
+          : `findings[${index}]`;
+      omitted.push(`${name}: ${reason}`);
+      return [];
+    }
+  );
+
+  const types = (Array.isArray(raw.types) ? raw.types : []).flatMap(
+    (entry, index) => {
+      const parsed = FindingTypeRecord.safeParse(entry);
+      if (parsed.success) return [parsed.data];
+      omitted.push(`finding type ${index}: invalid record`);
+      return [];
+    }
+  );
+
+  const impression = typeof raw.impression === 'string' ? raw.impression : '';
+  if (raw.impression !== undefined && typeof raw.impression !== 'string')
+    omitted.push('findings impression: invalid state');
+
+  // Nothing survived, so the root stays absent rather than empty.
+  if (findings.length === 0 && types.length === 0 && !impression)
+    return undefined;
+  return { impression, types, findings };
+}
+
+/**
+ * Key-image members no surviving finding points at. The record-by-record
+ * prune above removes the ones it drops, but a findings root discarded whole
+ * names nothing, and its images are just as dead.
+ */
+function dropUnreferencedKeyImages(
+  kept: FindingsState | undefined,
+  zip: JSZip
+) {
+  const referenced = new Set(
+    (kept?.findings ?? []).flatMap((finding) =>
+      finding.keyImage ? [finding.keyImage.path] : []
+    )
+  );
+  zip
+    .filter(
+      (path, file) =>
+        !file.dir && KEY_IMAGE_PATH_RE.test(path) && !referenced.has(path)
+    )
+    .forEach((file) => zip.remove(file.name));
+}
 
 function validateCoreGraph(core: Manifest, zip: JSZip) {
   if (core.version !== MANIFEST_VERSION) {
@@ -135,8 +222,9 @@ function validateCoreGraph(core: Manifest, zip: JSZip) {
 // `datasetRemoveCascade.spec.ts`. Those ids are kept live-clean at the source,
 // and a stale one is harmless on restore anyway (deserialize remaps every id
 // through its id-map and ignores misses), so this function does not re-walk
-// them. Segment groups stay here because an orphaned one leaves dead `.seg.nrrd`
-// bytes in the archive, which is a real cost the cascade does not address.
+// them. Segment groups and findings stay here because an orphaned one leaves dead
+// `.seg.nrrd`/key-image bytes in the archive, which is a real cost the cascade
+// does not address.
 export function normalizeManifest(manifest: Manifest, zip: JSZip) {
   const candidate = manifest as unknown as ManifestCandidate;
   const core = coreManifestSchema.parse(candidate) as Manifest;
@@ -246,6 +334,12 @@ export function normalizeManifest(manifest: Manifest, zip: JSZip) {
   // field valid in isolation is valid in the full manifest — and the output
   // is assembled from the parsed pieces, so nothing is validated (or
   // deep-copied) twice.
+  const findings =
+    candidate.findings === undefined
+      ? undefined
+      : pruneFindings(candidate.findings, datasetIds, omitted);
+  dropUnreferencedKeyImages(findings, zip);
+
   const optionalRoots = [
     'tools',
     'activeView',
@@ -270,6 +364,7 @@ export function normalizeManifest(manifest: Manifest, zip: JSZip) {
     ...core,
     segmentGroups: validGroups,
     ...(validLayers ? { parentToLayers: validLayers } : {}),
+    ...(findings ? { findings } : {}),
     ...Object.fromEntries(optionalEntries),
   } as Manifest;
   return { manifest: normalized, omitted };
@@ -322,6 +417,7 @@ export async function serialize() {
   await useViewConfigStore().serialize(stateFile);
   await labelStore.serialize(stateFile);
   toolStore.serialize(stateFile);
+  useFindingsStore().serialize(stateFile);
   await layersStore.serialize(stateFile);
   const repaired = normalizeManifest(manifest, zip);
   if (repaired.omitted.length > 0) {

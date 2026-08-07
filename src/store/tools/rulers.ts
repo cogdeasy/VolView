@@ -63,7 +63,7 @@ export const useRulerStore = defineAnnotationToolStore('ruler', () => {
   }
 
   function deserialize(manifest: Manifest, dataIDMap: Record<string, string>) {
-    deserializeTools(manifest.tools?.rulers, dataIDMap);
+    return deserializeTools(manifest.tools?.rulers, dataIDMap);
   }
 
   return {

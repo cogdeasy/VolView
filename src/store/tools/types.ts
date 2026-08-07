@@ -1,4 +1,5 @@
 import type { Manifest, StateFile } from '@/src/io/state-file/schema';
+import type { ToolID } from '@/src/types/annotation-tool';
 import { Store } from 'pinia';
 
 export enum AnnotationToolType {
@@ -27,7 +28,14 @@ export interface IActivatableTool {
 
 export interface ISerializableTool {
   serialize: (state: StateFile) => void;
-  deserialize: (manifest: Manifest, dataIDMap: Record<string, string>) => void;
+  /**
+   * Annotation stores return their saved tool id -> restored tool id map, so
+   * state that references annotations by id can be re-pointed after restore.
+   */
+  deserialize: (
+    manifest: Manifest,
+    dataIDMap: Record<string, string>
+  ) => void | Record<string, ToolID>;
 }
 
 export interface IToolStore
