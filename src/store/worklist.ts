@@ -347,15 +347,13 @@ export const useWorklistStore = defineStore('worklist', () => {
       if (volumeKey) noteSampleImported(sample.name, volumeKey);
       // Only the row that actually owns the data changes status; a synthetic
       // row that borrowed a sample has still not been read.
-      if (study.sample === sample) {
-        markOpened(study.key, study.readStatus);
-        // The sample row is now replaced by the real DICOM row; the reading
-        // it just started, and the preview, have to follow it.
-        if (studyKey) {
-          const loadedKey = `loaded:${studyKey}`;
-          markOpened(loadedKey, readStatusOverrides[loadedKey] ?? 'unread');
-          if (selectedKey.value === study.key) selectedKey.value = loadedKey;
-        }
+      if (study.sample === sample) markOpened(study.key, study.readStatus);
+      // The row the reader came from is now replaced by the real DICOM row, so
+      // the reading they just started, and the preview, follow it there.
+      if (studyKey) {
+        const loadedKey = `loaded:${studyKey}`;
+        markOpened(loadedKey, readStatusOverrides[loadedKey] ?? 'unread');
+        if (selectedKey.value === study.key) selectedKey.value = loadedKey;
       }
       hide();
     } catch (error) {

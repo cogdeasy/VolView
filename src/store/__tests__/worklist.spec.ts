@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 import { nextTick } from 'vue';
 import { loadSampleData } from '@/src/actions/loadSampleData';
+import { SAMPLE_DATA } from '@/src/config';
 import { useDataBrowserStore } from '@/src/store/data-browser';
 import { useDICOMStore } from '@/src/store/datasets-dicom';
 import { useImageStore } from '@/src/store/datasets-images';
@@ -143,6 +144,28 @@ describe('Worklist store', () => {
     expect(worklist.demoEntry?.key).toBe(synthetic.key);
     worklist.dismissDemoEntry();
     expect(worklist.demoEntry).toBeNull();
+  });
+
+  it('hands the reading over to the study a demo substitute produced', async () => {
+    const worklist = useWorklistStore();
+    useDataBrowserStore().hideSampleData = false;
+    const synthetic = worklist.studies.find(
+      (entry) => entry.origin === 'synthetic'
+    )!;
+    const [substitute] = SAMPLE_DATA;
+
+    addLoadedVolume('volume-1');
+    worklist.select(synthetic.key);
+    await worklist.openStudy(synthetic);
+    await worklist.openDemoSubstitute(substitute);
+    await nextTick();
+
+    // The fabricated row was never read; the study that stood in for it was.
+    expect(
+      worklist.studies.find((entry) => entry.key === synthetic.key)?.readStatus
+    ).toBe(synthetic.readStatus);
+    expect(worklist.selectedStudy?.key).toBe('loaded:study-uid-1');
+    expect(worklist.selectedStudy?.readStatus).toBe('in-progress');
   });
 
   it('restores a sample row once the study it produced is closed', async () => {

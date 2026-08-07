@@ -6,6 +6,7 @@ import ReadStatusChip from '@/src/components/worklist/ReadStatusChip.vue';
 import { useImageCacheStore } from '@/src/store/image-cache';
 import { useWorklistStore } from '@/src/store/worklist';
 import type { WorklistStudy } from '@/src/types/worklist';
+import { logError } from '@/src/utils/loggers';
 import {
   formatAgeSex,
   formatDicomDateTime,
@@ -18,6 +19,8 @@ const { selectedStudy, openingKey, openingProgress } = storeToRefs(worklist);
 
 /** Volume key -> data URI, for series whose pixel data is already in memory. */
 const thumbnails = reactive<Record<string, string>>({});
+/** Series whose pixel data cannot be rendered; they keep the modality tile. */
+const unrenderable = new Set<string>();
 
 // Also keyed on the size of the image cache, so a series registered after the
 // panel opened is picked up; getThumbnail() itself waits for the pixel data,
@@ -28,10 +31,19 @@ watch(
     if (!study) return;
     study.series.forEach(async (series) => {
       if (series.thumbnail || thumbnails[series.key]) return;
+      if (unrenderable.has(series.key)) return;
       const image = imageCacheStore.imageById[series.key];
       if (!image) return;
-      const thumbnail = await image.getThumbnail();
-      if (thumbnail) thumbnails[series.key] = thumbnail;
+      try {
+        const thumbnail = await image.getThumbnail();
+        if (thumbnail) thumbnails[series.key] = thumbnail;
+        else unrenderable.add(series.key);
+      } catch (err) {
+        // A preview is not worth a notification: the series still lists its
+        // modality, and getThumbnail() caches its rejection anyway.
+        unrenderable.add(series.key);
+        logError(err);
+      }
     });
   },
   { immediate: true }
