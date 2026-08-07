@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeUrlParams } from './urlParams';
+import { normalizeUrlParams, withDefaultUrls } from './urlParams';
 
 describe('normalizeUrlParams', () => {
   it('handles single URL as string', () => {
@@ -89,5 +89,43 @@ describe('normalizeUrlParams', () => {
       'https://example.com/save1',
       'https://example.com/save2',
     ]);
+  });
+});
+
+describe('withDefaultUrls', () => {
+  const defaults = {
+    urls: 'https://example.com/demo.zip',
+    names: 'Demo Study',
+  };
+
+  it('opens the deployment default when the tab names no urls', () => {
+    const result = withDefaultUrls({}, defaults);
+    expect(result.urls).toEqual(['https://example.com/demo.zip']);
+    expect(result.names).toEqual(['Demo Study']);
+  });
+
+  it('leaves an explicit urls= untouched', () => {
+    const result = withDefaultUrls(
+      { urls: ['https://example.com/patient.zip'] },
+      defaults
+    );
+    expect(result.urls).toEqual(['https://example.com/patient.zip']);
+    expect(result.names).toBeUndefined();
+  });
+
+  it('keeps other launch params when the default applies', () => {
+    const result = withDefaultUrls(
+      { save: 'https://example.com/save' },
+      {
+        urls: defaults.urls,
+      }
+    );
+    expect(result.urls).toEqual(['https://example.com/demo.zip']);
+    expect(result.save).toBe('https://example.com/save');
+  });
+
+  it('is a no-op for an unconfigured or unparseable default', () => {
+    expect(withDefaultUrls({}, {})).toEqual({});
+    expect(withDefaultUrls({}, { urls: '' })).toEqual({});
   });
 });

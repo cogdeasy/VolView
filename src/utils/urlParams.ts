@@ -7,6 +7,8 @@ import { logError } from '@/src/utils/loggers';
 // after a remote save (repointLaunchUrls). Keeping both sides here means the
 // stale-`names=` interaction below stays next to the parsing it protects.
 
+const { VITE_DEFAULT_URLS, VITE_DEFAULT_NAMES } = import.meta.env;
+
 type ParsedUrlParams = {
   urls?: string[];
   names?: string[];
@@ -88,12 +90,33 @@ export const normalizeUrlParams = (rawParams: UrlParams): ParsedUrlParams => {
   return normalized;
 };
 
+// A deployment (a kiosk or demo build) can name a dataset to open when the tab
+// carries no `urls=` of its own, via VITE_DEFAULT_URLS. An explicit `urls=`
+// always wins, and so does an explicit `names=` — a build-time name paired with
+// a launch-time URL would mislabel the data.
+export const withDefaultUrls = (
+  params: ParsedUrlParams,
+  defaults: { urls?: string; names?: string }
+): ParsedUrlParams => {
+  if (params.urls || !defaults.urls) return params;
+
+  const fallback = normalizeUrlParams({
+    urls: defaults.urls,
+    ...(defaults.names ? { names: defaults.names } : {}),
+  });
+
+  if (!fallback.urls) return params;
+
+  return { ...fallback, ...params };
+};
+
 // The current tab's launch params. Unparseable params degrade to an empty
 // launch (logged), never a failed boot.
 export const readLaunchParams = (): ParsedUrlParams => {
   try {
-    return normalizeUrlParams(
-      vtkURLExtract.extractURLParameters() as UrlParams
+    return withDefaultUrls(
+      normalizeUrlParams(vtkURLExtract.extractURLParameters() as UrlParams),
+      { urls: VITE_DEFAULT_URLS, names: VITE_DEFAULT_NAMES }
     );
   } catch (error) {
     logError(new Error(`Failed to parse URL parameters: ${error}`));
