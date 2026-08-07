@@ -117,7 +117,15 @@ export const withDefaultUrls = (
   if (!fallback.urls) return params;
 
   const launch = { ...params };
-  delete launch.names;
+
+  if (launch.names) {
+    logError(
+      new Error(
+        `Ignoring names=${launch.names.join(',')}: it labels a urls= the tab did not supply, and the deployment default is opening instead`
+      )
+    );
+    delete launch.names;
+  }
 
   return { ...launch, ...fallback };
 };

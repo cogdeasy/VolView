@@ -136,11 +136,18 @@ describe('withDefaultUrls', () => {
   });
 
   it('drops a lone names=, which labels the urls= it arrived with', () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+
     const result = withDefaultUrls(...parse({ names: 'Patient Study' }), {
       urls: defaults.urls,
     });
     expect(result.urls).toEqual(['https://example.com/demo.zip']);
     expect(result.names).toBeUndefined();
+    // Silence here would leave an integrator staring at a link whose label
+    // vanished.
+    expect(error.mock.calls[0][0].message).toContain('Patient Study');
+
+    error.mockRestore();
   });
 
   it('keeps other launch params when the default applies', () => {
