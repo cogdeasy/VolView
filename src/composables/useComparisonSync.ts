@@ -311,13 +311,16 @@ export function useComparisonSync() {
 
       const changed = panes.filter((pane) => {
         const before = previousSlices.get(paneKey(pane));
+        // A marker stands for the next look at this pane and no longer: the
+        // write that left it is the reason this ran, so a pane found anywhere
+        // else has been moved by something since, and a marker left standing
+        // would swallow a later scroll onto the slice it names.
+        const echo = echoes.get(paneKey(pane));
+        if (echo !== undefined) echoes.delete(paneKey(pane));
         if (before === undefined || before.slice === pane.slice) return false;
-        // An echo is consumed once: the reader may well scroll back to a
-        // slice we once wrote ourselves.
-        if (echoes.get(paneKey(pane)) === pane.slice) {
-          echoes.delete(paneKey(pane));
-          return false;
-        }
+        // An echo is spent once: the reader may well scroll back to a slice we
+        // wrote ourselves.
+        if (echo === pane.slice) return false;
         // A study that just grew carried this pane's slice with it: the middle
         // of what has arrived is further in than the middle of what had
         // arrived before. That is the volume loading, not the reader reading,
@@ -559,14 +562,16 @@ export function useComparisonSync() {
       const changed = cameras.filter((camera) => {
         const key = cameraKey(camera);
         const before = previousCameras.get(paneKey(camera));
+        // As on the slice path, a marker stands for the next look at this pane
+        // and no longer: a pane found anywhere but where the pair put it has
+        // been moved by something since.
+        const echo = cameraEchoes.get(paneKey(camera));
+        if (echo !== undefined) cameraEchoes.delete(paneKey(camera));
         if (before === key) return false;
-        // Echoes are consumed before the first-sight rule, since a pane can be
+        // Echoes are spent before the first-sight rule, since a pane can be
         // written into existence by the pair itself: an echo nothing ever
         // matches would swallow a later move onto the same camera.
-        if (cameraEchoes.get(paneKey(camera)) === key) {
-          cameraEchoes.delete(paneKey(camera));
-          return false;
-        }
+        if (echo === key) return false;
         // A pane seen for the first time — a new pair, a study switch — may
         // only drive from the current side, so a comparison opens with the
         // prior on the current's zoom instead of on its own auto-fit.
