@@ -6,6 +6,7 @@ import { useViewStore } from '@/src/store/views';
 import { useViewSliceStore } from '@/src/store/view-configs/slicing';
 import { useViewCameraStore } from '@/src/store/view-configs/camera';
 import { useWindowingStore } from '@/src/store/view-configs/windowing';
+import { useImageStatsStore } from '@/src/store/image-stats';
 import {
   copyInPlaneComponents,
   currentSliceToPriorSlice,
@@ -38,6 +39,7 @@ export function useComparisonSync() {
   const sliceStore = useViewSliceStore();
   const cameraStore = useViewCameraStore();
   const windowingStore = useWindowingStore();
+  const imageStatsStore = useImageStatsStore();
 
   const { isComparisonLayout } = storeToRefs(comparison);
 
@@ -483,6 +485,23 @@ export function useComparisonSync() {
     });
   });
 
+  /**
+   * Whether a study's automatic window is still provisional.
+   *
+   * An automatic window resolves to the study's histogram once that has been
+   * computed, and stands in until then on whatever scalar range the volume
+   * reports — 0..1 before it has been measured at all, and the range of the
+   * chunks that happen to have arrived while it is still loading. Copying one
+   * of those is worse than copying nothing: a width/level write clears the
+   * target's own automatic windowing, and nothing writes a window when the
+   * histogram lands, so the older study would wear a flat field for the rest
+   * of the session.
+   */
+  const windowUnsettled = (viewID: string, imageID: string) => {
+    const { useAuto, auto } = windowingStore.getConfig(viewID, imageID);
+    return useAuto && !imageStatsStore.getAutoRangeValues(imageID)[auto];
+  };
+
   const viewShowing = (imageID: string) =>
     comparison.panes.find((pane) => pane.imageID === imageID)?.viewID ??
     viewStore.getAllViews().find((view) => view.dataID === imageID)?.id;
@@ -532,6 +551,9 @@ export function useComparisonSync() {
       comparison.panes.find((pane) => pane.imageID === fromImageID)?.viewID ??
       viewStore.getAllViews().find((view) => view.dataID === fromImageID)?.id;
     if (!sourceViewID) return;
+    // Waited out rather than copied: the watcher below re-runs the copy once
+    // the study has been measured.
+    if (windowUnsettled(sourceViewID, fromImageID)) return;
     const { width, level } = windowingStore.getConfig(
       sourceViewID,
       fromImageID
@@ -591,6 +613,11 @@ export function useComparisonSync() {
       () => comparison.links.windowLevel,
       () => comparison.pairKey,
       () => comparison.active,
+      // A comparison can open while the studies are still loading, and the
+      // window worth linking only exists once one has been measured.
+      () =>
+        !!comparison.currentImageID &&
+        !!imageStatsStore.stats[comparison.currentImageID]?.autoRangeValues,
     ],
     ([linked]) => {
       const { currentImageID, priorImageID } = comparison;

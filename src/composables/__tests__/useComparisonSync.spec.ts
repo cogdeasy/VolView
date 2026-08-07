@@ -13,6 +13,7 @@ import { useViewStore } from '@/src/store/views';
 import { useViewSliceStore } from '@/src/store/view-configs/slicing';
 import { useViewCameraStore } from '@/src/store/view-configs/camera';
 import { useWindowingStore } from '@/src/store/view-configs/windowing';
+import { useImageStatsStore } from '@/src/store/image-stats';
 import { useSyncWindowing } from '@/src/composables/useSyncWindowing';
 import {
   ComparisonLayoutNames,
@@ -443,6 +444,39 @@ describe('useComparisonSync — window/level link', () => {
     const prior = windowingStore.getConfig(priorViewID, 'prior');
     expect(prior.useAuto).toBe(false);
     expect(prior.width).toBe(120);
+  });
+
+  it('waits for the current study to be measured before writing its window', async () => {
+    const { comparison, currentViewID, priorViewID } = openPair();
+    const windowingStore = useWindowingStore();
+    const imageStatsStore = useImageStatsStore();
+    await nextTick();
+
+    // A comparison can open while the studies are still loading, when an
+    // automatic window stands on the scalar range of what has arrived — here
+    // an all-zero volume, a flat field.
+    comparison.setLink('windowLevel', false);
+    await nextTick();
+    comparison.setLink('windowLevel', true);
+    await nextTick();
+
+    expect(windowingStore.getConfig(priorViewID, 'prior').useAuto).toBe(true);
+
+    imageStatsStore.stats.current = {
+      scalarMin: 0,
+      scalarMax: 400,
+      autoRangeValues: { FullRange: [0, 400] },
+    };
+    await nextTick();
+
+    // Nothing writes a window when the histogram lands, so the copy has to be
+    // the thing that waits: the prior wears a real window rather than a
+    // provisional one it would keep for the rest of the session.
+    expect(windowingStore.getConfig(currentViewID, 'current').width).toBe(400);
+    const prior = windowingStore.getConfig(priorViewID, 'prior');
+    expect(prior.useAuto).toBe(false);
+    expect(prior.width).toBe(400);
+    expect(prior.level).toBe(200);
   });
 
   it('reads the pane the reader is looking at after a layout switch, not the one it replaced', async () => {
