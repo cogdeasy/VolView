@@ -7,7 +7,11 @@
     :width="sizeV"
     :min-width="sizeV"
     :max-width="sizeV"
-    :class="['pv-control-button', classV]"
+    :class="[
+      'pv-control-button',
+      { 'pv-control-button--density': size == null },
+      classV,
+    ]"
     :data-testid="`control-button-${name}`"
     v-bind="$attrs"
   >
@@ -66,14 +70,14 @@ export default {
 
 <style scoped>
 /* Sized by the density token unless an explicit `size` is passed. */
-.pv-control-button:not([style*='height']) {
+.pv-control-button--density {
   height: var(--pv-density-tool-button-size);
   width: var(--pv-density-tool-button-size);
   min-width: var(--pv-density-tool-button-size);
   max-width: var(--pv-density-tool-button-size);
 }
 
-.pv-control-button :deep(.v-icon) {
+.pv-control-button--density :deep(.v-icon) {
   font-size: var(--pv-density-tool-icon-size);
 }
 </style>

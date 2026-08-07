@@ -12,7 +12,7 @@
  *
  *  1. Vuetify theme colors (`src/plugins/vuetify.js`), giving `bg-*`/`text-*`
  *     utility classes and `--v-theme-*` custom properties.
- *  2. `--pv-*` CSS custom properties emitted by `applyDesignTokens()`
+ *  2. `--pv-*` CSS custom properties emitted by `installDesignTokens()`
  *     (`src/plugins/designTokens.ts`) and consumed by `src/styles/tokens.css`.
  *  3. Vuetify component `defaults`, so components inherit Philips density,
  *     variant and rounding without per-usage props.
@@ -39,7 +39,7 @@ export * from '@/src/branding';
  *
  * To swap in the real typeface, drop the licensed webfonts into `public/fonts`,
  * declare them with `@font-face` in `src/styles/fonts.css`, and change
- * `Typography.fontFamily.sans` below to lead with `'Neue Frutiger World'`.
+ * `FontStacks.sans` below to lead with `'Neue Frutiger World'`.
  * Nothing else in the codebase names a font.
  */
 export const FontStacks = {
@@ -47,7 +47,7 @@ export const FontStacks = {
     "'Source Sans 3 Variable', 'Source Sans 3', 'Frutiger', " +
     "'Segoe UI', system-ui, -apple-system, sans-serif",
   /** Tabular data: DICOM tags, window/level values, coordinates. */
-  mono: "'Roboto Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace",
+  mono: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace",
 } as const;
 
 export type TypeStyle = {

@@ -54,7 +54,8 @@
   color: rgb(var(--v-theme-on-selection));
 }
 
-.image-list-card-hover {
+/* Selection outranks hover, so hovering the selected card keeps its border. */
+.image-list-card-hover:not(.image-list-card-active) {
   border-color: rgb(var(--v-theme-primary)) !important;
 }
 

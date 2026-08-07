@@ -168,17 +168,21 @@ html,
 
 /* ------------------------------------------------------------ surfaces --- */
 
-.pv-surface {
+/* Doubled selectors: Vuetify's own component CSS (`.v-list`, `.v-sheet`, …)
+   also sets `background-color` at one class of specificity and is injected
+   after this file, so a single class here loses the cascade. */
+
+.pv-surface.pv-surface {
   background-color: rgb(var(--v-theme-surface));
   color: rgb(var(--v-theme-on-surface));
 }
 
-.pv-surface-raised {
+.pv-surface-raised.pv-surface-raised {
   background-color: rgb(var(--v-theme-surface-raised));
   color: rgb(var(--v-theme-on-surface-raised));
 }
 
-.pv-surface-sunken {
+.pv-surface-sunken.pv-surface-sunken {
   background-color: rgb(var(--v-theme-surface-sunken));
   color: rgb(var(--v-theme-on-surface-sunken));
 }
@@ -253,6 +257,15 @@ html,
   font-size: var(--pv-font-size-body);
   line-height: var(--pv-line-height-body);
   padding: var(--pv-density-block-padding) var(--pv-density-inline-padding);
+}
+
+/* Vuetify draws a divider as `currentColor` faded by `--v-border-opacity`,
+   which the theme pins to 1 so that explicit border tokens render truthfully.
+   That would leave dividers as full-strength text-colored rules, so they are
+   given the decorative hairline token instead. */
+.v-divider.v-divider {
+  border-color: rgb(var(--v-theme-border));
+  opacity: 1;
 }
 
 /* The module switcher stacks an icon over a caption, so the tab needs its own
