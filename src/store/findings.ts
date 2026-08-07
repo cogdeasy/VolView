@@ -234,8 +234,18 @@ export const useFindingsStore = defineStore('findings', () => {
 
   function upsertFindingType(type: FindingType) {
     const index = findingTypes.value.findIndex((t) => t.id === type.id);
-    if (index === -1) findingTypes.value.push(type);
-    else findingTypes.value[index] = { ...findingTypes.value[index], ...type };
+    if (index === -1) {
+      findingTypes.value.push(type);
+      return;
+    }
+    const existing = findingTypes.value[index];
+    // Two sessions can author the same type under different modalities, so
+    // merging one onto the other must not take it off a modality's list.
+    findingTypes.value[index] = {
+      ...existing,
+      ...type,
+      modalities: [...new Set([...existing.modalities, ...type.modalities])],
+    };
   }
 
   /**

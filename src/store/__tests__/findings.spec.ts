@@ -283,6 +283,33 @@ describe('findings store', () => {
     );
   });
 
+  it('keeps both modalities when a restored type merges onto a local one', async () => {
+    const store = useFindingsStore();
+    const typeID = store.addFindingType({
+      label: 'Papillary muscle',
+      modalities: ['CT'],
+      defaultBodySite: 'Left ventricle',
+      categoryScale: 'severity',
+    });
+    const { manifest, stateFiles } = await serializeFindings();
+
+    // The same type, authored this session under another modality.
+    setActivePinia(createPinia());
+    const restored = useFindingsStore();
+    restored.addFindingType({
+      label: 'Papillary muscle',
+      modalities: ['MR'],
+      defaultBodySite: 'Left ventricle',
+      categoryScale: 'severity',
+    });
+    await restored.deserialize(manifest, {}, {}, stateFiles);
+
+    expect(restored.findingTypeByID[typeID].modalities.sort()).toEqual([
+      'CT',
+      'MR',
+    ]);
+  });
+
   it('re-seats a colliding type clear of the ones still to be restored', async () => {
     const store = useFindingsStore();
     const type = (label: string) => ({
