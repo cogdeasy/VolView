@@ -62,6 +62,12 @@ export function useHangingProtocolAutoApply() {
    */
   const finalized = new Set<string>();
 
+  /** The study a protocol hung the panes with, whichever pane is focused. */
+  const hungOnScreenID = () =>
+    viewStore.layoutViews
+      .map((view) => view.dataID)
+      .find((dataID): dataID is string => !!dataID && hung.has(dataID)) ?? null;
+
   /**
    * Hangs a study, and runs the pixel-data phase itself when the image is
    * already loaded: the watcher that normally waits for loading to finish
@@ -123,8 +129,14 @@ export function useHangingProtocolAutoApply() {
       }
       // The panes are holding more than this series: turning a switch on is no
       // more a reason to take a comparison apart than opening a series into
-      // one pane is.
-      if (!isStudyOpen(imageID)) return;
+      // one pane is. The indicator still has to come back, and it belongs to
+      // whatever hung the arrangement on screen rather than to the series the
+      // reader happens to have focused.
+      if (!isStudyOpen(imageID)) {
+        const owner = hungOnScreenID();
+        if (owner) store.reportForImage(owner);
+        return;
+      }
       hangNow(imageID);
     }
   );

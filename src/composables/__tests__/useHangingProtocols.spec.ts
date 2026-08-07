@@ -82,4 +82,31 @@ describe('hanging a study as it opens', () => {
 
     expect(store.applyForImage).not.toHaveBeenCalled();
   });
+
+  it('puts the indicator back on what hung the panes, not the focused series', async () => {
+    const store = watchStore();
+    const views = useViewStore();
+    store.settings.autoApply = false;
+    await nextTick();
+
+    // 'image-1' hung the arrangement; 'image-2' was put into a pane by hand
+    // and is the one the reader has focused.
+    store.hungImages.set('image-1', {
+      protocolId: 'head-ct',
+      reason: 'match',
+      criteria: [],
+      explanation: '',
+      studyInstanceUID: 'study-1',
+    });
+    views.setDataForView(views.layoutViews[0].id, 'image-1');
+    views.setDataForView(views.layoutViews[1].id, 'image-2');
+    currentImageID.value = 'image-2';
+    await nextTick();
+
+    store.settings.autoApply = true;
+    await nextTick();
+
+    expect(store.applyForImage).not.toHaveBeenCalled();
+    expect(store.reportForImage).toHaveBeenCalledWith('image-1');
+  });
 });
