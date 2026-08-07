@@ -204,6 +204,10 @@ export function useComparisonSync() {
     );
   }
 
+  // Where the slice store puts a pane that has no stored slice of its own,
+  // mirroring `defaultSliceConfig`'s derivation from the range.
+  const derivedMiddle = (max: number) => Math.ceil(max / 2);
+
   // A pane is identified by view *and* study: picking another study in the
   // comparison bar makes the previous bookkeeping for that slot meaningless.
   const paneKey = (pane: ComparisonPane) => `${pane.viewID}|${pane.imageID}`;
@@ -309,6 +313,13 @@ export function useComparisonSync() {
         return before !== undefined && pane.max > before.max;
       });
 
+      // A pane nobody has scrolled has no stored slice: the store derives the
+      // middle of the range, so growth moves it. A pane sitting anywhere else
+      // is one the reader put there, and a study finishing its download in the
+      // same breath is no reason to throw that away.
+      const carriedByGrowth = (pane: PaneSlice) =>
+        grew.includes(pane) && pane.slice === derivedMiddle(pane.max);
+
       const changed = panes.filter((pane) => {
         const before = previousSlices.get(paneKey(pane));
         // A marker stands for the next look at this pane and no longer: the
@@ -326,7 +337,7 @@ export function useComparisonSync() {
         // arrived before. That is the volume loading, not the reader reading,
         // and the older study finishing its download is no reason to move the
         // study being read.
-        return !grew.includes(pane);
+        return !carriedByGrowth(pane);
       });
 
       // Both panes of an axis can change in one tick; the current study wins,
@@ -342,8 +353,11 @@ export function useComparisonSync() {
       previousSlices = snapshot(panes);
       driveSlices(drivers, panes);
       // A pane the growth moved is put back where the current study says it
-      // belongs, rather than being left wherever the download landed it.
-      if (grew.length) nextTick(realignFromCurrent);
+      // belongs, rather than being left wherever the download landed it. A
+      // pane the reader moved in the same breath drove the pair itself, and
+      // realigning would undo them.
+      if (grew.some(carriedByGrowth) && !drivers.length)
+        nextTick(realignFromCurrent);
     },
     { immediate: true }
   );

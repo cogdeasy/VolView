@@ -126,6 +126,29 @@ describe('useComparisonSync — slice ranges', () => {
     await nextTick();
     expect(sliceStore.getConfig(priorViewID, 'prior').slice).toBe(2);
   });
+
+  it('keeps a scroll made while the same study was still arriving', async () => {
+    seatImage('current', 8);
+    seatImage('prior', 2);
+    const { currentViewID, priorViewID } = openPair();
+    const sliceStore = useViewSliceStore();
+    sliceStore.updateConfig(currentViewID, 'current', {
+      slice: 2,
+      min: 0,
+      max: 7,
+    });
+    await nextTick();
+
+    // The rest of the prior lands in the same breath as the reader scrolling
+    // it — a slice the growth alone would never have put it on.
+    useImageCacheStore().updateVTKImageData('prior', imageOf(8));
+    sliceStore.updateConfig(priorViewID, 'prior', { min: 0, max: 7, slice: 6 });
+    await nextTick();
+    await nextTick();
+
+    expect(sliceStore.getConfig(priorViewID, 'prior').slice).toBe(6);
+    expect(sliceStore.getConfig(currentViewID, 'current').slice).toBe(6);
+  });
 });
 
 describe('useComparisonSync — pane bindings', () => {
