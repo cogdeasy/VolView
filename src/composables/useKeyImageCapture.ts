@@ -2,7 +2,7 @@ import { nextTick } from 'vue';
 import { useViewStore } from '@/src/store/views';
 import { useViewSliceStore } from '@/src/store/view-configs/slicing';
 import { useFindingsStore } from '@/src/store/findings';
-import { getRegisteredViewIDs } from '@/src/core/views/viewApiRegistry';
+import { getRegisteredViews } from '@/src/core/views/viewApiRegistry';
 import { captureViewKeyImage } from '@/src/core/findings/keyImage';
 import { frameOfReferenceToImageSliceAndAxis } from '@/src/utils/frameOfReference';
 import { useCurrentImage } from '@/src/composables/useCurrentImage';
@@ -19,13 +19,26 @@ export function useKeyImageCapture() {
   const findingsStore = useFindingsStore();
   const { currentImageMetadata } = useCurrentImage();
 
-  /** Mounted views, in layout order. */
+  /**
+   * Mounted views, in layout order. A panel of a composite layout (the oblique
+   * grid) is mounted under an id the view store does not know, so it is a
+   * capture source on the strength of being mounted and carries its own name.
+   */
   function candidates(): CaptureCandidate[] {
-    const mounted = new Set(getRegisteredViewIDs());
-    return viewStore
+    const layoutOrder = viewStore
       .getAllViews()
-      .filter((view: ViewInfo) => mounted.has(view.id))
-      .map((view: ViewInfo) => ({ id: view.id, name: view.name }));
+      .map((view: ViewInfo) => view.id);
+    const rank = (id: string) => {
+      const index = layoutOrder.indexOf(id);
+      return index === -1 ? layoutOrder.length : index;
+    };
+    return getRegisteredViews()
+      .map(({ id, name }) => ({
+        id,
+        name: viewStore.getView(id)?.name ?? name ?? '',
+      }))
+      .filter((candidate) => !!candidate.name)
+      .sort((a, b) => rank(a.id) - rank(b.id));
   }
 
   /**
@@ -73,14 +86,17 @@ export function useKeyImageCapture() {
     const view = viewStore.getView(targetID);
     // The captured view's own slice, not the finding's: the user may capture a
     // finding from a view along another axis, where the finding's slice index
-    // means nothing. A 3D view or a cine frame has no slice to report.
+    // means nothing. A 3D view, an oblique panel or a cine frame has no slice
+    // index of its own to report.
     const slice =
       view?.type === '2D' && finding.frame == null
         ? useViewSliceStore().getConfig(targetID, finding.imageID).slice
         : undefined;
     findingsStore.setKeyImage(findingID, {
       dataURL,
-      viewName: view?.name ?? 'View',
+      viewName:
+        candidates().find((candidate) => candidate.id === targetID)?.name ??
+        'View',
       slice,
       capturedAt: new Date().toISOString(),
     });

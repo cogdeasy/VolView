@@ -120,7 +120,9 @@ const viewAxis = computed(() => getLPSAxisFromDir(viewDirection.value));
 
 useWebGLWatchdog(vtkView);
 useViewAnimationListener(vtkView, viewId, 'Oblique');
-useViewApiRegistration(viewId, vtkView);
+// An oblique panel has no view-store entry, so it names itself for the key
+// image capture picker.
+useViewApiRegistration(viewId, vtkView, () => `Oblique ${viewAxis.value}`);
 
 // active tool
 const { currentTool } = storeToRefs(useToolStore());

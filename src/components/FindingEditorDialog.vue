@@ -18,11 +18,7 @@ import {
   LATERALITY_LABELS,
   typesForModality,
 } from '@/src/core/findings/taxonomy';
-import type {
-  FindingCategoryScale,
-  FindingMeasurement,
-  Laterality,
-} from '@/src/types/finding';
+import type { FindingCategoryScale, Laterality } from '@/src/types/finding';
 import type { ToolID } from '@/src/types/annotation-tool';
 
 const findingsStore = useFindingsStore();
@@ -167,12 +163,16 @@ const attachableMeasurements = computed(() => {
         title: `${toolType} — ${tool.labelName ?? ''} (slice ${
           tool.slice + 1
         })`,
-        value: { toolType, toolID: tool.id } as FindingMeasurement,
+        // Keyed by tool id rather than by the measurement pair: Vuetify matches
+        // an object item value by reference, and this list is rebuilt whenever
+        // any annotation changes, which would blank a pending pick.
+        value: tool.id,
+        toolType,
       }));
   });
 });
 
-const measurementToAttach = ref<FindingMeasurement | null>(null);
+const measurementToAttach = ref<ToolID | null>(null);
 
 // The picker is per-finding: an unlinked pick must not follow the editor to
 // the next finding, where the Link button would attach it to the wrong one.
@@ -181,9 +181,14 @@ watch(editingFindingID, () => {
 });
 
 function attachMeasurement() {
-  const measurement = measurementToAttach.value;
-  if (!measurement || !editingFindingID.value) return;
-  findingsStore.attachMeasurement(editingFindingID.value, measurement);
+  const picked = attachableMeasurements.value.find(
+    (item) => item.value === measurementToAttach.value
+  );
+  if (!picked || !editingFindingID.value) return;
+  findingsStore.attachMeasurement(editingFindingID.value, {
+    toolType: picked.toolType,
+    toolID: picked.value,
+  });
   measurementToAttach.value = null;
 }
 

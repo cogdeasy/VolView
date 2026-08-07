@@ -9,20 +9,30 @@ import type { VtkViewApi } from '@/src/types/vtk-types';
  * hierarchy does not otherwise allow. Reactive so that a list of capture
  * sources tracks views mounting and unmounting.
  */
-const viewApis = shallowReactive(new Map<string, VtkViewApi>());
+type RegisteredView = {
+  api: VtkViewApi;
+  /**
+   * How to call this view when the view store has no entry for it — a panel of
+   * a composite layout (the oblique grid) is mounted under an id of its own
+   * that `viewByID` never contains.
+   */
+  name: string;
+};
 
-export function registerViewApi(viewID: string, api: VtkViewApi) {
-  viewApis.set(viewID, api);
+const viewApis = shallowReactive(new Map<string, RegisteredView>());
+
+export function registerViewApi(viewID: string, api: VtkViewApi, name = '') {
+  viewApis.set(viewID, { api, name });
 }
 
 export function unregisterViewApi(viewID: string, api: VtkViewApi) {
-  if (viewApis.get(viewID) === api) viewApis.delete(viewID);
+  if (viewApis.get(viewID)?.api === api) viewApis.delete(viewID);
 }
 
 export function getViewApi(viewID: string): VtkViewApi | undefined {
-  return viewApis.get(viewID);
+  return viewApis.get(viewID)?.api;
 }
 
-export function getRegisteredViewIDs(): string[] {
-  return [...viewApis.keys()];
+export function getRegisteredViews(): Array<{ id: string; name: string }> {
+  return [...viewApis].map(([id, { name }]) => ({ id, name }));
 }
