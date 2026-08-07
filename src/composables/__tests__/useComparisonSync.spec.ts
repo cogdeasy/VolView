@@ -479,6 +479,38 @@ describe('useComparisonSync — window/level link', () => {
     expect(prior.level).toBe(200);
   });
 
+  it('carries over a window set on the prior once the prior has been measured', async () => {
+    const { currentViewID, priorViewID } = openPair();
+    const windowingStore = useWindowingStore();
+    const imageStatsStore = useImageStatsStore();
+    await nextTick();
+
+    imageStatsStore.stats.current = {
+      scalarMin: 0,
+      scalarMax: 400,
+      autoRangeValues: { FullRange: [0, 400] },
+    };
+    await nextTick();
+
+    // The reader picks an automatic window on the prior while the prior's own
+    // histogram is still being computed. The window it stands on until then is
+    // provisional, so the copy is waived — and the waiting is the pair's to
+    // finish, since the reader has no reason to ask twice.
+    windowingStore.updateConfig(priorViewID, 'prior', { auto: 'FullRange' });
+    expect(windowingStore.getConfig(currentViewID, 'current').width).toBe(400);
+
+    imageStatsStore.stats.prior = {
+      scalarMin: 0,
+      scalarMax: 100,
+      autoRangeValues: { FullRange: [0, 100] },
+    };
+    await nextTick();
+
+    const current = windowingStore.getConfig(currentViewID, 'current');
+    expect(current.width).toBe(100);
+    expect(current.level).toBe(50);
+  });
+
   it('reads the pane the reader is looking at after a layout switch, not the one it replaced', async () => {
     const { comparison, viewIDOf, currentViewID } = openPair();
     const windowingStore = useWindowingStore();

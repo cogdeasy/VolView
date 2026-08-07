@@ -502,6 +502,11 @@ export function useComparisonSync() {
     return useAuto && !imageStatsStore.getAutoRangeValues(imageID)[auto];
   };
 
+  // A copy waived because its source had not been measured yet, so it can be
+  // made in the direction it was waived once the source resolves. Only the
+  // last one is kept: anything the reader did since supersedes it.
+  let waivedCopy: Maybe<{ fromImageID: string; toImageID: string }> = null;
+
   const viewShowing = (imageID: string) =>
     comparison.panes.find((pane) => pane.imageID === imageID)?.viewID ??
     viewStore.getAllViews().find((view) => view.dataID === imageID)?.id;
@@ -553,7 +558,11 @@ export function useComparisonSync() {
     if (!sourceViewID) return;
     // Waited out rather than copied: the watcher below re-runs the copy once
     // the study has been measured.
-    if (windowUnsettled(sourceViewID, fromImageID)) return;
+    if (windowUnsettled(sourceViewID, fromImageID)) {
+      waivedCopy = { fromImageID, toImageID };
+      return;
+    }
+    waivedCopy = null;
     const { width, level } = windowingStore.getConfig(
       sourceViewID,
       fromImageID
@@ -614,10 +623,16 @@ export function useComparisonSync() {
       () => comparison.pairKey,
       () => comparison.active,
       // A comparison can open while the studies are still loading, and the
-      // window worth linking only exists once one has been measured.
+      // window worth linking only exists once one has been measured. Either
+      // study can be the one that was waited on: the reader can window the
+      // prior while it is the prior's own histogram that has not landed.
       () =>
-        !!comparison.currentImageID &&
-        !!imageStatsStore.stats[comparison.currentImageID]?.autoRangeValues,
+        [comparison.currentImageID, comparison.priorImageID]
+          .map(
+            (imageID) =>
+              !!imageID && !!imageStatsStore.stats[imageID]?.autoRangeValues
+          )
+          .join(),
     ],
     ([linked]) => {
       const { currentImageID, priorImageID } = comparison;
@@ -627,7 +642,14 @@ export function useComparisonSync() {
         .filter((imageID) => imageID !== linkedTo)
         .forEach(restoreWindowing);
       if (!linkedTo || !currentImageID) return;
-      copyWindowLevel(null, currentImageID, linkedTo);
+      // A window the reader set on the prior is theirs to have carried over,
+      // so a copy waived from that side is made from that side; anything else
+      // settles on the pair's resting state, both studies on the current's
+      // window. A waived copy naming a study no longer in the pair fails this
+      // test and is dropped with it.
+      if (waivedCopy?.fromImageID === linkedTo)
+        copyWindowLevel(null, linkedTo, currentImageID);
+      else copyWindowLevel(null, currentImageID, linkedTo);
     }
   );
 
