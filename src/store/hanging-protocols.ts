@@ -594,8 +594,13 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     };
   }
 
+  /**
+   * A protocol the reader authored goes to the top of the list. Precedence is
+   * list order, so appending would leave "save the current layout" losing to a
+   * built-in with the same rules and never hanging anything.
+   */
   function addProtocol(protocol: HangingProtocol) {
-    protocols.value = [...protocols.value, protocol];
+    protocols.value = [protocol, ...protocols.value];
   }
 
   function updateProtocol(id: string, patch: Partial<HangingProtocol>) {

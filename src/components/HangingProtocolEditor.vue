@@ -105,6 +105,16 @@ const regexError = (pattern: string | undefined) => {
   return safe ? undefined : reason;
 };
 
+/**
+ * Keeps the stored window while the field is empty or half-typed, so clearing
+ * the box does not silently store a width of 0.
+ */
+const patchWindowNumber = (field: 'width' | 'level', value: string) => {
+  const parsed = Number(value);
+  if (value.trim() === '' || !Number.isFinite(parsed)) return;
+  patchWindow({ [field]: parsed });
+};
+
 /** Series counts are validated as non-negative integers when stored. */
 const countOrUndefined = (value: string) => {
   const parsed = parseInt(value, 10);
@@ -203,7 +213,7 @@ const countOrUndefined = (value: string) => {
         density="compact"
         variant="outlined"
         hide-details
-        @update:model-value="patchWindow({ width: Number($event) })"
+        @update:model-value="patchWindowNumber('width', $event)"
       />
       <v-text-field
         :model-value="protocol.windowLevel.level"
@@ -212,7 +222,7 @@ const countOrUndefined = (value: string) => {
         density="compact"
         variant="outlined"
         hide-details
-        @update:model-value="patchWindow({ level: Number($event) })"
+        @update:model-value="patchWindowNumber('level', $event)"
       />
     </div>
 

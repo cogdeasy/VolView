@@ -120,7 +120,9 @@ const createFromCurrentView = () => {
   );
   store.addProtocol(protocol);
   selectedId.value = protocol.id;
-  messageStore.addSuccess('Captured the current view as a new protocol');
+  messageStore.addSuccess(
+    'Captured the current view as a new protocol, first in precedence'
+  );
 };
 
 const captureLayoutIntoDraft = () => {
