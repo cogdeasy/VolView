@@ -105,9 +105,11 @@ const regexError = (pattern: string | undefined) => {
   return safe ? undefined : reason;
 };
 
-const numberOrUndefined = (value: string) => {
+/** Series counts are validated as non-negative integers when stored. */
+const countOrUndefined = (value: string) => {
   const parsed = parseInt(value, 10);
-  return Number.isFinite(parsed) ? parsed : undefined;
+  if (!Number.isFinite(parsed)) return undefined;
+  return Math.max(0, parsed);
 };
 </script>
 
@@ -121,6 +123,7 @@ const numberOrUndefined = (value: string) => {
       hide-details="auto"
       class="mb-3"
       data-testid="protocol-name"
+      :rules="[(value: string) => !!value.trim() || 'A name is required']"
       @update:model-value="patch({ name: $event })"
     />
     <v-text-field
@@ -375,22 +378,24 @@ const numberOrUndefined = (value: string) => {
         :model-value="protocol.match.minSeriesCount ?? ''"
         label="Min series in study"
         type="number"
+        min="0"
         density="compact"
         variant="outlined"
         hide-details
         @update:model-value="
-          patchMatch({ minSeriesCount: numberOrUndefined($event) })
+          patchMatch({ minSeriesCount: countOrUndefined($event) })
         "
       />
       <v-text-field
         :model-value="protocol.match.maxSeriesCount ?? ''"
         label="Max series in study"
         type="number"
+        min="0"
         density="compact"
         variant="outlined"
         hide-details
         @update:model-value="
-          patchMatch({ maxSeriesCount: numberOrUndefined($event) })
+          patchMatch({ maxSeriesCount: countOrUndefined($event) })
         "
       />
     </div>

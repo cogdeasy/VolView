@@ -87,9 +87,17 @@ const switchTo = (protocolId: string) => {
               :active="protocol.id === appliedProtocol?.id"
               @click="switchTo(protocol.id)"
             >
-              <v-list-item-title>{{ protocol.name }}</v-list-item-title>
+              <v-list-item-title>
+                {{ protocol.name }}
+                <!-- A disabled protocol can still be applied on request, but
+                     the choice is not remembered for the study. -->
+                <span v-if="!protocol.enabled" class="text-medium-emphasis">
+                  (off)
+                </span>
+              </v-list-item-title>
               <v-list-item-subtitle>
                 {{ describeWindowLevel(protocol.windowLevel) }}
+                <template v-if="!protocol.enabled"> · not remembered </template>
               </v-list-item-subtitle>
             </v-list-item>
             <v-divider class="my-1" />

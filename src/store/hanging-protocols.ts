@@ -56,6 +56,23 @@ const defaultSettings = (): Settings => ({
   overrides: {},
 });
 
+/**
+ * A reader accumulates overrides forever otherwise: every study they ever
+ * hung by hand would sit in local storage. Insertion order is stable for the
+ * string keys used here, so the oldest pins fall off first.
+ */
+export const MAX_REMEMBERED_OVERRIDES = 200;
+
+export function rememberOverride(
+  overrides: Record<string, string>,
+  studyUID: string,
+  protocolId: string
+): Record<string, string> {
+  const entries = Object.entries(overrides).filter(([key]) => key !== studyUID);
+  entries.push([studyUID, protocolId]);
+  return Object.fromEntries(entries.slice(-MAX_REMEMBERED_OVERRIDES));
+}
+
 const cloneBuiltIns = () =>
   BUILT_IN_PROTOCOLS.map((protocol) => cloneProtocol(protocol));
 
@@ -424,10 +441,11 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     const studyUID = getStudyUID(imageID);
     // Only a protocol that selection would honour later is worth remembering.
     if (studyUID && protocol.enabled) {
-      settings.value.overrides = {
-        ...settings.value.overrides,
-        [studyUID]: protocolId,
-      };
+      settings.value.overrides = rememberOverride(
+        settings.value.overrides,
+        studyUID,
+        protocolId
+      );
     }
 
     applyProtocol(protocol, imageID);

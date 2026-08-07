@@ -219,9 +219,6 @@ const viewInfo = computed(() => viewStore.getView(viewId.value) as ViewInfo2D);
 // Chrome visibility is part of the applied hanging protocol.
 const hangingProtocolStore = useHangingProtocolStore();
 const showViewLabels = computed(() => hangingProtocolStore.overlays.viewLabels);
-const showAnnotations = computed(
-  () => hangingProtocolStore.overlays.annotations
-);
 
 // base image
 const {
@@ -250,6 +247,16 @@ useViewAnimationListener(vtkView, viewId, '2D');
 
 // active tool
 const { currentTool } = storeToRefs(useToolStore());
+
+const ANNOTATION_TOOLS = [Tools.Ruler, Tools.Rectangle, Tools.Polygon];
+// The tool components are what register a placing widget, so a protocol that
+// hides annotations must not survive the reader reaching for a measurement:
+// picking one brings them back rather than becoming a silent no-op.
+const showAnnotations = computed(
+  () =>
+    hangingProtocolStore.overlays.annotations ||
+    ANNOTATION_TOOLS.includes(currentTool.value)
+);
 
 const { slice: currentSlice, range: sliceRange } = useSliceConfig(
   viewId,

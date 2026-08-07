@@ -16,7 +16,10 @@ import {
   ProtocolParseError,
 } from '@/src/core/hanging-protocols/serialization';
 import { evaluateProtocol } from '@/src/core/hanging-protocols/matching';
-import type { HangingProtocol } from '@/src/core/hanging-protocols/types';
+import {
+  hangingProtocol,
+  type HangingProtocol,
+} from '@/src/core/hanging-protocols/types';
 
 const store = useHangingProtocolStore();
 const { protocols, settings, applied } = storeToRefs(store);
@@ -51,6 +54,16 @@ const dirty = computed(
       JSON.stringify(editedFields(selected.value))
 );
 
+// Stored protocols are parsed on read, so a draft the schema rejects would be
+// dropped on the next start. Refuse the save instead of losing the reader's
+// work silently.
+const draftError = computed(() => {
+  if (!draft.value) return null;
+  const result = hangingProtocol.safeParse(draft.value);
+  if (result.success) return null;
+  return result.error.issues[0]?.message ?? 'This protocol cannot be saved.';
+});
+
 // Keyed on the id, not the object: the stored protocol is replaced whenever
 // anything else edits it (the enable switch in the list, for instance), and
 // re-cloning then would throw away the edits in progress.
@@ -67,7 +80,7 @@ const select = (id: string) => {
 };
 
 const save = () => {
-  if (!draft.value) return;
+  if (!draft.value || draftError.value) return;
   // `enabled` is deliberately left out: the list switch can have toggled it
   // while edits were in progress, and writing the draft copy back would undo
   // that.
@@ -77,6 +90,13 @@ const save = () => {
 
 const revert = () => {
   draft.value = selected.value ? cloneProtocol(selected.value) : null;
+};
+
+// The ids survive the restore, so the draft has to be re-cloned by hand;
+// otherwise saving would write the pre-restore copy straight back.
+const restoreBuiltIns = () => {
+  store.restoreBuiltIns();
+  revert();
 };
 
 const createFromCurrentView = () => {
@@ -191,7 +211,7 @@ const matchesCurrentStudy = (protocol: HangingProtocol) =>
           variant="text"
           size="small"
           prepend-icon="mdi-restore"
-          @click="store.restoreBuiltIns()"
+          @click="restoreBuiltIns"
         >
           Restore built-ins
         </v-btn>
@@ -348,12 +368,19 @@ const matchesCurrentStudy = (protocol: HangingProtocol) =>
                 color="primary"
                 variant="flat"
                 size="small"
-                :disabled="!dirty"
+                :disabled="!dirty || !!draftError"
                 data-testid="protocol-save"
                 @click="save"
               >
                 Save changes
               </v-btn>
+              <span
+                v-if="draftError"
+                class="text-caption text-error"
+                data-testid="protocol-save-error"
+              >
+                {{ draftError }}
+              </span>
               <v-btn
                 variant="text"
                 size="small"

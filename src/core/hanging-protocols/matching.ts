@@ -210,11 +210,18 @@ export function checkPattern(pattern: string): {
   return { safe: true };
 }
 
+/**
+ * DICOM Long String values are 64 characters, so this truncation never changes
+ * a real match. It bounds the input the pattern runs against, which bounds the
+ * damage any expression the heuristic wrongly accepts can do.
+ */
+export const MAX_SUBJECT_LENGTH = 128;
+
 const matchesPattern = (pattern: string | undefined, actual: string) => {
   if (!pattern || pattern.trim() === '') return null;
   // An unusable or unsafe expression never matches; the editor surfaces why.
   const matched = checkPattern(pattern).safe
-    ? new RegExp(pattern, 'i').test(actual)
+    ? new RegExp(pattern, 'i').test(actual.slice(0, MAX_SUBJECT_LENGTH))
     : false;
   return { expected: `/${pattern}/i`, matched };
 };

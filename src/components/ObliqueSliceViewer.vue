@@ -43,6 +43,7 @@
           <slice-viewer-overlay
             :view-id="viewId"
             :image-id="currentImageID"
+            :show-labels="showViewLabels"
           ></slice-viewer-overlay>
           <vtk-base-oblique-slice-representation
             :view-id="viewId"
@@ -102,6 +103,7 @@ import vtkMouseCameraTrackballZoomToMouseManipulator from '@kitware/vtk.js/Inter
 import { storeToRefs } from 'pinia';
 import { useToolStore } from '@/src/store/tools';
 import { Tools } from '@/src/store/tools/types';
+import { useHangingProtocolStore } from '@/src/store/hanging-protocols';
 
 interface Props {
   viewId: string;
@@ -116,6 +118,10 @@ const props = defineProps<Props>();
 
 const { viewId, outlineType, viewDirection, viewUp } = toRefs(props);
 const viewAxis = computed(() => getLPSAxisFromDir(viewDirection.value));
+
+// Chrome visibility is part of the applied hanging protocol.
+const hangingProtocolStore = useHangingProtocolStore();
+const showViewLabels = computed(() => hangingProtocolStore.overlays.viewLabels);
 
 useWebGLWatchdog(vtkView);
 useViewAnimationListener(vtkView, viewId, 'Oblique');
