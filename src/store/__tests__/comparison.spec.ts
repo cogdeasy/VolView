@@ -12,6 +12,7 @@ import {
   ComparisonLayoutNames,
   ComparisonLayouts,
   ComparisonViewNames,
+  comparisonPaneSpec,
 } from '@/src/core/comparison/layout';
 
 const seatImage = (id: string) => {
@@ -98,6 +99,25 @@ describe('comparison store — mode detection', () => {
       'Axial',
       'Axial',
     ]);
+  });
+
+  it('leaves no comparison pane behind in the slots a smaller layout drops', () => {
+    const viewStore = useViewStore();
+    viewStore.setNamedLayoutsFromConfig(ComparisonLayouts);
+    viewStore.switchToNamedLayout(ComparisonLayoutNames.quad);
+
+    viewStore.switchToNamedLayout(ComparisonLayoutNames.pair);
+
+    // The two panes the pair does not use are off screen; a comparison name
+    // left on one of them would re-arm the mode if it ever came back.
+    expect(
+      viewStore.viewIDs
+        .map((viewID) => viewStore.getView(viewID)?.name)
+        .filter((name) => !!comparisonPaneSpec(name))
+        .sort()
+    ).toEqual(
+      [ComparisonViewNames.currentAxial, ComparisonViewNames.priorAxial].sort()
+    );
   });
 
   it('is off when the layout name is the only thing left of a comparison', () => {

@@ -22,6 +22,14 @@ export const BrandColors = {
    */
   currentStudy: '#00A3E0',
   priorStudy: '#8A94A6',
+  /**
+   * Chrome drawn over image data. The scrim keeps text legible on any
+   * anatomy without lifting the black point of the viewport, and advisory
+   * text is warm enough to read as a caveat rather than an error.
+   */
+  overlayScrim: 'rgba(0, 0, 0, 0.72)',
+  onOverlay: '#E8ECF2',
+  overlayCaution: '#FFCC80',
 } as const;
 
 export const Brand = {

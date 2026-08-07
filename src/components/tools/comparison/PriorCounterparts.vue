@@ -149,7 +149,7 @@ onVTKEvent(camera, 'onModified', project);
 useResizeObserver(vtkFieldRef(view.renderWindowView, 'container'), project);
 watch(counterparts, project, { immediate: true, deep: true });
 
-const markerColor = BrandColors.accent;
+const colors = BrandColors;
 </script>
 
 <template>
@@ -190,7 +190,7 @@ const markerColor = BrandColors.accent;
       <text
         :x="counterpart.second.x + 8"
         :y="counterpart.second.y - 8"
-        :fill="markerColor"
+        :fill="colors.accent"
         stroke="black"
         stroke-width="0.6"
         font-size="12"
@@ -200,7 +200,11 @@ const markerColor = BrandColors.accent;
       </text>
     </g>
   </svg>
-  <div v-if="unavailable" class="counterpart-note">
+  <div
+    v-if="unavailable"
+    class="counterpart-note"
+    :style="{ color: colors.overlayCaution }"
+  >
     Counterparts need a shared frame of reference
   </div>
 </template>
@@ -215,7 +219,6 @@ const markerColor = BrandColors.accent;
   right: 0;
   text-align: center;
   font-size: 0.7rem;
-  color: #ffcc80;
   pointer-events: none;
   user-select: none;
 }

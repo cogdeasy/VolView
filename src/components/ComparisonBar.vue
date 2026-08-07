@@ -58,7 +58,18 @@ const alignmentLabel = computed(() =>
   isPhysical.value ? 'Patient position' : 'Relative slice position'
 );
 
-const needsSecondStudy = computed(() => comparison.candidates.length < 2);
+// Only a study the pickers will actually offer can complete a pair, so a lone
+// cine series alongside the current study still counts as nothing to compare
+// against — otherwise the bar looks operational with no prior it can take.
+const comparableCount = computed(
+  () => comparison.candidates.filter((study) => !study.isCine).length
+);
+const needsSecondStudy = computed(() => comparableCount.value < 2);
+const needsSecondStudyText = computed(() =>
+  comparison.candidates.length > comparableCount.value
+    ? 'Load a second study to compare. Cine series do not count: they play in their own view and have no slices to align.'
+    : 'Load a second study to compare. Both studies stay in the Data panel and can be picked here.'
+);
 
 // A nudge is a number of slices along one anatomical axis, so with two pairs
 // on screen the control has to say which pair it is correcting.
@@ -75,7 +86,7 @@ const nudgeScope = computed(() =>
       type="info"
       variant="tonal"
       class="flex-grow-1"
-      text="Load a second study to compare. Both studies stay in the Data panel and can be picked here."
+      :text="needsSecondStudyText"
     />
     <template v-else>
       <div class="study-pickers">

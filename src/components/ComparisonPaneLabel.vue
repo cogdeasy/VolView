@@ -28,22 +28,31 @@ const boundStudy = computed(() => comparison.paneStudyFor(viewId.value));
 
 const visible = computed(() => comparison.active && !!boundStudy.value);
 
+// Studies are compared by ID rather than by reference: descriptors are minted
+// on read, so identity would only hold while two computeds happen to share a
+// cache entry.
+const inComparison = computed(
+  () => boundStudy.value?.imageID === roleStudy.value?.imageID
+);
+
 // An image outside the pair is on neither side of it, so the role and the
 // interval it carries are withheld rather than asserted about a study they
 // were not measured against.
 const roleLabel = computed(() => {
-  if (boundStudy.value !== roleStudy.value) return 'Not in comparison';
+  if (!inComparison.value) return 'Not in comparison';
   if (spec.value?.role !== 'prior') return 'Current';
   const interval = comparison.priorInterval;
   return interval ? `Prior — ${interval}` : 'Prior';
 });
 
 const accent = computed(() => {
-  if (boundStudy.value !== roleStudy.value) return BrandColors.priorStudy;
+  if (!inComparison.value) return BrandColors.priorStudy;
   return spec.value?.role === 'prior'
     ? BrandColors.priorStudy
     : BrandColors.currentStudy;
 });
+
+const colors = BrandColors;
 
 const details = computed(() => {
   const info = boundStudy.value;
@@ -62,10 +71,12 @@ const details = computed(() => {
   <div
     v-if="visible"
     class="comparison-pane-label"
-    :style="{ borderBottomColor: accent }"
+    :style="{ borderBottomColor: accent, background: colors.overlayScrim }"
   >
     <span class="role" :style="{ color: accent }">{{ roleLabel }}</span>
-    <span class="details">{{ details.join(' · ') }}</span>
+    <span class="details" :style="{ color: colors.onOverlay }">{{
+      details.join(' · ')
+    }}</span>
   </div>
 </template>
 
@@ -80,7 +91,6 @@ const details = computed(() => {
   align-items: baseline;
   column-gap: 10px;
   padding: 3px 10px;
-  background: rgba(0, 0, 0, 0.72);
   border-bottom: 2px solid transparent;
   pointer-events: none;
   user-select: none;
@@ -97,7 +107,6 @@ const details = computed(() => {
 }
 
 .details {
-  color: #e8ecf2;
   font-size: 0.72rem;
   letter-spacing: 0.02em;
   overflow: hidden;

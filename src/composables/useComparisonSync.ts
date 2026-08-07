@@ -423,8 +423,21 @@ export function useComparisonSync() {
       } as PaneCamera);
       if (next === cameraKey(target)) return;
 
-      cameraEchoes.set(paneKey(target), next);
       cameraStore.updateConfig(target.viewID, target.imageID, patch);
+      // The marker is what the store kept, read back the way the watcher will
+      // read it, rather than a prediction of the merge: the config is pushed
+      // into the live camera and pulled back, so a value that round-trips in
+      // another shape would leave a marker nothing can ever consume.
+      const kept = cameraStore.getConfig(target.viewID, target.imageID);
+      cameraEchoes.set(
+        paneKey(target),
+        cameraKey({
+          ...target,
+          parallelScale: kept?.parallelScale,
+          focalPoint: kept?.focalPoint as Vector3 | undefined,
+          position: kept?.position as Vector3 | undefined,
+        })
+      );
     });
   }
 

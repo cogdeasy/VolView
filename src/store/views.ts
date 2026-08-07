@@ -262,16 +262,22 @@ export const useViewStore = defineStore('view', () => {
     });
   }
 
-  function setLayoutFromGrid(gridSize: [number, number]) {
-    currentLayoutName.value = null;
-    // A grid keeps the views that are already in its slots, so the names a
-    // named layout gave them go back to plain orientations. Comparison panes
-    // are recognised by name, and a hand-built grid is not a comparison.
-    layoutSlots.value.forEach((viewID) => {
+  // Comparison panes are recognised by their name, so a view that is no longer
+  // one goes back to a plain orientation: a slot left holding the name off
+  // layout would re-arm comparison mode if it ever became visible again.
+  function releaseComparisonNames(slots: string[]) {
+    slots.forEach((viewID) => {
       const view = viewByID[viewID];
       const spec = view && comparisonPaneSpec(view.name);
       if (spec) view.name = spec.axis;
     });
+  }
+
+  function setLayoutFromGrid(gridSize: [number, number]) {
+    currentLayoutName.value = null;
+    // A grid keeps the views that are already in its slots, and a hand-built
+    // grid is not a comparison.
+    releaseComparisonNames(layoutSlots.value);
     setLayout(generateLayoutFromGrid(gridSize));
   }
 
@@ -305,6 +311,11 @@ export const useViewStore = defineStore('view', () => {
             layoutSlots.value.push(addView(viewInit));
           }
         });
+        // Slots the new layout does not reach keep whatever name they were
+        // last given, which for a smaller layout can be a comparison pane.
+        releaseComparisonNames(
+          layoutSlots.value.slice(namedLayout.views.length)
+        );
       },
     });
   }
