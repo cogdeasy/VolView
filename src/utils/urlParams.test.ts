@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { normalizeUrlParams, withDefaultUrls } from './urlParams';
 
 describe('normalizeUrlParams', () => {
@@ -155,5 +155,52 @@ describe('withDefaultUrls', () => {
   it('is a no-op for an unconfigured or unparseable default', () => {
     expect(withDefaultUrls(...parse({}), {})).toEqual({});
     expect(withDefaultUrls(...parse({}), { urls: '' })).toEqual({});
+  });
+});
+
+// The rules above are only as good as what vtkURLExtract actually hands over
+// for each query string, so drive the real boot path rather than the parser.
+describe('readLaunchParams', () => {
+  const DEMO = 'https://example.com/demo.zip';
+
+  const launch = async (search: string, defaultUrls = DEMO) => {
+    vi.stubEnv('VITE_DEFAULT_URLS', defaultUrls);
+    vi.stubEnv('VITE_DEFAULT_NAMES', 'Demo Study');
+    window.history.replaceState(null, '', `/${search}`);
+    vi.resetModules();
+    const { readLaunchParams } = await import('./urlParams');
+    return readLaunchParams();
+  };
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    window.history.replaceState(null, '', '/');
+  });
+
+  it('opens the deployment default on a bare visit', async () => {
+    expect((await launch('')).urls).toEqual([DEMO]);
+  });
+
+  it('leaves the default alone when unconfigured', async () => {
+    expect(await launch('', '')).toEqual({});
+  });
+
+  it.each(['?urls=', '?urls', '?urls=http://['])(
+    'shows nothing for %s, which names an intent the default must not answer',
+    async (search) => {
+      expect((await launch(search)).urls).toBeUndefined();
+    }
+  );
+
+  it('keeps save= when urls= carries no value', async () => {
+    const params = await launch('?urls&save=https://example.com/save');
+    expect(params.urls).toBeUndefined();
+    expect(params.save).toBe('https://example.com/save');
+  });
+
+  it('lets an explicit urls= win', async () => {
+    const params = await launch('?urls=https://example.com/patient.zip');
+    expect(params.urls).toEqual(['https://example.com/patient.zip']);
+    expect(params.names).toBeUndefined();
   });
 });
