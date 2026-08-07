@@ -70,7 +70,7 @@ const unpin = () => {
           size="x-small"
           variant="text"
           density="comfortable"
-          icon="mdi-information-outline"
+          icon
           data-testid="protocol-indicator-why"
           @click="showWhy = !showWhy"
         >
@@ -140,7 +140,7 @@ const unpin = () => {
           size="x-small"
           variant="text"
           density="comfortable"
-          icon="mdi-close"
+          icon
           data-testid="protocol-indicator-dismiss"
           @click="indicatorDismissed = true"
         >

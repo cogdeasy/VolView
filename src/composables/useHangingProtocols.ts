@@ -4,6 +4,7 @@ import {
   useCurrentImage,
 } from '@/src/composables/useCurrentImage';
 import { onImageDeleted } from '@/src/composables/onImageDeleted';
+import { useViewStore } from '@/src/store/views';
 import { useHangingProtocolStore } from '@/src/store/hanging-protocols';
 
 /**
@@ -17,7 +18,20 @@ import { useHangingProtocolStore } from '@/src/store/hanging-protocols';
  */
 export function useHangingProtocolAutoApply() {
   const store = useHangingProtocolStore();
+  const viewStore = useViewStore();
   const { currentImageID, isImageLoading } = useCurrentImage('global');
+
+  /**
+   * Whether this study is what the viewer is showing, rather than what one
+   * pane happens to hold. Opening a study binds every pane to it; dropping a
+   * series into a single pane, or clicking into one that holds another series,
+   * does not — and hanging then would replace the comparison layout the reader
+   * just built with the new series' protocol.
+   */
+  const isStudyOpen = (imageID: string) => {
+    const views = viewStore.layoutViews;
+    return !!views.length && views.every((view) => view.dataID === imageID);
+  };
 
   /**
    * Images this tab has hung, as opposed to ones it only reported on, kept by
@@ -55,6 +69,9 @@ export function useHangingProtocolAutoApply() {
         store.reportForImage(imageID);
         return;
       }
+      // One pane's series: leave the layout, and the indicator, describing
+      // what hung the study on screen.
+      if (!isStudyOpen(imageID)) return;
       // Only a study a protocol actually hung counts as hung: with automatic
       // hanging off, or with nothing matching, the views were left alone and
       // the study must still be hangable later.

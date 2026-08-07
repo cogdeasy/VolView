@@ -151,11 +151,14 @@ const patchWindowNumber = (field: 'width' | 'level', value: string) => {
   patchWindow({ [field]: parsed });
 };
 
-/** Series counts are validated as non-negative integers when stored. */
+/**
+ * Series counts are non-negative integers. A negative one is no rule at all
+ * rather than a rule of zero, which would look configured and always match.
+ */
 const countOrUndefined = (value: string) => {
   const parsed = parseInt(value, 10);
-  if (!Number.isFinite(parsed)) return undefined;
-  return Math.max(0, parsed);
+  if (!Number.isFinite(parsed) || parsed < 0) return undefined;
+  return parsed;
 };
 </script>
 

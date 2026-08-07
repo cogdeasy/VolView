@@ -130,14 +130,28 @@ const restoreBuiltIns = () => {
   revert();
 };
 
+/**
+ * Opens a protocol the reader has just added. Unsaved edits hold the switch
+ * back until they answer the discard prompt, so say where the new protocol
+ * went rather than reporting a change they cannot see.
+ */
+const openAdded = (id: string, added: string) => {
+  select(id);
+  messageStore.addSuccess(
+    selectedId.value === id
+      ? added
+      : `${added}. It opens once your unsaved edits are saved or discarded.`
+  );
+};
+
 const createFromCurrentView = () => {
   const protocol = store.captureCurrentState(
     'My protocol',
     currentImageID.value
   );
   store.addProtocol(protocol);
-  select(protocol.id);
-  messageStore.addSuccess(
+  openAdded(
+    protocol.id,
     'Captured the current view as a new protocol, first in precedence'
   );
 };
@@ -153,7 +167,7 @@ const captureLayoutIntoDraft = () => {
 
 const duplicate = (id: string) => {
   const copy = store.duplicateProtocol(id);
-  if (copy) select(copy.id);
+  if (copy) openAdded(copy.id, `Added ${copy.name}`);
 };
 
 const remove = (id: string) => {
@@ -184,10 +198,11 @@ const onImportFile = async (event: Event) => {
   if (!file) return;
   try {
     const added = store.importProtocols(await file.text());
-    messageStore.addSuccess(
-      `Imported ${added.length} protocol${added.length === 1 ? '' : 's'}`
-    );
-    if (added.length) select(added[added.length - 1].id);
+    const message = `Imported ${added.length} protocol${
+      added.length === 1 ? '' : 's'
+    }`;
+    if (added.length) openAdded(added[added.length - 1].id, message);
+    else messageStore.addSuccess(message);
   } catch (err) {
     messageStore.addError(
       err instanceof ProtocolParseError
