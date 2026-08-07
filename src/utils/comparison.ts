@@ -215,6 +215,13 @@ export function currentSliceToPriorSlice(
 /**
  * Inverse of {@link currentSliceToPriorSlice}, so scrolling either pane keeps
  * the pair anatomically aligned.
+ *
+ * Only a true inverse away from the ends of the prior volume: a nudge pushes
+ * the mapped slice past the last one, and both directions clamp, so with an
+ * offset of +3 the prior's slice 0 maps back to the current's 0 while that
+ * maps forward to prior 3 again. The pair settles there because the caller
+ * discards the echo of its own write rather than because the round trip is
+ * exact.
  */
 export function priorSliceToCurrentSlice(
   current: ImageMetadata,

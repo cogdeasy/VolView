@@ -37,6 +37,8 @@ export interface StudyDescriptor {
   displayDate: string | null;
   /** Groups series belonging to the same study. */
   studyKey: string;
+  /** PatientID, empty when the data carries no patient identity. */
+  patientKey: string;
   /** Cine series are poor comparison candidates, so they are never auto-picked. */
   isCine: boolean;
 }
@@ -90,6 +92,7 @@ export const useComparisonStore = defineStore('comparison', () => {
         studyDate,
         displayDate: formatDicomDate(studyDate),
         studyKey: studyKey ?? imageID,
+        patientKey: patient?.PatientID ?? '',
         isCine: volume?.kind === 'cine',
       };
     }
@@ -104,6 +107,7 @@ export const useComparisonStore = defineStore('comparison', () => {
       studyDate: '',
       displayDate: null,
       studyKey: imageID,
+      patientKey: '',
       isCine: false,
     };
   }
@@ -204,6 +208,20 @@ export const useComparisonStore = defineStore('comparison', () => {
       .filter((a): a is AlignmentAssessment => !!a);
     if (!assessments.length) return null;
     return assessments.find(({ mode }) => mode === 'index') ?? assessments[0];
+  });
+
+  /**
+   * Two studies that name different patients cannot be compared by anatomy at
+   * all, whatever their geometry says: identical protocols on two people
+   * produce volumes that pass every frame-of-reference test here. Data with no
+   * patient identity claims nothing either way.
+   */
+  const patientMismatch = computed(() => {
+    const currentPatient = current.value?.patientKey;
+    const priorPatient = prior.value?.patientKey;
+    return (
+      !!currentPatient && !!priorPatient && currentPatient !== priorPatient
+    );
   });
 
   /** "6 months earlier" style label for the prior study. */
@@ -392,6 +410,7 @@ export const useComparisonStore = defineStore('comparison', () => {
     priorImageID,
     links,
     sliceOffsetByPair,
+    patientMismatch,
     candidates,
     isComparisonLayout,
     active,

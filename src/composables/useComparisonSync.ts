@@ -310,14 +310,16 @@ export function useComparisonSync() {
       sourceViewID,
       fromImageID
     );
+    // One write is enough: `useSyncWindowing` carries a view's window to every
+    // other view holding the same study, so writing each of them here only
+    // multiplies the same value by the number of views on screen.
+    const targetViewID =
+      comparison.panes.find((pane) => pane.imageID === toImageID)?.viewID ??
+      viewStore.getAllViews().find((view) => view.dataID === toImageID)?.id;
+    if (!targetViewID) return;
     windowingEcho = true;
     try {
-      viewStore
-        .getAllViews()
-        .filter((view) => view.dataID === toImageID)
-        .forEach((view) => {
-          windowingStore.updateConfig(view.id, toImageID, { width, level });
-        });
+      windowingStore.updateConfig(targetViewID, toImageID, { width, level });
     } finally {
       windowingEcho = false;
     }
@@ -427,17 +429,18 @@ export function useComparisonSync() {
       // The marker is what the store kept, read back the way the watcher will
       // read it, rather than a prediction of the merge: the config is pushed
       // into the live camera and pulled back, so a value that round-trips in
-      // another shape would leave a marker nothing can ever consume.
+      // another shape would leave a marker nothing can ever consume. A write
+      // that left the camera where it was moves nothing, so like the slice
+      // path it leaves no marker to outlive it either.
       const kept = cameraStore.getConfig(target.viewID, target.imageID);
-      cameraEchoes.set(
-        paneKey(target),
-        cameraKey({
-          ...target,
-          parallelScale: kept?.parallelScale,
-          focalPoint: kept?.focalPoint as Vector3 | undefined,
-          position: kept?.position as Vector3 | undefined,
-        })
-      );
+      const keptKey = cameraKey({
+        ...target,
+        parallelScale: kept?.parallelScale,
+        focalPoint: kept?.focalPoint as Vector3 | undefined,
+        position: kept?.position as Vector3 | undefined,
+      });
+      if (keptKey !== cameraKey(target))
+        cameraEchoes.set(paneKey(target), keptKey);
     });
   }
 

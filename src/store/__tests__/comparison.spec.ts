@@ -33,7 +33,8 @@ const seatDicomVolume = (
   volumeID: string,
   studyKey: string,
   studyDate: string,
-  kind: 'volume' | 'cine'
+  kind: 'volume' | 'cine',
+  patientID = 'PATIENT-1'
 ) => {
   const dicomStore = useDICOMStore();
   dicomStore.volumeInfo[volumeID] = {
@@ -55,6 +56,13 @@ const seatDicomVolume = (
     StudyTime: '',
     AccessionNumber: '',
     StudyDescription: studyKey,
+  };
+  dicomStore.studyPatient[studyKey] = patientID;
+  dicomStore.patientInfo[patientID] = {
+    PatientID: patientID,
+    PatientName: patientID,
+    PatientBirthDate: '',
+    PatientSex: '',
   };
 };
 
@@ -228,6 +236,42 @@ describe('comparison store — cine series', () => {
 
     expect(comparison.currentImageID).toBeNull();
     expect(comparison.priorImageID).toBeNull();
+  });
+});
+
+describe('comparison store — patient identity', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+  });
+
+  it('flags a pair that names two different patients', () => {
+    const comparison = useComparisonStore();
+    seatDicomVolume('vol-a', 'study-a', '20190430', 'volume', 'PATIENT-A');
+    seatDicomVolume('vol-b', 'study-b', '20181031', 'volume', 'PATIENT-B');
+
+    comparison.autoSelectStudies();
+
+    expect(comparison.patientMismatch).toBe(true);
+  });
+
+  it('says nothing about data that carries no patient identity', () => {
+    const comparison = useComparisonStore();
+    seatImage('img-one');
+    seatImage('img-two');
+
+    comparison.autoSelectStudies();
+
+    expect(comparison.patientMismatch).toBe(false);
+  });
+
+  it('leaves two studies of the same patient unflagged', () => {
+    const comparison = useComparisonStore();
+    seatDicomVolume('vol-2019', 'study-2019', '20190430', 'volume');
+    seatDicomVolume('vol-2018', 'study-2018', '20181031', 'volume');
+
+    comparison.autoSelectStudies();
+
+    expect(comparison.patientMismatch).toBe(false);
   });
 });
 

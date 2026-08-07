@@ -187,6 +187,23 @@ const nudgeScope = computed(() =>
         </v-tooltip>
       </v-chip>
 
+      <v-chip
+        v-if="comparison.patientMismatch"
+        size="small"
+        variant="tonal"
+        color="error"
+        prepend-icon="mdi-account-alert-outline"
+        data-testid="comparison-patient-warning"
+      >
+        Different patients
+        <v-tooltip activator="parent" location="bottom" max-width="320">
+          {{ comparison.current?.patientName }} and
+          {{ comparison.prior?.patientName }} are not the same patient. Matching
+          geometry means these two volumes can be scrolled together, not that
+          the same anatomy is on screen.
+        </v-tooltip>
+      </v-chip>
+
       <v-divider vertical class="mx-1" />
 
       <div class="nudge">
