@@ -17,9 +17,11 @@ const RECOVERY_CONFIRM_TIMEOUT = 10_000;
 /** How often the rebuilt tree is checked for that first frame. */
 const RECOVERY_CONFIRM_INTERVAL = 500;
 /**
- * Quiet period after a successful recovery. A context that dies again this
- * soon is not going to be fixed by another silent rebuild, so the reader is
- * given the decision instead of watching the views flicker in a loop.
+ * Quiet period after a recovery attempt. A context that dies again this soon
+ * is not going to be fixed by another silent rebuild, so the reader is given
+ * the decision instead of watching the views flicker in a loop. Measured from
+ * the attempt rather than from a success, so a context that never comes back
+ * is not rebuilt forever.
  */
 const RECOVERY_COOLDOWN = 30_000;
 
@@ -27,12 +29,11 @@ type RootRenderWindowView = VtkRenderWindowParentApi['renderWindowView'] & {
   getGraphicsMemoryInfo?: () => number;
 };
 
-/**
- * Module scope on purpose: recovery rebuilds the render tree, so the failure
- * notice is raised by one instance of this composable and dismissed by the
- * next one.
- */
-let unavailableNoticeShown = false;
+/** Cleared together once the renderer is trustworthy again. */
+const RENDERER_MESSAGE_TITLES: string[] = [
+  Messages.RendererUnavailable.title,
+  Messages.RendererUnrecoverable.title,
+];
 
 /**
  * Watches the single WebGL context that every view blits from.
@@ -67,8 +68,8 @@ export function useRendererHealthMonitor(api: VtkRenderWindowParentApi) {
       },
     });
 
-    const lastRecovery = health.lastRecoveryAt;
-    if (lastRecovery == null || Date.now() - lastRecovery > RECOVERY_COOLDOWN) {
+    const lastAttempt = health.lastRecoveryAttemptAt;
+    if (lastAttempt == null || Date.now() - lastAttempt > RECOVERY_COOLDOWN) {
       health.requestRecovery();
     }
   };
@@ -87,7 +88,9 @@ export function useRendererHealthMonitor(api: VtkRenderWindowParentApi) {
 
   useIntervalFn(() => {
     const gl = getContext();
-    if (gl?.isContextLost() && health.status !== 'unhealthy') {
+    // Only while healthy: a context already known to be gone must not be
+    // re-reported while recovery is in flight or after it was given up on.
+    if (health.status === 'healthy' && gl?.isContextLost()) {
       // Covers drivers that drop the context without firing the event.
       onContextLost();
     }
@@ -120,10 +123,14 @@ export function useRendererHealthMonitor(api: VtkRenderWindowParentApi) {
   // requested in the same tick, so this keys off the settled status rather
   // than off individual transitions.
   watch(
-    () => health.status,
-    (status) => {
-      if (status !== 'healthy' && !unavailableNoticeShown) {
-        unavailableNoticeShown = true;
+    () => ({ status: health.status, viewFailed: health.anyViewFailed }),
+    ({ status, viewFailed }) => {
+      // One failed view is enough to warn globally, even while the rest of the
+      // layout keeps working.
+      const degraded = status !== 'healthy' || viewFailed;
+
+      if (degraded && !health.noticeShown) {
+        health.setNoticeShown(true);
         messageStore.addError(Messages.RendererUnavailable.title, {
           details: Messages.RendererUnavailable.details,
           persist: true,
@@ -139,10 +146,10 @@ export function useRendererHealthMonitor(api: VtkRenderWindowParentApi) {
           persist: true,
         });
       }
-      if (status === 'healthy' && unavailableNoticeShown) {
-        unavailableNoticeShown = false;
+      if (!degraded && health.noticeShown) {
+        health.setNoticeShown(false);
         messageStore.messages
-          .filter((msg) => msg.title === Messages.RendererUnavailable.title)
+          .filter((msg) => RENDERER_MESSAGE_TITLES.includes(msg.title))
           .forEach((msg) => messageStore.clearOne(msg.id));
         messageStore.addSuccess(Messages.RendererRecovered.title, {
           details: Messages.RendererRecovered.details,

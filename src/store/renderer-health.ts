@@ -54,11 +54,20 @@ export const useRendererHealthStore = defineStore('renderer-health', () => {
   const contextRestoredCount = ref(0);
   const lastFailureAt = ref<Maybe<number>>(null);
   const lastRecoveryAt = ref<Maybe<number>>(null);
+  const lastRecoveryAttemptAt = ref<Maybe<number>>(null);
   const recoveryAttempts = ref(0);
   const framesRendered = ref(0);
   const webglInfo = ref<Maybe<WebGLInfo>>(null);
   const approxTextureBytes = ref(0);
   const viewHealth = reactive<Record<string, ViewRendererHealth>>({});
+
+  /**
+   * Whether the reader has already been told the renderer is unavailable.
+   * Lives here rather than in the monitor because recovery rebuilds the render
+   * tree: the notice is raised by one monitor instance and dismissed by the
+   * next one.
+   */
+  const noticeShown = ref(false);
 
   /**
    * Bumped to force the whole render-window subtree to be torn down and
@@ -74,11 +83,18 @@ export const useRendererHealthStore = defineStore('renderer-health', () => {
     Object.keys(viewHealth).filter((id) => !viewHealth[id].healthy)
   );
 
+  const anyViewFailed = computed(() => unhealthyViewIds.value.length > 0);
+
   function getViewHealth(viewId: string): ViewRendererHealth {
     return viewHealth[viewId] ?? DEFAULT_VIEW_HEALTH;
   }
 
-  /** A view is unusable if it failed itself or the whole context is gone. */
+  /**
+   * A view is unusable if it failed itself or the whole context is gone.
+   *
+   * Only context loss sets the global status, so this never occludes a view
+   * whose own image is fine.
+   */
   function isViewUnhealthy(viewId: string) {
     if (status.value === 'unhealthy' || status.value === 'unrecoverable')
       return true;
@@ -139,10 +155,9 @@ export const useRendererHealthStore = defineStore('renderer-health', () => {
       lastCheckedAt: Date.now(),
     };
     lastFailureAt.value = Date.now();
-    if (status.value === 'healthy') {
-      status.value = 'unhealthy';
-      failureReason.value = reason;
-    }
+    // Deliberately does not touch the global status: one view painting black
+    // says nothing about the others, and covering a good image is its own
+    // diagnostic hazard.
   }
 
   function reportViewHealthy(viewId: string) {
@@ -174,6 +189,7 @@ export const useRendererHealthStore = defineStore('renderer-health', () => {
    */
   function requestRecovery() {
     recoveryAttempts.value += 1;
+    lastRecoveryAttemptAt.value = Date.now();
     status.value = 'recovering';
     renderTreeEpoch.value += 1;
   }
@@ -189,6 +205,10 @@ export const useRendererHealthStore = defineStore('renderer-health', () => {
     status.value = 'unrecoverable';
   }
 
+  function setNoticeShown(shown: boolean) {
+    noticeShown.value = shown;
+  }
+
   function $reset() {
     status.value = 'healthy';
     failureReason.value = null;
@@ -196,9 +216,11 @@ export const useRendererHealthStore = defineStore('renderer-health', () => {
     contextRestoredCount.value = 0;
     lastFailureAt.value = null;
     lastRecoveryAt.value = null;
+    lastRecoveryAttemptAt.value = null;
     recoveryAttempts.value = 0;
     framesRendered.value = 0;
     approxTextureBytes.value = 0;
+    noticeShown.value = false;
     Object.keys(viewHealth).forEach((id) => delete viewHealth[id]);
   }
 
@@ -209,15 +231,18 @@ export const useRendererHealthStore = defineStore('renderer-health', () => {
     contextRestoredCount,
     lastFailureAt,
     lastRecoveryAt,
+    lastRecoveryAttemptAt,
     recoveryAttempts,
     framesRendered,
     webglInfo,
     approxTextureBytes,
     viewHealth,
     renderTreeEpoch,
+    noticeShown,
     healthy,
     recovering,
     unhealthyViewIds,
+    anyViewFailed,
     getViewHealth,
     isViewUnhealthy,
     registerView,
@@ -233,6 +258,7 @@ export const useRendererHealthStore = defineStore('renderer-health', () => {
     requestRecovery,
     confirmRecovery,
     reportRecoveryFailed,
+    setNoticeShown,
     $reset,
   };
 });

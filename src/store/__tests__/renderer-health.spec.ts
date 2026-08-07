@@ -47,6 +47,21 @@ describe('Renderer health store', () => {
     expect(health.isViewUnhealthy('Axial')).toBe(true);
     expect(health.getViewHealth('Axial').reason).toBe('blank-frame');
     expect(health.unhealthyViewIds).toEqual(['Axial']);
+    // The other view is still trustworthy and must not be occluded.
+    expect(health.isViewUnhealthy('Coronal')).toBe(false);
+    expect(health.status).toBe('healthy');
+    expect(health.anyViewFailed).toBe(true);
+  });
+
+  it('lets a failed view clear itself without a global recovery', () => {
+    const health = useRendererHealthStore();
+    health.registerView('Axial');
+    health.reportViewFailed('Axial', 'blank-frame');
+
+    health.reportViewHealthy('Axial');
+
+    expect(health.isViewUnhealthy('Axial')).toBe(false);
+    expect(health.anyViewFailed).toBe(false);
   });
 
   it('counts consecutive blank samples and clears them on recovery', () => {
@@ -72,6 +87,10 @@ describe('Renderer health store', () => {
     expect(health.renderTreeEpoch).toBe(epoch + 1);
     expect(health.status).toBe('recovering');
     expect(health.recoveryAttempts).toBe(1);
+    // Timestamped even though it has not succeeded, so the cooldown applies to
+    // back-to-back failures rather than only after a success.
+    expect(health.lastRecoveryAttemptAt).not.toBeNull();
+    expect(health.lastRecoveryAt).toBeNull();
   });
 
   it('clears all view failures once recovery is confirmed', () => {

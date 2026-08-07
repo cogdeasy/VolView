@@ -158,6 +158,8 @@ export function useViewRendererHealth(options: ViewRendererHealthOptions) {
       return;
     }
 
+    // Not cached against "nothing repainted": a canvas that goes black with no
+    // render event is exactly the stall this is looking for.
     const blank = canvasIsUniformlyBlack(canvasValue);
     if (blank !== true) {
       health.reportViewHealthy(id);
