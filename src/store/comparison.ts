@@ -157,6 +157,13 @@ export const useComparisonStore = defineStore('comparison', () => {
     return viewStore.visibleViews.flatMap((view) => {
       const spec = comparisonPaneSpec(view?.name);
       if (!view || !spec) return [];
+      // The name says which axis the pane is for; the view says which axis it
+      // actually shows. They agree in every layout the app builds, but a
+      // restored manifest is taken at its word, and a pane whose name and
+      // orientation disagree would have its slices mapped along an axis
+      // nobody is looking at. Better no pane than a wrong one.
+      if (view.type !== '2D' || view.options.orientation !== spec.axis)
+        return [];
       const imageID =
         spec.role === 'current' ? currentImageID.value : priorImageID.value;
       if (!imageID) return [];

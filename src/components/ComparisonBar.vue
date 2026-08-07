@@ -174,7 +174,7 @@ const nudgeScope = computed(() =>
       </div>
 
       <v-chip
-        v-if="alignment"
+        v-if="comparison.active && alignment"
         size="small"
         variant="tonal"
         :color="isPhysical ? undefined : 'warning'"
@@ -204,9 +204,9 @@ const nudgeScope = computed(() =>
         </v-tooltip>
       </v-chip>
 
-      <v-divider vertical class="mx-1" />
+      <v-divider v-if="comparison.active" vertical class="mx-1" />
 
-      <div class="nudge">
+      <div v-if="comparison.active" class="nudge">
         <span class="nudge-label">
           Align priors{{ nudgeScope }}
           <v-tooltip activator="parent" location="bottom" max-width="320">

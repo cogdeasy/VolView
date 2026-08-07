@@ -51,10 +51,12 @@ describe('useComparisonSync — slice ranges', () => {
     comparison.setCurrentImageID('current');
     comparison.setPriorImageID('prior');
     scope.run(() => useComparisonSync());
-    const priorViewID = viewStore.visibleViews.find(
-      (view) => view?.name === ComparisonViewNames.priorAxial
-    )!.id;
-    return { priorViewID };
+    const viewIDOf = (name: string) =>
+      viewStore.visibleViews.find((view) => view?.name === name)!.id;
+    return {
+      currentViewID: viewIDOf(ComparisonViewNames.currentAxial),
+      priorViewID: viewIDOf(ComparisonViewNames.priorAxial),
+    };
   };
 
   it('lets a prior pane scroll into slices that arrived after it was bound', async () => {
@@ -82,6 +84,30 @@ describe('useComparisonSync — slice ranges', () => {
     await nextTick();
 
     expect(sliceStore.getConfig(priorViewID, 'prior').max).toBe(7);
+  });
+
+  it('holds the current study still while the prior finishes downloading', async () => {
+    seatImage('current', 8);
+    seatImage('prior', 2);
+    const { currentViewID, priorViewID } = openPair();
+    const sliceStore = useViewSliceStore();
+    sliceStore.updateConfig(currentViewID, 'current', {
+      slice: 2,
+      min: 0,
+      max: 7,
+    });
+    await nextTick();
+
+    // Six more slices land. An untouched prior pane sits on the middle of
+    // whatever has arrived, so its reported slice moves on its own.
+    useImageCacheStore().updateVTKImageData('prior', imageOf(8));
+    await nextTick();
+
+    expect(sliceStore.getConfig(currentViewID, 'current').slice).toBe(2);
+
+    // and the pane the download moved is put back where the current says.
+    await nextTick();
+    expect(sliceStore.getConfig(priorViewID, 'prior').slice).toBe(2);
   });
 });
 

@@ -18,6 +18,7 @@ import type { Maybe } from '@/src/types';
 
 interface PaneSlice extends ComparisonPane {
   slice: number;
+  max: number;
 }
 
 /**
@@ -132,10 +133,10 @@ export function useComparisonSync() {
   // --- slice position --- //
 
   const paneSlices = computed<PaneSlice[]>(() =>
-    comparison.panes.map((pane) => ({
-      ...pane,
-      slice: sliceStore.getConfig(pane.viewID, pane.imageID).slice,
-    }))
+    comparison.panes.map((pane) => {
+      const { slice, max } = sliceStore.getConfig(pane.viewID, pane.imageID);
+      return { ...pane, slice, max };
+    })
   );
 
   function partnerOf(pane: PaneSlice, panes: PaneSlice[]) {
@@ -180,10 +181,15 @@ export function useComparisonSync() {
 
   // Slices we wrote ourselves, so an echo is not mistaken for a user scroll.
   const echoes = new Map<string, number>();
-  let previousSlices = new Map<string, number>();
+  // The range is remembered beside the slice: a pane nobody has scrolled sits
+  // on the middle of its study by derivation, not by storage, so a volume
+  // still arriving moves it without anyone touching it.
+  let previousSlices = new Map<string, { slice: number; max: number }>();
 
   const snapshot = (panes: PaneSlice[]) =>
-    new Map(panes.map((pane) => [paneKey(pane), pane.slice]));
+    new Map(
+      panes.map((pane) => [paneKey(pane), { slice: pane.slice, max: pane.max }])
+    );
 
   /**
    * Drops bookkeeping for panes that are no longer on screen: an echo left
@@ -265,16 +271,26 @@ export function useComparisonSync() {
         return;
       }
 
+      const grew = panes.filter((pane) => {
+        const before = previousSlices.get(paneKey(pane));
+        return before !== undefined && pane.max > before.max;
+      });
+
       const changed = panes.filter((pane) => {
         const before = previousSlices.get(paneKey(pane));
-        if (before === undefined || before === pane.slice) return false;
+        if (before === undefined || before.slice === pane.slice) return false;
         // An echo is consumed once: the reader may well scroll back to a
         // slice we once wrote ourselves.
         if (echoes.get(paneKey(pane)) === pane.slice) {
           echoes.delete(paneKey(pane));
           return false;
         }
-        return true;
+        // A study that just grew carried this pane's slice with it: the middle
+        // of what has arrived is further in than the middle of what had
+        // arrived before. That is the volume loading, not the reader reading,
+        // and the older study finishing its download is no reason to move the
+        // study being read.
+        return !grew.includes(pane);
       });
 
       // Both panes of an axis can change in one tick; the current study wins,
@@ -289,6 +305,9 @@ export function useComparisonSync() {
 
       previousSlices = snapshot(panes);
       driveSlices(drivers, panes);
+      // A pane the growth moved is put back where the current study says it
+      // belongs, rather than being left wherever the download landed it.
+      if (grew.length) nextTick(realignFromCurrent);
     },
     { immediate: true }
   );
