@@ -47,6 +47,8 @@ export type VolumeInfo = {
   SeriesDescription: string;
   WindowLevel: string;
   WindowWidth: string;
+  /** Optional: absent from saved state that predates the field. */
+  BodyPartExamined?: string;
   // For 'cine', NumberOfSlices is the frame count. Optional for back-compat
   // with saved state that predates the field.
   kind?: 'volume' | 'cine';
@@ -208,6 +210,7 @@ export const useDICOMStore = defineStore('dicom', {
             SeriesDescription: metadata[Tags.SeriesDescription],
             WindowLevel: metadata[Tags.WindowLevel],
             WindowWidth: metadata[Tags.WindowWidth],
+            BodyPartExamined: metadata[Tags.BodyPartExamined],
             kind: 'volume',
           };
 

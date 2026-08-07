@@ -21,7 +21,7 @@
                 <layout-grid v-show="hasData" :layout="layout" />
               </VtkRenderWindowParent>
               <welcome-page
-                v-if="!hasData"
+                v-if="!hasData && !worklistVisible"
                 :loading="showLoading"
                 class="clickable"
                 @click="loadUserPromptedFiles"
@@ -31,6 +31,11 @@
           </div>
         </v-main>
         <controls-modal />
+        <worklist-page
+          v-if="worklistVisible"
+          :has-data="hasData"
+          @open-files="loadUserPromptedFiles"
+        />
       </v-app>
       <persistent-overlay
         :disabled="!dragHover"
@@ -69,6 +74,8 @@ import {
   loadUrls,
 } from '@/src/actions/loadUserFiles';
 import WelcomePage from '@/src/components/WelcomePage.vue';
+import WorklistPage from '@/src/components/worklist/WorklistPage.vue';
+import { useWorklistStore } from '@/src/store/worklist';
 import { useDICOMStore } from '@/src/store/datasets-dicom';
 import LayoutGrid from '@/src/components/LayoutGrid.vue';
 import ModulePanel from '@/src/components/ModulePanel.vue';
@@ -101,6 +108,7 @@ export default defineComponent({
     PersistentOverlay,
     ControlsModal,
     WelcomePage,
+    WorklistPage,
     AppBar,
     VtkRenderWindowParent,
   },
@@ -108,6 +116,7 @@ export default defineComponent({
   setup() {
     const imageStore = useImageStore();
     const dicomStore = useDICOMStore();
+    const worklistStore = useWorklistStore();
 
     useGlobalErrorHook();
     useKeyboardShortcuts();
@@ -154,6 +163,21 @@ export default defineComponent({
 
     const urlParams = readLaunchParams();
 
+    // Launching with data goes straight to the viewer; the worklist must not
+    // flash in front of it while the URLs load.
+    if (urlParams.urls || urlParams.config) {
+      worklistStore.dismissForExternalLoad();
+    }
+
+    // Anything loaded from outside the worklist (drag and drop, the file
+    // dialog, DICOMweb) takes the reader to the viewer.
+    const datasetCount = computed(
+      () => imageStore.idList.length + Object.keys(dicomStore.volumeInfo).length
+    );
+    watch(datasetCount, (count, previousCount) => {
+      if (count > previousCount) worklistStore.dismissForExternalLoad();
+    });
+
     onMounted(async () => {
       await authReady;
       await loadUrls(urlParams);
@@ -191,6 +215,7 @@ export default defineComponent({
       loadFiles,
       hasData,
       showLoading,
+      worklistVisible: computed(() => worklistStore.visible),
       layout: visibleLayout,
     };
   },

@@ -6,12 +6,14 @@ import AboutBox from '@/src/components/AboutBox.vue';
 import PhilipsFullLogo from '@/src/components/icons/PhilipsFullLogo.vue';
 import PhilipsLogo from '@/src/components/icons/PhilipsLogo.vue';
 import { useKeyboardShortcutsStore } from '@/src/store/keyboard-shortcuts';
+import { useWorklistStore } from '@/src/store/worklist';
 
 const emit = defineEmits(['click:left-menu']);
 
 const { mobile } = useDisplay();
 const aboutBoxDialog = ref(false);
 const keyboardStore = useKeyboardShortcutsStore();
+const worklistStore = useWorklistStore();
 </script>
 
 <template>
@@ -21,6 +23,32 @@ const keyboardStore = useKeyboardShortcutsStore();
       <philips-logo v-if="mobile" />
       <philips-full-logo v-else />
     </v-toolbar-title>
+    <v-btn
+      v-if="mobile"
+      variant="text"
+      icon
+      :rounded="0"
+      class="toolbar-button"
+      data-testid="app-bar-worklist"
+      @click="worklistStore.show()"
+    >
+      <v-icon icon="mdi-view-list-outline"></v-icon>
+      <v-tooltip activator="parent" location="bottom">Worklist</v-tooltip>
+    </v-btn>
+    <v-btn
+      v-else
+      variant="text"
+      :rounded="0"
+      class="toolbar-button"
+      prepend-icon="mdi-view-list-outline"
+      data-testid="app-bar-worklist"
+      @click="worklistStore.show()"
+    >
+      Worklist
+      <v-tooltip activator="parent" location="bottom">
+        Back to the worklist
+      </v-tooltip>
+    </v-btn>
     <v-btn
       variant="text"
       icon
