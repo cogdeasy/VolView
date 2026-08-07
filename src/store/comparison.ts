@@ -169,8 +169,9 @@ export const useComparisonStore = defineStore('comparison', () => {
    * manifest is taken at its word, and a pane whose name and orientation
    * disagree would have its slices mapped — and its counterparts drawn — along
    * an axis nobody is looking at. Better no pane than a wrong one, which is a
-   * judgement everything that decorates a pane has to share: the pair, the
-   * caption and the counterpart markers all resolve a pane through here.
+   * judgement everything that treats a view as a pane has to share: the pair,
+   * the caption, the counterpart markers and the view-type switcher the pane
+   * withholds all resolve a pane through here.
    */
   function paneSpecFor(viewID: Maybe<string>) {
     const view = viewStore.getView(viewID);

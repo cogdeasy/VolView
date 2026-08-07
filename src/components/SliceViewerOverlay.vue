@@ -11,8 +11,6 @@ import ViewTypeSwitcher from '@/src/components/ViewTypeSwitcher.vue';
 import { useImage } from '@/src/composables/useCurrentImage';
 import { computed } from 'vue';
 import { useComparisonStore } from '@/src/store/comparison';
-import { useViewStore } from '@/src/store/views';
-import { comparisonPaneSpec } from '@/src/core/comparison/layout';
 
 type Props = {
   viewId: string;
@@ -51,12 +49,12 @@ const isLockedOrientationView = computed(() =>
 
 // A pane's orientation belongs to the comparison layout: switching its view
 // type renames the view, which quietly drops the pane out of the pair — so the
-// switcher goes as soon as the layout does, pair or no pair.
+// switcher goes as soon as the layout does, pair or no pair. A pane the pair
+// itself refuses, its name and its rendered orientation contradicting each
+// other, keeps the switcher: there is no pairing to protect, and using it is
+// how the reader gets such a view back to an ordinary one.
 const comparison = useComparisonStore();
-const viewStore = useViewStore();
-const isComparisonPane = computed(
-  () => !!comparisonPaneSpec(viewStore.getView(viewId.value)?.name)
-);
+const isComparisonPane = computed(() => !!comparison.paneSpecFor(viewId.value));
 
 // Space is reserved for the study banner on the banner's own terms, so the
 // annotations cannot be pushed down for a caption that is not drawn, nor the
