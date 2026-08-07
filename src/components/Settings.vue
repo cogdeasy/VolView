@@ -36,6 +36,10 @@
       ></v-switch>
 
       <v-divider class="mt-2 mb-6"></v-divider>
+      <div class="text-subtitle-2 mb-2">Renderer</div>
+      <renderer-diagnostics />
+
+      <v-divider class="mt-6 mb-6"></v-divider>
       <dicom-web-settings />
 
       <v-divider class="mt-2 mb-6"></v-divider>
@@ -53,6 +57,7 @@ import { useLocalStorage } from '@vueuse/core';
 import { useKeyboardShortcutsStore } from '@/src/store/keyboard-shortcuts';
 import { useViewCameraStore } from '@/src/store/view-configs/camera';
 import DicomWebSettings from './dicom-web/DicomWebSettings.vue';
+import RendererDiagnostics from './RendererDiagnostics.vue';
 import ServerSettings from './ServerSettings.vue';
 import { DarkTheme, LightTheme, ThemeStorageKey } from '../constants';
 import {
@@ -94,6 +99,7 @@ export default defineComponent({
   },
   components: {
     DicomWebSettings,
+    RendererDiagnostics,
     ServerSettings,
   },
 });

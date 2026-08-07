@@ -32,14 +32,20 @@ export default defineComponent({
     });
 
     // remove toasts if the message is gone
-    watch(byID, (msgLookup) => {
-      Object.keys(toasts).forEach((msgID) => {
-        if (!(msgID in msgLookup)) {
-          toast.dismiss(toasts[msgID]);
-          delete toasts[msgID];
-        }
-      });
-    });
+    watch(
+      byID,
+      (msgLookup) => {
+        Object.keys(toasts).forEach((msgID) => {
+          if (!(msgID in msgLookup)) {
+            toast.dismiss(toasts[msgID]);
+            delete toasts[msgID];
+          }
+        });
+      },
+      // keys are added and removed on the same object, which a shallow watch
+      // on the ref does not see
+      { deep: true }
+    );
 
     messageStore.$onAction(({ name, args, after }) => {
       if (name === '_addMessage') {

@@ -17,7 +17,7 @@
           <div class="fill-height d-flex flex-row flex-grow-1">
             <controls-strip :has-data="hasData"></controls-strip>
             <div class="d-flex flex-column flex-grow-1">
-              <VtkRenderWindowParent>
+              <VtkRenderWindowParent :key="renderTreeEpoch">
                 <layout-grid v-show="hasData" :layout="layout" />
               </VtkRenderWindowParent>
               <welcome-page
@@ -89,6 +89,7 @@ import VtkRenderWindowParent from '@/src/components/vtk/VtkRenderWindowParent.vu
 import { useSyncWindowing } from '@/src/composables/useSyncWindowing';
 import { readLaunchParams } from '@/src/utils/urlParams';
 import { Brand } from '@/src/branding';
+import { useRendererHealthStore } from '@/src/store/renderer-health';
 
 export default defineComponent({
   name: 'App',
@@ -111,6 +112,10 @@ export default defineComponent({
 
     useGlobalErrorHook();
     useKeyboardShortcuts();
+
+    // Remounting the render window parent rebuilds the WebGL context in place;
+    // camera, slice, window/level and layout live in stores and survive it.
+    const { renderTreeEpoch } = storeToRefs(useRendererHealthStore());
 
     // --- sync handling --- //
 
@@ -192,6 +197,7 @@ export default defineComponent({
       hasData,
       showLoading,
       layout: visibleLayout,
+      renderTreeEpoch,
     };
   },
 });

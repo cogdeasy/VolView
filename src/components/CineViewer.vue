@@ -109,6 +109,10 @@
           <svg class="overlay-no-events">
             <bounding-rectangle :points="selectionPoints" />
           </svg>
+          <renderer-health-overlay
+            :view-id="viewId"
+            :image-id="currentImageID"
+          />
           <slot></slot>
         </vtk-slice-view>
       </div>
@@ -134,7 +138,7 @@ import SliceSlider from '@/src/components/SliceSlider.vue';
 import CineViewerOverlay from '@/src/components/CineViewerOverlay.vue';
 import { useToolSelectionStore } from '@/src/store/tools/toolSelection';
 import { useAnnotationToolStore, useToolStore } from '@/src/store/tools';
-import { useWebGLWatchdog } from '@/src/composables/useWebGLWatchdog';
+import RendererHealthOverlay from '@/src/components/RendererHealthOverlay.vue';
 import { useCineFrame } from '@/src/composables/useCineFrame';
 import VtkCineScrubManipulator from '@/src/components/vtk/VtkCineScrubManipulator.vue';
 import VtkCineScrubKeyManipulator from '@/src/components/vtk/VtkCineScrubKeyManipulator.vue';
@@ -170,7 +174,6 @@ function resetCamera() {
 
 useResetViewsEvents().onClick(resetCamera);
 
-useWebGLWatchdog(vtkView);
 useViewAnimationListener(vtkView, viewId, '2D');
 
 const { currentTool } = storeToRefs(useToolStore());
