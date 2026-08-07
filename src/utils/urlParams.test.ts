@@ -98,34 +98,48 @@ describe('withDefaultUrls', () => {
     names: 'Demo Study',
   };
 
+  const parse = (raw: Parameters<typeof normalizeUrlParams>[0]) =>
+    [raw, normalizeUrlParams(raw)] as const;
+
   it('opens the deployment default when the tab names no urls', () => {
-    const result = withDefaultUrls({}, defaults);
+    const result = withDefaultUrls(...parse({}), defaults);
     expect(result.urls).toEqual(['https://example.com/demo.zip']);
     expect(result.names).toEqual(['Demo Study']);
   });
 
   it('leaves an explicit urls= untouched', () => {
     const result = withDefaultUrls(
-      { urls: ['https://example.com/patient.zip'] },
+      ...parse({ urls: 'https://example.com/patient.zip' }),
       defaults
     );
     expect(result.urls).toEqual(['https://example.com/patient.zip']);
     expect(result.names).toBeUndefined();
   });
 
+  it('shows nothing rather than the default when every urls= was rejected', () => {
+    const result = withDefaultUrls(...parse({ urls: 'http://[' }), defaults);
+    expect(result.urls).toBeUndefined();
+  });
+
+  it('drops a lone names=, which labels the urls= it arrived with', () => {
+    const result = withDefaultUrls(...parse({ names: 'Patient Study' }), {
+      urls: defaults.urls,
+    });
+    expect(result.urls).toEqual(['https://example.com/demo.zip']);
+    expect(result.names).toBeUndefined();
+  });
+
   it('keeps other launch params when the default applies', () => {
     const result = withDefaultUrls(
-      { save: 'https://example.com/save' },
-      {
-        urls: defaults.urls,
-      }
+      ...parse({ save: 'https://example.com/save' }),
+      { urls: defaults.urls }
     );
     expect(result.urls).toEqual(['https://example.com/demo.zip']);
     expect(result.save).toBe('https://example.com/save');
   });
 
   it('is a no-op for an unconfigured or unparseable default', () => {
-    expect(withDefaultUrls({}, {})).toEqual({});
-    expect(withDefaultUrls({}, { urls: '' })).toEqual({});
+    expect(withDefaultUrls(...parse({}), {})).toEqual({});
+    expect(withDefaultUrls(...parse({}), { urls: '' })).toEqual({});
   });
 });

@@ -91,14 +91,17 @@ export const normalizeUrlParams = (rawParams: UrlParams): ParsedUrlParams => {
 };
 
 // A deployment (a kiosk or demo build) can name a dataset to open when the tab
-// carries no `urls=` of its own, via VITE_DEFAULT_URLS. An explicit `urls=`
-// always wins, and so does an explicit `names=` — a build-time name paired with
-// a launch-time URL would mislabel the data.
+// carries no `urls=` of its own, via VITE_DEFAULT_URLS. The test is on the raw
+// params, not the parsed ones: a tab whose `urls=` were all rejected still
+// asked for specific data, and must show nothing rather than silently open a
+// different study. For the same reason the default is all-or-nothing — a
+// launch-time `names=` labels the `urls=` it arrived with, not this dataset.
 export const withDefaultUrls = (
+  rawParams: UrlParams,
   params: ParsedUrlParams,
   defaults: { urls?: string; names?: string }
 ): ParsedUrlParams => {
-  if (params.urls || !defaults.urls) return params;
+  if (rawParams.urls || !defaults.urls) return params;
 
   const fallback = normalizeUrlParams({
     urls: defaults.urls,
@@ -107,17 +110,21 @@ export const withDefaultUrls = (
 
   if (!fallback.urls) return params;
 
-  return { ...fallback, ...params };
+  const launch = { ...params };
+  delete launch.names;
+
+  return { ...launch, ...fallback };
 };
 
 // The current tab's launch params. Unparseable params degrade to an empty
 // launch (logged), never a failed boot.
 export const readLaunchParams = (): ParsedUrlParams => {
   try {
-    return withDefaultUrls(
-      normalizeUrlParams(vtkURLExtract.extractURLParameters() as UrlParams),
-      { urls: VITE_DEFAULT_URLS, names: VITE_DEFAULT_NAMES }
-    );
+    const rawParams = vtkURLExtract.extractURLParameters() as UrlParams;
+    return withDefaultUrls(rawParams, normalizeUrlParams(rawParams), {
+      urls: VITE_DEFAULT_URLS,
+      names: VITE_DEFAULT_NAMES,
+    });
   } catch (error) {
     logError(new Error(`Failed to parse URL parameters: ${error}`));
     return {};
