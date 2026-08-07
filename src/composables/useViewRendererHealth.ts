@@ -204,15 +204,22 @@ export function useViewRendererHealth(options: ViewRendererHealthOptions) {
     if (expectsVisiblePixels.value !== true || imageIsInFrame() !== true) {
       // A genuinely black slice, an image panned or zoomed out of frame, or
       // not enough information: all reasons to stay quiet rather than cry wolf
-      // on a diagnostic display.
-      health.reportViewHealthy(id);
+      // on a diagnostic display. Not evidence of health either - a broken view
+      // must keep its warning while the reader is on a black slice.
+      health.clearBlankSamples(id);
       return;
     }
 
     // Not cached against "nothing repainted": a canvas that goes black with no
     // render event is exactly the stall this is looking for.
     const blank = canvasIsUniformlyBlack(canvasValue);
-    if (blank !== true) {
+    if (blank == null) {
+      health.clearBlankSamples(id);
+      return;
+    }
+    if (!blank) {
+      // Pixels where pixels were expected: the only positive proof that this
+      // view is displaying image data, and the only thing that lifts a warning.
       health.reportViewHealthy(id);
       return;
     }

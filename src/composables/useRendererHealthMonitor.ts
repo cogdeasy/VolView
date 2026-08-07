@@ -149,18 +149,31 @@ export function useRendererHealthMonitor(api: VtkRenderWindowParentApi) {
   // requested in the same tick, so this keys off the settled status rather
   // than off individual transitions.
   watch(
-    () => ({ status: health.status, viewFailed: health.anyViewFailed }),
-    ({ status, viewFailed }, previous) => {
+    () => ({
+      status: health.status,
+      viewFailed: health.anyViewFailed,
+      failureAt: health.lastFailureAt,
+    }),
+    ({ status, viewFailed, failureAt }, previous) => {
       // One failed view is enough to warn globally, even while the rest of the
       // layout keeps working.
       const degraded = status !== 'healthy' || viewFailed;
+      // A reader who dismissed the notice from the tray must still be told
+      // about the next failure, so the tray is re-checked rather than the flag
+      // being taken as proof the warning is still on screen.
+      const newFailure = previous != null && failureAt !== previous.failureAt;
 
-      if (degraded && !health.noticeShown) {
+      if (degraded && (!health.noticeShown || newFailure)) {
         health.setNoticeShown(true);
-        messageStore.addError(Messages.RendererUnavailable.title, {
-          details: Messages.RendererUnavailable.details,
-          persist: true,
-        });
+        const stillShown = messageStore.messages.some(
+          (msg) => msg.title === Messages.RendererUnavailable.title
+        );
+        if (!stillShown) {
+          messageStore.addError(Messages.RendererUnavailable.title, {
+            details: Messages.RendererUnavailable.details,
+            persist: true,
+          });
+        }
       }
       if (status === 'recovering' && previous?.status !== 'recovering') {
         confirmDeadline = Date.now() + RECOVERY_CONFIRM_TIMEOUT;

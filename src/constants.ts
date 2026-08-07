@@ -20,7 +20,8 @@ export const Messages = {
     title: 'Rendering unavailable',
     details:
       'Image display has stopped in one or more views. Do not interpret ' +
-      'affected views. Restoring rendering automatically.',
+      'affected views. Use the controls on the affected view to restore ' +
+      'rendering or reload the application.',
   },
   RendererRecovered: {
     title: 'Rendering restored',

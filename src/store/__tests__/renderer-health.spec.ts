@@ -149,6 +149,29 @@ describe('Renderer health store', () => {
     expect(health.failureLeftWithView).toBe(false);
   });
 
+  it('keeps a view failed when a later sample proves nothing either way', () => {
+    const health = useRendererHealthStore();
+    health.registerView('Axial');
+    health.reportViewFailed('Axial', 'blank-frame');
+
+    health.clearBlankSamples('Axial');
+
+    expect(health.isViewUnhealthy('Axial')).toBe(true);
+    expect(health.getViewHealth('Axial').reason).toBe('blank-frame');
+  });
+
+  it('forgets blank samples on an inconclusive sample of a healthy view', () => {
+    const health = useRendererHealthStore();
+    health.registerView('Axial');
+    health.reportViewBlank('Axial');
+    health.reportViewBlank('Axial');
+
+    health.clearBlankSamples('Axial');
+
+    expect(health.getViewHealth('Axial').blankSamples).toBe(0);
+    expect(health.isViewUnhealthy('Axial')).toBe(false);
+  });
+
   it('does not treat views unmounted by a rebuild as failures walking out', () => {
     const health = useRendererHealthStore();
     health.registerView('Axial');

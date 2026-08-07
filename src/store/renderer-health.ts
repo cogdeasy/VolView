@@ -170,6 +170,24 @@ export const useRendererHealthStore = defineStore('renderer-health', () => {
     return blankSamples;
   }
 
+  /**
+   * Forget accumulated blank samples without clearing an existing failure.
+   *
+   * For samples that prove nothing either way: they must not push a healthy
+   * view towards a failure, and they must not lift the warning off a broken
+   * one - only pixels actually appearing again can do that.
+   */
+  function clearBlankSamples(viewId: string) {
+    registerView(viewId);
+    const current = viewHealth[viewId];
+    if (current.blankSamples === 0) return;
+    viewHealth[viewId] = {
+      ...current,
+      blankSamples: 0,
+      lastCheckedAt: Date.now(),
+    };
+  }
+
   function reportViewFailed(viewId: string, reason: RendererFailureReason) {
     registerView(viewId);
     const current = viewHealth[viewId];
@@ -271,6 +289,7 @@ export const useRendererHealthStore = defineStore('renderer-health', () => {
     reportContextLost,
     reportContextRestored,
     reportViewBlank,
+    clearBlankSamples,
     reportViewFailed,
     reportViewHealthy,
     publishFrameCount,
