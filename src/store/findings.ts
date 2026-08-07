@@ -57,6 +57,12 @@ const blobToDataURL = (blob: Blob) =>
 
 const dataURLToBase64 = (dataURL: string) => dataURL.split(',')[1] ?? '';
 
+/** Two taxonomy entries a user would read as the same type. */
+const sameFindingType = (a: FindingType, b: FindingType) =>
+  a.label === b.label &&
+  a.defaultBodySite === b.defaultBodySite &&
+  a.categoryScale === b.categoryScale;
+
 export type NewFinding = Partial<Omit<Finding, 'id' | 'createdAt'>> &
   Pick<Finding, 'imageID'>;
 
@@ -262,10 +268,19 @@ export const useFindingsStore = defineStore('findings', () => {
 
   function serialize(state: StateFile) {
     const { zip, manifest } = state;
+    // Built-ins come from code, so only user edits need to travel.
+    const types = findingTypes.value.filter((type) => !type.builtin);
+    // The root stays additive: a session that never used the feature saves the
+    // manifest it would have saved before findings existed.
+    if (
+      findingIDs.value.length === 0 &&
+      types.length === 0 &&
+      !impression.value
+    )
+      return;
     manifest.findings = {
       impression: impression.value,
-      // Built-ins come from code, so only user edits need to travel.
-      types: findingTypes.value.filter((type) => !type.builtin),
+      types,
       findings: findingIDs.value.map((id) => {
         const { keyImage, ...finding } = findingByID.value[id];
         // A link to a deleted annotation is not worth saving.
@@ -303,7 +318,27 @@ export const useFindingsStore = defineStore('findings', () => {
     if (!section) return { missingKeyImages };
 
     impression.value = section.impression ?? '';
-    (section.types ?? []).forEach((type) => upsertFindingType(type));
+
+    // A saved custom type id comes from the counter of the session that wrote
+    // it, so it can name a different type this session already minted.
+    // Re-seat those under a fresh id and re-point the restored findings, the
+    // same way annotations are remapped.
+    const typeIDMap: Record<string, string> = {};
+    (section.types ?? []).forEach((type) => {
+      const clash = findingTypes.value.find(
+        (existing) => existing.id === type.id
+      );
+      if (clash && !sameFindingType(clash, type)) {
+        typeIDMap[type.id] = addFindingType({
+          label: type.label,
+          modalities: type.modalities,
+          defaultBodySite: type.defaultBodySite,
+          categoryScale: type.categoryScale,
+        });
+        return;
+      }
+      upsertFindingType(type);
+    });
 
     const fileByPath = new Map(
       stateFiles.map((entry) => [entry.archivePath, entry.file])
@@ -336,6 +371,7 @@ export const useFindingsStore = defineStore('findings', () => {
       const id = addFinding({
         ...saved,
         imageID,
+        typeID: typeIDMap[saved.typeID] ?? saved.typeID,
         // Annotations are re-added under fresh ids on restore; drop a
         // measurement whose tool did not come back rather than dangling.
         measurements: saved.measurements.flatMap((measurement) => {

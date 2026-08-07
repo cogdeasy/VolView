@@ -1,5 +1,6 @@
 import { nextTick } from 'vue';
 import { useViewStore } from '@/src/store/views';
+import { useViewSliceStore } from '@/src/store/view-configs/slicing';
 import { useFindingsStore } from '@/src/store/findings';
 import { getRegisteredViewIDs } from '@/src/core/views/viewApiRegistry';
 import { captureViewKeyImage } from '@/src/core/findings/keyImage';
@@ -70,10 +71,17 @@ export function useKeyImageCapture() {
     if (!dataURL) return false;
 
     const view = viewStore.getView(targetID);
+    // The captured view's own slice, not the finding's: the user may capture a
+    // finding from a view along another axis, where the finding's slice index
+    // means nothing. A 3D view or a cine frame has no slice to report.
+    const slice =
+      view?.type === '2D' && finding.frame == null
+        ? useViewSliceStore().getConfig(targetID, finding.imageID).slice
+        : undefined;
     findingsStore.setKeyImage(findingID, {
       dataURL,
       viewName: view?.name ?? 'View',
-      slice: finding.slice,
+      slice,
       capturedAt: new Date().toISOString(),
     });
     return true;

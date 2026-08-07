@@ -484,7 +484,7 @@ const FindingMeasurement = z.object({
 const FindingKeyImage = z.object({
   path: z.string(),
   viewName: z.string(),
-  slice: z.number(),
+  slice: z.number().optional(),
   capturedAt: z.string(),
 });
 

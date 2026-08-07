@@ -35,8 +35,11 @@ export type FindingKeyImage = {
   /** PNG data URL. Archived as a zip member in the session state file. */
   dataURL: string;
   viewName: string;
-  /** Slice the capture was taken at, 0-based. */
-  slice: number;
+  /**
+   * Slice of the captured view itself, 0-based. Absent when that view has no
+   * slice of its own (a 3D view, or a cine frame).
+   */
+  slice?: number;
   capturedAt: string;
 };
 

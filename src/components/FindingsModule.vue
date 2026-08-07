@@ -147,7 +147,10 @@ function move(index: number, offset: number) {
                 {{ finding.headline }}
               </div>
               <div class="text-caption text-disabled mt-1">
-                Slice {{ finding.slice + 1 }}
+                <span v-if="finding.frame != null">
+                  Frame {{ finding.frame + 1 }}
+                </span>
+                <span v-else>Slice {{ finding.slice + 1 }}</span>
                 <span v-if="finding.liveMeasurements.length">
                   · {{ finding.liveMeasurements.length }} measurement<span
                     v-if="finding.liveMeasurements.length > 1"

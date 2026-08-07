@@ -222,6 +222,46 @@ describe('findings store', () => {
     expect(restored.findingTypeByID[newID].label).toBe('Trabecula');
   });
 
+  it('re-seats a restored type that collides with one this session made', async () => {
+    const store = useFindingsStore();
+    const typeID = store.addFindingType({
+      label: 'Papillary muscle',
+      modalities: ['MR'],
+      defaultBodySite: 'Left ventricle',
+      categoryScale: 'severity',
+    });
+    const id = store.addFinding({ imageID: 'image-1', title: 'LV long axis' });
+    store.updateFinding(id, { typeID });
+    const { manifest, stateFiles } = await serializeFindings();
+
+    // Another session minted its own type under the same id.
+    setActivePinia(createPinia());
+    const restored = useFindingsStore();
+    const mineID = restored.addFindingType({
+      label: 'Trabecula',
+      modalities: ['MR'],
+      defaultBodySite: 'Left ventricle',
+      categoryScale: 'severity',
+    });
+    expect(mineID).toBe(typeID);
+
+    await restored.deserialize(
+      manifest,
+      { 'image-1': 'image-1' },
+      {},
+      stateFiles
+    );
+
+    // The session's own type keeps its meaning, and the restored finding
+    // points at the re-seated copy rather than inheriting it.
+    expect(restored.findingTypeByID[mineID].label).toBe('Trabecula');
+    const restoredTypeID = restored.findings[0].typeID;
+    expect(restoredTypeID).not.toBe(mineID);
+    expect(restored.findingTypeByID[restoredTypeID].label).toBe(
+      'Papillary muscle'
+    );
+  });
+
   it('drops a measurement whose annotation did not restore', async () => {
     const toolID = addRuler('image-1');
     const store = useFindingsStore();

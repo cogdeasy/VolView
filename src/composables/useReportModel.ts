@@ -104,16 +104,17 @@ export function useReportModel() {
       keyImage: finding.keyImage
         ? {
             dataURL: finding.keyImage.dataURL,
-            // A capture navigates to the finding first, so it sits at the
-            // finding's own position: a cine finding is at a frame, and its
-            // slice is 0 by construction rather than a real slice number.
-            caption: `${finding.title || 'Finding'} — ${
-              finding.keyImage.viewName
-            }, ${
+            // The position named here is the captured view's own, which is not
+            // a slice for a cine finding or a 3D view.
+            caption: [
+              `${finding.title || 'Finding'} — ${finding.keyImage.viewName}`,
               finding.frame != null
                 ? `frame ${finding.frame + 1}`
-                : `slice ${finding.keyImage.slice + 1}`
-            }`,
+                : finding.keyImage.slice != null &&
+                  `slice ${finding.keyImage.slice + 1}`,
+            ]
+              .filter(Boolean)
+              .join(', '),
           }
         : undefined,
     };

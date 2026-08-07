@@ -30,7 +30,9 @@ const documentTheme = computed<'dark' | 'light'>(() =>
 );
 
 // The preview is the exported document itself, rendered in a sandboxed frame,
-// so what the radiologist signs off is byte-for-byte what leaves the app.
+// so its content and layout are what leaves the app. Only the surface differs:
+// the preview follows the session theme, while an export is always the
+// print-safe light one.
 // Debounced because every srcdoc change reloads the frame and its inline
 // key images; the exports re-render from live state regardless. Only rendered
 // while the dialog is open, so editing findings costs nothing.
