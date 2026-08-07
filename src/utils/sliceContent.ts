@@ -100,3 +100,44 @@ export function sliceShouldRenderVisiblePixels(
   const lowerBound = windowLevel - windowWidth / 2;
   return maxScalar > lowerBound;
 }
+
+/**
+ * Whether an axis-aligned world bounding box still covers part of the
+ * viewport, given a world-to-normalized-display projection.
+ *
+ * Panning or zooming the image out of frame leaves a legitimately black
+ * canvas, so the data alone cannot say whether pixels are owed - where the
+ * camera is pointing has to be part of the question.
+ */
+export function boundsOverlapViewport(
+  bounds: number[],
+  project: (x: number, y: number, z: number) => Maybe<[number, number]>
+): Maybe<boolean> {
+  if (bounds.length < 6) return null;
+  const [xMin, xMax, yMin, yMax, zMin, zMax] = bounds;
+  if (xMin > xMax || yMin > yMax || zMin > zMax) return null;
+
+  let left = Infinity;
+  let right = -Infinity;
+  let bottom = Infinity;
+  let top = -Infinity;
+
+  for (let corner = 0; corner < 8; corner++) {
+    const projected = project(
+      corner & 1 ? xMax : xMin,
+      corner & 2 ? yMax : yMin,
+      corner & 4 ? zMax : zMin
+    );
+    if (!projected) return null;
+    const [x, y] = projected;
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    left = Math.min(left, x);
+    right = Math.max(right, x);
+    bottom = Math.min(bottom, y);
+    top = Math.max(top, y);
+  }
+
+  // Overlap rather than containment: a deeply zoomed-in view has every corner
+  // off screen while the middle of the image fills the canvas.
+  return right >= 0 && left <= 1 && top >= 0 && bottom <= 1;
+}

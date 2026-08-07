@@ -1,5 +1,6 @@
 import { MaybeRef, computed, onScopeDispose, unref, watch } from 'vue';
 import { useIntervalFn, useDocumentVisibility } from '@vueuse/core';
+import { captureMessage } from '@sentry/vue';
 import { Maybe } from '@/src/types';
 import { View } from '@/src/core/vtk/types';
 import { onVTKEvent } from '@/src/composables/onVTKEvent';
@@ -12,6 +13,7 @@ import { useSliceConfig } from '@/src/composables/useSliceConfig';
 import { useWindowingConfig } from '@/src/composables/useWindowingConfig';
 import { LPSAxis } from '@/src/types/lps';
 import {
+  boundsOverlapViewport,
   cachedMaxScalarOnSlice,
   sliceShouldRenderVisiblePixels,
 } from '@/src/utils/sliceContent';
@@ -27,6 +29,20 @@ const MIN_CANVAS_SIZE = 32;
 /** 8-bit value at or below which a pixel counts as black. */
 const BLACK_THRESHOLD = 2;
 
+let detectorDisabledReported = false;
+
+/**
+ * The blank-canvas check is the core of the feature, so a view whose canvas it
+ * cannot read must not fail silently.
+ */
+function warnDetectorDisabled() {
+  if (detectorDisabledReported) return;
+  detectorDisabledReported = true;
+  captureMessage('Renderer health: view canvas has no 2D context', {
+    level: 'warning',
+  });
+}
+
 /**
  * Whether every pixel of the view canvas is black.
  *
@@ -41,7 +57,10 @@ function canvasIsUniformlyBlack(canvas: HTMLCanvasElement): Maybe<boolean> {
 
   // vtk.js blits the shared WebGL output into this canvas' own 2D context.
   const ctx = canvas.getContext('2d');
-  if (!ctx) return null;
+  if (!ctx) {
+    warnDetectorDisabled();
+    return null;
+  }
 
   const bandHeight = Math.ceil(height / READBACK_BANDS);
   for (let top = 0; top < height; top += bandHeight) {
@@ -150,6 +169,27 @@ export function useViewRendererHealth(options: ViewRendererHealthOptions) {
     );
   });
 
+  /**
+   * Whether the image still covers any of the viewport. Read at sample time
+   * rather than as a computed, because camera changes are not reactive.
+   */
+  function imageIsInFrame(): Maybe<boolean> {
+    const viewValue = unref(view);
+    const imageIdValue = unref(imageId);
+    const canvasValue = canvas.value;
+    if (!viewValue || !imageIdValue || !canvasValue?.height) return null;
+
+    const imageData = imageCacheStore.getVtkImageData(imageIdValue);
+    if (!imageData) return null;
+
+    const { renderer } = viewValue;
+    const aspect = canvasValue.width / canvasValue.height;
+    return boundsOverlapViewport(imageData.getBounds(), (x, y, z) => {
+      const point = renderer.worldToNormalizedDisplay(x, y, z, aspect);
+      return point ? [point[0], point[1]] : null;
+    });
+  }
+
   function sample() {
     const id = unref(viewId);
     const painted = framesThisView > framesAtLastSample;
@@ -161,9 +201,10 @@ export function useViewRendererHealth(options: ViewRendererHealthOptions) {
     const canvasValue = canvas.value;
     if (!canvasValue) return;
 
-    if (expectsVisiblePixels.value !== true) {
-      // Either a genuinely black slice or not enough information: both are
-      // reasons to stay quiet rather than cry wolf on a diagnostic display.
+    if (expectsVisiblePixels.value !== true || imageIsInFrame() !== true) {
+      // A genuinely black slice, an image panned or zoomed out of frame, or
+      // not enough information: all reasons to stay quiet rather than cry wolf
+      // on a diagnostic display.
       health.reportViewHealthy(id);
       return;
     }

@@ -124,7 +124,7 @@ export function useRendererHealthMonitor(api: VtkRenderWindowParentApi) {
   // than off individual transitions.
   watch(
     () => ({ status: health.status, viewFailed: health.anyViewFailed }),
-    ({ status, viewFailed }) => {
+    ({ status, viewFailed }, previous) => {
       // One failed view is enough to warn globally, even while the rest of the
       // layout keeps working.
       const degraded = status !== 'healthy' || viewFailed;
@@ -136,11 +136,13 @@ export function useRendererHealthMonitor(api: VtkRenderWindowParentApi) {
           persist: true,
         });
       }
-      if (status === 'recovering') {
+      if (status === 'recovering' && previous?.status !== 'recovering') {
         confirmDeadline = Date.now() + RECOVERY_CONFIRM_TIMEOUT;
         confirmTimer.resume();
       }
-      if (status === 'unrecoverable') {
+      // On the transition only: the watch source is a fresh object each time,
+      // so an unguarded branch here would stack up duplicate errors.
+      if (status === 'unrecoverable' && previous?.status !== 'unrecoverable') {
         messageStore.addError(Messages.RendererUnrecoverable.title, {
           details: Messages.RendererUnrecoverable.details,
           persist: true,

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import vtkDataArray from '@kitware/vtk.js/Common/Core/DataArray';
 import vtkImageData from '@kitware/vtk.js/Common/DataModel/ImageData';
 import {
+  boundsOverlapViewport,
   maxScalarOnSlice,
   sliceShouldRenderVisiblePixels,
 } from '@/src/utils/sliceContent';
@@ -66,5 +67,43 @@ describe('sliceShouldRenderVisiblePixels', () => {
     // useWindowingConfig reports (1, 2^32-1) until real stats arrive, which
     // is exactly when a black canvas must not be reported as a failure.
     expect(sliceShouldRenderVisiblePixels(500, 1, 2 ** 32 - 1)).toBe(false);
+  });
+});
+
+describe('boundsOverlapViewport', () => {
+  const unitBounds = [0, 10, 0, 10, 0, 10];
+  /** Maps world coordinates into normalized display by scaling and shifting. */
+  const projector =
+    (scale: number, offsetX: number, offsetY: number) =>
+    (x: number, y: number): [number, number] => [
+      x * scale + offsetX,
+      y * scale + offsetY,
+    ];
+
+  it('sees an image filling the viewport', () => {
+    expect(boundsOverlapViewport(unitBounds, projector(0.1, 0, 0))).toBe(true);
+  });
+
+  it('sees an image the camera has zoomed into', () => {
+    // Every corner is off screen but the middle of the image is not.
+    expect(boundsOverlapViewport(unitBounds, projector(1, -4, -4))).toBe(true);
+  });
+
+  it('reports an image panned out of frame', () => {
+    expect(boundsOverlapViewport(unitBounds, projector(0.1, 3, 0))).toBe(false);
+    expect(boundsOverlapViewport(unitBounds, projector(0.1, 0, -5))).toBe(
+      false
+    );
+  });
+
+  it('declines to answer on unusable input', () => {
+    expect(boundsOverlapViewport([0, 1], projector(1, 0, 0))).toBeNull();
+    expect(boundsOverlapViewport([1, -1, 0, 1, 0, 1], projector(1, 0, 0))).toBe(
+      null
+    );
+    expect(boundsOverlapViewport(unitBounds, () => null)).toBeNull();
+    expect(
+      boundsOverlapViewport(unitBounds, () => [NaN, 0] as [number, number])
+    ).toBeNull();
   });
 });
