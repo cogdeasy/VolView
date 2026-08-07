@@ -3,14 +3,6 @@ import PhilipsWordmark from '@/src/components/icons/PhilipsWordmark.vue';
 import { Brand } from '@/src/branding';
 import { useBrandLogoColor } from '@/src/composables/useBrandLogoColor';
 
-withDefaults(
-  defineProps<{
-    /** Hides the product name, leaving only the Philips lockup. */
-    productNameHidden?: boolean;
-  }>(),
-  { productNameHidden: false }
-);
-
 const logoColor = useBrandLogoColor();
 </script>
 
@@ -22,12 +14,10 @@ const logoColor = useBrandLogoColor();
     :style="{ color: logoColor }"
   >
     <philips-wordmark :size="20" aria-hidden="true" />
-    <template v-if="!productNameHidden">
-      <span class="philips-logo__rule" />
-      <span class="philips-logo__product" aria-hidden="true">{{
-        Brand.productShortName
-      }}</span>
-    </template>
+    <span class="philips-logo__rule" />
+    <span class="philips-logo__product" aria-hidden="true">{{
+      Brand.productShortName
+    }}</span>
   </div>
 </template>
 
