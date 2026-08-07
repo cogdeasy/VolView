@@ -86,16 +86,23 @@ function chromePairs(palette: SemanticPalette): Pair[] {
         threshold: WCAG_AA_TEXT,
       });
     });
-    (['border-strong', 'accent', 'selection-border-color'] as const).forEach(
-      (token) => {
-        pairs.push({
-          label: `${token} boundary against ${name}`,
-          foreground: palette[token],
-          background,
-          threshold: WCAG_AA_NON_TEXT,
-        });
-      }
-    );
+    // `surface-variant` is drawn on top of a surface (slider tracks and ticks,
+    // switch tracks), so it is held to the non-text boundary threshold.
+    (
+      [
+        'border-strong',
+        'accent',
+        'selection-border-color',
+        'surface-variant',
+      ] as const
+    ).forEach((token) => {
+      pairs.push({
+        label: `${token} boundary against ${name}`,
+        foreground: palette[token],
+        background,
+        threshold: WCAG_AA_NON_TEXT,
+      });
+    });
   });
 
   (
@@ -107,6 +114,7 @@ function chromePairs(palette: SemanticPalette): Pair[] {
       ['on-success', 'success'],
       ['on-info', 'info'],
       ['on-selection', 'selection-bg-color'],
+      ['on-surface-variant', 'surface-variant'],
     ] as const
   ).forEach(([foreground, background]) => {
     pairs.push({

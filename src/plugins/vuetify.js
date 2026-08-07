@@ -133,11 +133,8 @@ const vuetify = createVuetify({
     VTabs: {
       color: 'primary',
     },
-    VTooltip: {
-      // Styling hangs off `.v-tooltip` in tokens.css, not off this class, so a
-      // call site passing its own `content-class` stays themed.
-      contentClass: 'pv-tooltip',
-    },
+    // Tooltips need no defaults: their styling hangs off `.v-tooltip` in
+    // tokens.css, which survives a call site passing its own `content-class`.
   },
   display: {
     mobileBreakpoint: 'lg',

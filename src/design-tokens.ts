@@ -248,6 +248,14 @@ export type SemanticPalette = {
    */
   'surface-bright': string;
   'surface-light': string;
+  /**
+   * Vuetify uses this pair for things drawn *on top of* a surface — slider
+   * tracks and ticks, switch tracks, flat chips. It therefore has to contrast
+   * with the surface, which inverts Material's convention in the dark theme:
+   * a variant surface darker than our near-black chrome would be invisible, so
+   * the dark theme's is a mid grey with a near-black `on-` pair. Both
+   * directions are contrast-tested.
+   */
   'surface-variant': string;
   'on-surface-variant': string;
   primary: string;
@@ -361,7 +369,7 @@ export const LightPalette: SemanticPalette = {
   'border-strong': '#6B7A8A',
   'surface-bright': '#FFFFFF',
   'surface-light': '#EFF3F8',
-  'surface-variant': '#66727F',
+  'surface-variant': '#5A6572',
   'on-surface-variant': '#FFFFFF',
   primary: AccessiblePrimary.light,
   'on-primary': AccessiblePrimary.onLight,
