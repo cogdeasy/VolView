@@ -87,9 +87,9 @@
             :manipulator-config="windowingManipulatorProps"
           ></vtk-slice-view-window-manipulator>
           <slice-viewer-overlay
-            v-if="showViewLabels"
             :view-id="viewId"
             :image-id="currentImageID"
+            :show-labels="showViewLabels"
           ></slice-viewer-overlay>
           <vtk-base-slice-representation
             ref="baseSliceRep"

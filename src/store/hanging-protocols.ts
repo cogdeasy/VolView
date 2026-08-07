@@ -345,7 +345,12 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     imageID: Maybe<string>,
     options?: { force?: boolean }
   ) {
-    if (!settings.value.autoApply && !options?.force) return null;
+    if (!settings.value.autoApply && !options?.force) {
+      // Nothing hangs this study, so the previous study's protocol must not
+      // linger in the indicator or in the after-load phase.
+      applied.value = null;
+      return null;
+    }
 
     const context = getStudyContext(imageID);
     const studyUID = getStudyUID(imageID);
@@ -435,6 +440,8 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     const windowingStore = useWindowingStore();
     const coloringStore = useVolumeColoringStore();
 
+    // `visibleViews` is pushed in the same depth-first order in which
+    // `parseLayoutConfig` assigns slot indices, so slot index indexes it.
     const slotViews = viewStore.visibleViews;
     const layout = layoutToConfig(
       viewStore.visibleLayout,
@@ -516,6 +523,12 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     if (applied.value?.protocolId === id) {
       applied.value = null;
     }
+    // Drop the studies that were pinned to it, so they hang by rule again.
+    settings.value.overrides = Object.fromEntries(
+      Object.entries(settings.value.overrides).filter(
+        ([, protocolId]) => protocolId !== id
+      )
+    );
   }
 
   function duplicateProtocol(id: string) {
@@ -570,12 +583,13 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
   /** Imported protocols are appended; ids that already exist are re-minted. */
   function importProtocols(text: string) {
     const incoming = parseProtocols(text);
-    const existingIds = new Set(protocols.value.map((protocol) => protocol.id));
-    const added = incoming.map((protocol) => ({
-      ...protocol,
-      id: existingIds.has(protocol.id) ? nextId() : protocol.id,
-      builtIn: false,
-    }));
+    const takenIds = new Set(protocols.value.map((protocol) => protocol.id));
+    const added = incoming.map((protocol) => {
+      // Also covers a file that repeats an id within itself.
+      const id = takenIds.has(protocol.id) ? nextId() : protocol.id;
+      takenIds.add(id);
+      return { ...protocol, id, builtIn: false };
+    });
     protocols.value = [...protocols.value, ...added];
     return added;
   }

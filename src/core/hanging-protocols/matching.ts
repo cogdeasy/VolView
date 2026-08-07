@@ -63,15 +63,65 @@ const anyOf = (
   };
 };
 
+export const MAX_PATTERN_LENGTH = 200;
+
+/**
+ * Rejects expressions that can backtrack catastrophically before they are ever
+ * run. Protocols can be imported from a file, and matching runs on every
+ * protocol for every study and on every render of the manager list, so one
+ * `(a+)+` would freeze the tab. The check is the standard conservative one: a
+ * quantified group that itself contains a quantifier. A production version
+ * would evaluate patterns with a linear-time engine (RE2) instead of rejecting
+ * them.
+ */
+export function checkPattern(pattern: string): {
+  safe: boolean;
+  reason?: string;
+} {
+  if (pattern.length > MAX_PATTERN_LENGTH) {
+    return {
+      safe: false,
+      reason: `Pattern is longer than ${MAX_PATTERN_LENGTH} characters.`,
+    };
+  }
+
+  try {
+    RegExp(pattern);
+  } catch {
+    return { safe: false, reason: 'Pattern is not a valid expression.' };
+  }
+
+  const quantifier = /[*+?}]/;
+  const openGroups: number[] = [];
+  for (let i = 0; i < pattern.length; i += 1) {
+    const char = pattern[i];
+    if (char === '\\') {
+      i += 1;
+    } else if (char === '(') {
+      openGroups.push(i);
+    } else if (char === ')') {
+      const start = openGroups.pop();
+      if (start === undefined) continue;
+      const body = pattern.slice(start + 1, i);
+      const next = pattern[i + 1] ?? '';
+      if (quantifier.test(body) && quantifier.test(next)) {
+        return {
+          safe: false,
+          reason: 'Nested quantifiers can hang the browser.',
+        };
+      }
+    }
+  }
+
+  return { safe: true };
+}
+
 const matchesPattern = (pattern: string | undefined, actual: string) => {
   if (!pattern || pattern.trim() === '') return null;
-  let matched = false;
-  try {
-    matched = new RegExp(pattern, 'i').test(actual);
-  } catch {
-    // An unparseable expression never matches; the editor surfaces the error.
-    matched = false;
-  }
+  // An unusable or unsafe expression never matches; the editor surfaces why.
+  const matched = checkPattern(pattern).safe
+    ? new RegExp(pattern, 'i').test(actual)
+    : false;
   return { expected: `/${pattern}/i`, matched };
 };
 
@@ -161,8 +211,13 @@ export function selectProtocol(
   context: StudyContext,
   options: { overrideId?: string | null; defaultId?: string | null } = {}
 ): ProtocolSelection {
+  // A disabled protocol is off, whether it is reached by rule, by a remembered
+  // override or as the default.
   const byId = (id: string | null | undefined) =>
-    id ? (protocols.find((protocol) => protocol.id === id) ?? null) : null;
+    id
+      ? (protocols.find((protocol) => protocol.id === id && protocol.enabled) ??
+        null)
+      : null;
 
   const evaluations = protocols
     .filter((protocol) => protocol.enabled)

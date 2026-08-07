@@ -9,6 +9,7 @@ import {
   describeLayout,
   findNamedLayout,
 } from '@/src/core/hanging-protocols/describe';
+import { checkPattern } from '@/src/core/hanging-protocols/matching';
 import type {
   FocusedModule,
   HangingProtocol,
@@ -47,7 +48,9 @@ const layoutItems = computed(() =>
 );
 
 const selectNamedLayout = (name: string | null) => {
-  if (!name) return;
+  // "Custom" only describes a layout captured from the viewer; picking it
+  // again must not blank the protocol's layout.
+  if (!name || !(name in DefaultNamedLayouts)) return;
   patch({ layout: DefaultNamedLayouts[name] });
 };
 
@@ -98,12 +101,8 @@ const csvToList = (value: string) =>
 
 const regexError = (pattern: string | undefined) => {
   if (!pattern) return undefined;
-  try {
-    RegExp(pattern, 'i');
-    return undefined;
-  } catch {
-    return 'Not a valid regular expression';
-  }
+  const { safe, reason } = checkPattern(pattern);
+  return safe ? undefined : reason;
 };
 
 const numberOrUndefined = (value: string) => {

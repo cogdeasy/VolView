@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  checkPattern,
   evaluateProtocol,
   explainSelection,
   selectProtocol,
@@ -69,6 +70,33 @@ describe('hanging protocol matching', () => {
         makeContext({ modality: 'OCT', bodyPart: 'NECK' })
       ).matched
     ).toBe(false);
+  });
+
+  it('refuses expressions that can backtrack catastrophically', () => {
+    expect(checkPattern('head|brain').safe).toBe(true);
+    expect(checkPattern('(head|brain)+').safe).toBe(true);
+    expect(checkPattern('(a+)+$').safe).toBe(false);
+    expect(checkPattern('(x|x*)*y').safe).toBe(false);
+    expect(checkPattern('([').safe).toBe(false);
+    expect(checkPattern('a'.repeat(300)).safe).toBe(false);
+
+    const protocol = makeProtocol('evil', { studyDescription: '(a+)+$' });
+    expect(
+      evaluateProtocol(protocol, makeContext({ studyDescription: 'aaaaaa!' }))
+        .matched
+    ).toBe(false);
+  });
+
+  it('ignores a disabled protocol even when it is pinned to the study', () => {
+    const protocols = [
+      makeProtocol('pinned', {}, { enabled: false }),
+      makeProtocol('rule', { modality: ['CT'] }),
+    ];
+    const selection = selectProtocol(protocols, makeContext(), {
+      overrideId: 'pinned',
+    });
+    expect(selection.protocol?.id).toBe('rule');
+    expect(selection.reason).toBe('match');
   });
 
   it('requires every declared rule to hold', () => {
