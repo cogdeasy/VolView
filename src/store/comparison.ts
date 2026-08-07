@@ -335,10 +335,14 @@ export const useComparisonStore = defineStore('comparison', () => {
     const available = candidates.value;
     if (!available.length) return;
 
-    const stillLoaded = (id: Maybe<string>) =>
-      !!id && available.some((study) => study.imageID === id);
+    // A role may only hold a study the pickers would offer. Kind is read off
+    // metadata that arrives with the pixels, so a series chosen while it looked
+    // like a volume can turn out to be a cine, and the pair would go on mapping
+    // slices into a pane that renders a player.
+    const selectable = (id: Maybe<string>) =>
+      !!id && comparableCandidates.value.some((study) => study.imageID === id);
 
-    if (!stillLoaded(currentImageID.value)) {
+    if (!selectable(currentImageID.value)) {
       // Whatever the reader was already looking at becomes the current study —
       // except the prior, which clicking its pane must not promote: closing the
       // current study should not silently make the comparison a self-comparison.
@@ -356,11 +360,7 @@ export const useComparisonStore = defineStore('comparison', () => {
         (study) => study.imageID !== priorImageID.value
       );
       const fallback = pool.length ? pool : usable;
-      const readable =
-        stillLoaded(beingRead) &&
-        usable.some((study) => study.imageID === beingRead)
-          ? beingRead
-          : null;
+      const readable = selectable(beingRead) ? beingRead : null;
       currentImageID.value = readable ?? fallback[0]?.imageID ?? null;
     }
 
@@ -370,7 +370,7 @@ export const useComparisonStore = defineStore('comparison', () => {
     }
 
     if (
-      stillLoaded(priorImageID.value) &&
+      selectable(priorImageID.value) &&
       priorImageID.value !== currentImageID.value
     )
       return;

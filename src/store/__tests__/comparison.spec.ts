@@ -270,6 +270,22 @@ describe('comparison store — cine series', () => {
     expect(comparison.priorImageID).toBeNull();
   });
 
+  it('lets go of a study that turns out to be a cine after it was paired', () => {
+    const comparison = useComparisonStore();
+    seatDicomVolume('vol-2019', 'study-2019', '20190430', 'volume');
+    seatDicomVolume('vol-2018', 'study-2018', '20181031', 'volume');
+    seatDicomVolume('vol-2017', 'study-2017', '20171031', 'volume');
+    comparison.autoSelectStudies();
+    expect(comparison.priorImageID).toBe('vol-2018');
+
+    // Kind is read off metadata that arrives with the pixels, so a series can
+    // resolve to a cine after the pair already holds it.
+    useDICOMStore().volumeInfo['vol-2018'].kind = 'cine';
+    comparison.autoSelectStudies();
+
+    expect(comparison.priorImageID).toBe('vol-2017');
+  });
+
   it('leaves both roles empty in a workspace holding only cine series', () => {
     const comparison = useComparisonStore();
     seatDicomVolume('vol-cine', 'study-2019', '20190430', 'cine');
