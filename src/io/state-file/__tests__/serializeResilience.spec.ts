@@ -203,6 +203,46 @@ describe('state-file serialization resilience', () => {
     expect(normalized.omitted).toContain('findings[0]: invalid finding record');
   });
 
+  it('drops a finding whose image is gone, with its key image', () => {
+    const zip = new JSZip();
+    zip.file('findings/finding-1.png', 'bytes');
+    const orphan = {
+      id: 'finding-1',
+      imageID: 'dataset-2',
+      title: 'Orphaned lesion',
+      typeID: 'mass',
+      bodySite: 'Left ventricle',
+      laterality: 'left',
+      category: 'Mild',
+      description: '',
+      measurements: [],
+      slice: 3,
+      frameOfReference: { planeOrigin: [0, 0, 0], planeNormal: [0, 0, 1] },
+      createdAt: '2026-01-01T00:00:00.000Z',
+      keyImage: {
+        path: 'findings/finding-1.png',
+        viewName: 'Axial',
+        slice: 3,
+        capturedAt: '2026-01-01T00:00:00.000Z',
+      },
+    };
+    const manifest = {
+      version: MANIFEST_VERSION,
+      datasets: [{ id: 'dataset-1', dataSourceId: 1 }],
+      dataSources: [{ id: 1, type: 'uri', uri: '/dataset-1' }],
+      findings: { impression: 'Normal study.', types: [], findings: [orphan] },
+    } as unknown as Manifest;
+
+    const normalized = normalizeManifest(manifest, zip);
+
+    expect(normalized.manifest.findings?.findings).toEqual([]);
+    expect(normalized.manifest.findings?.impression).toBe('Normal study.');
+    expect(zip.file('findings/finding-1.png')).toBeNull();
+    expect(normalized.omitted).toContain(
+      'Orphaned lesion: image dataset-2 is missing'
+    );
+  });
+
   it('omits the complete view layout when viewByID is invalid', () => {
     const manifest = {
       ...manifestWithSelection('dataset-1'),

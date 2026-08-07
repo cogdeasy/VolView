@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import type { Vector3 } from '@kitware/vtk.js/types';
 
 import { useIdStore } from '@/src/store/id';
+import { useFindingsUIStore } from '@/src/store/findings-ui';
 import { useAnnotationToolStore } from '@/src/store/tools';
 import { AnnotationToolType } from '@/src/store/tools/types';
 import { onImageDeleted } from '@/src/composables/onImageDeleted';
@@ -129,6 +130,10 @@ export const useFindingsStore = defineStore('findings', () => {
     if (!(id in findingByID.value)) return;
     removeFromArray(findingIDs.value, id);
     delete findingByID.value[id];
+    // The editor names a live finding, whether the delete came from the list
+    // or from the image cascade below.
+    const ui = useFindingsUIStore();
+    if (ui.editingFindingID === id) ui.closeEditor();
   }
 
   /**

@@ -1,10 +1,12 @@
 import type { Vector3 } from '@kitware/vtk.js/types';
 import { useAnnotationToolStore } from '@/src/store/tools';
 import { AnnotationToolType } from '@/src/store/tools/types';
+import { useImageCacheStore } from '@/src/store/image-cache';
 import type { Finding, FindingMeasurement } from '@/src/types/finding';
 import type { ReportMeasurement, ReportQuantity } from './report';
 import {
   distance,
+  inPlaneImageAxes,
   polygonArea,
   polygonPerimeter,
   rectangleDimensions,
@@ -26,7 +28,8 @@ const KIND_LABELS: Record<AnnotationToolType, string> = {
 export function quantitiesFor(
   toolType: AnnotationToolType,
   points: Vector3[],
-  planeNormal: Vector3
+  planeNormal: Vector3,
+  inPlaneAxes?: [Vector3, Vector3]
 ): ReportQuantity[] {
   if (toolType === AnnotationToolType.Ruler) {
     if (points.length < 2) return [];
@@ -37,7 +40,8 @@ export function quantitiesFor(
     const { width, height, area } = rectangleDimensions(
       points[0],
       points[1],
-      planeNormal
+      planeNormal,
+      inPlaneAxes
     );
     return [
       { label: 'Size', text: `${mm(width)} × ${mm(height)}` },
@@ -57,13 +61,21 @@ export function summarizeMeasurement(
   const store = useAnnotationToolStore(measurement.toolType);
   const tool = store.toolByID[measurement.toolID];
   if (!tool) return null;
+  // A rectangle's edges follow the image's own axes, so its extents are only
+  // the patient-axis deltas on an axis-aligned acquisition.
+  const orientation = useImageCacheStore().getImageMetadata(
+    tool.imageID
+  )?.orientation;
   return {
     kind: KIND_LABELS[measurement.toolType],
     label: tool.labelName ?? '',
     quantities: quantitiesFor(
       measurement.toolType,
       store.getPoints(measurement.toolID),
-      tool.frameOfReference.planeNormal
+      tool.frameOfReference.planeNormal,
+      orientation
+        ? inPlaneImageAxes(orientation, tool.frameOfReference.planeNormal)
+        : undefined
     ),
   };
 }

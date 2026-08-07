@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia';
 import JSZip from 'jszip';
 
 import { useFindingsStore } from '@/src/store/findings';
+import { useFindingsUIStore } from '@/src/store/findings-ui';
 import { useRulerStore } from '@/src/store/tools/rulers';
 import { AnnotationToolType } from '@/src/store/tools/types';
 import { ManifestSchema } from '@/src/io/state-file/schema';
@@ -162,6 +163,26 @@ describe('findings store', () => {
 
     expect(missingKeyImages).toEqual(['LV long axis']);
     expect(restored.findings[0].keyImage).toBeUndefined();
+  });
+
+  it('closes the editor when the finding it names is removed', () => {
+    const store = useFindingsStore();
+    const ui = useFindingsUIStore();
+    const kept = store.promoteMeasurement(
+      AnnotationToolType.Ruler,
+      addRuler('image-1', 'Kept')
+    )!;
+    const removed = store.promoteMeasurement(
+      AnnotationToolType.Ruler,
+      addRuler('image-1', 'Removed')
+    )!;
+
+    ui.editFinding(kept);
+    store.removeFinding(removed);
+    expect(ui.editingFindingID).toBe(kept);
+
+    store.removeFinding(kept);
+    expect(ui.editingFindingID).toBeNull();
   });
 
   it('reorders a finding past a sibling, skipping other images', () => {

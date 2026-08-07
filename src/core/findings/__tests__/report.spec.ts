@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { mat3 } from 'gl-matrix';
+import type { Vector3 } from '@kitware/vtk.js/types';
 
 import { Brand } from '@/src/branding';
 import {
@@ -7,6 +9,7 @@ import {
   type Report,
 } from '@/src/core/findings/report';
 import {
+  inPlaneImageAxes,
   polygonArea,
   rectangleDimensions,
 } from '@/src/core/findings/measurements';
@@ -134,6 +137,35 @@ describe('measurement math', () => {
     expect(width).toBeCloseTo(7);
     expect(height).toBeCloseTo(4);
     expect(area).toBeCloseTo(28);
+  });
+
+  it('takes rectangle extents along a tilted image own axes', () => {
+    const angle = Math.PI / 6;
+    const [cos, sin] = [Math.cos(angle), Math.sin(angle)];
+    // Columns are the image axes: the slice plane is rotated 30° about z.
+    const orientation = mat3.fromValues(cos, sin, 0, -sin, cos, 0, 0, 0, 1);
+    const normal: Vector3 = [0, 0, 1];
+    const corner: Vector3 = [10, 20, 5];
+    const opposite: Vector3 = [
+      corner[0] + 7 * cos - 4 * sin,
+      corner[1] + 7 * sin + 4 * cos,
+      5,
+    ];
+
+    const { width, height, area } = rectangleDimensions(
+      corner,
+      opposite,
+      normal,
+      inPlaneImageAxes(orientation, normal)
+    );
+    expect(width).toBeCloseTo(7);
+    expect(height).toBeCloseTo(4);
+    expect(area).toBeCloseTo(28);
+
+    // Patient axes alone read the rotated rectangle's bounding box instead.
+    expect(rectangleDimensions(corner, opposite, normal).area).toBeGreaterThan(
+      area
+    );
   });
 
   it('measures the area of a planar polygon in 3D', () => {

@@ -58,12 +58,13 @@ const coreManifestSchema = ManifestSchema.pick({
 
 /**
  * Prunes the findings root record by record, the way segment groups are: a
- * finding is the user's own authored content, so a malformed one must not cost
- * the impression, the taxonomy and the other findings as well.
+ * finding is the user's own authored content, so a malformed or orphaned one
+ * must not cost the impression, the taxonomy and the other findings as well.
  */
 function pruneFindings(
   raw: unknown,
   zip: JSZip,
+  datasetIds: Set<string>,
   omitted: string[]
 ): FindingsState | undefined {
   if (!isRecord(raw)) {
@@ -74,12 +75,20 @@ function pruneFindings(
   const findings = (Array.isArray(raw.findings) ? raw.findings : []).flatMap(
     (entry, index) => {
       const parsed = FindingRecord.safeParse(entry);
-      if (parsed.success) return [parsed.data];
+      const reason = (() => {
+        if (!parsed.success) return 'invalid finding record';
+        // The onImageDeleted cascade keeps this clean, but an orphan that slips
+        // through would leave its key image as dead bytes in the archive.
+        if (!datasetIds.has(parsed.data.imageID))
+          return `image ${parsed.data.imageID} is missing`;
+        return null;
+      })();
+      if (parsed.success && !reason) return [parsed.data];
       const name =
         isRecord(entry) && typeof entry.title === 'string' && entry.title
           ? entry.title
           : `findings[${index}]`;
-      omitted.push(`${name}: invalid finding record`);
+      omitted.push(`${name}: ${reason}`);
       removeKeyImages({ findings: [entry] }, zip);
       return [];
     }
@@ -200,8 +209,9 @@ function validateCoreGraph(core: Manifest, zip: JSZip) {
 // `datasetRemoveCascade.spec.ts`. Those ids are kept live-clean at the source,
 // and a stale one is harmless on restore anyway (deserialize remaps every id
 // through its id-map and ignores misses), so this function does not re-walk
-// them. Segment groups stay here because an orphaned one leaves dead `.seg.nrrd`
-// bytes in the archive, which is a real cost the cascade does not address.
+// them. Segment groups and findings stay here because an orphaned one leaves dead
+// `.seg.nrrd`/key-image bytes in the archive, which is a real cost the cascade
+// does not address.
 export function normalizeManifest(manifest: Manifest, zip: JSZip) {
   const candidate = manifest as unknown as ManifestCandidate;
   const core = coreManifestSchema.parse(candidate) as Manifest;
@@ -314,7 +324,7 @@ export function normalizeManifest(manifest: Manifest, zip: JSZip) {
   const findings =
     candidate.findings === undefined
       ? undefined
-      : pruneFindings(candidate.findings, zip, omitted);
+      : pruneFindings(candidate.findings, zip, datasetIds, omitted);
 
   const optionalRoots = [
     'tools',
