@@ -3,6 +3,22 @@ import { getViewApi } from '@/src/core/views/viewApiRegistry';
 /** Cap on the long edge of a captured key image, in pixels. */
 const MAX_EDGE = 1024;
 
+/** How long to wait for the render pass that fulfills a capture. */
+const CAPTURE_TIMEOUT_MS = 5000;
+
+const withTimeout = <T>(promise: Promise<T>, message: string) => {
+  let timer = 0;
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) => {
+      timer = window.setTimeout(
+        () => reject(new Error(message)),
+        CAPTURE_TIMEOUT_MS
+      );
+    }),
+  ]).finally(() => window.clearTimeout(timer));
+};
+
 const loadImage = (src: string) =>
   new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image();
@@ -39,6 +55,7 @@ async function rasterizeSvg(
  * image shows the measurement it documents.
  *
  * @returns a PNG data URL, or null if the view is not mounted.
+ * @throws if the view does not render, or the capture cannot be rasterized.
  */
 export async function captureViewKeyImage(
   viewID: string
@@ -51,7 +68,12 @@ export async function captureViewKeyImage(
   const captured = view.renderWindow.captureImages()[0];
   if (!captured) return null;
   view.requestRender({ immediate: true });
-  const base = await loadImage(await captured);
+  // An animating or suspended view may never run the pass that settles the
+  // capture, and the button must not spin forever waiting for it.
+  const base = await withTimeout(
+    captured.then(loadImage),
+    'The view did not render in time'
+  );
 
   const container = view.renderWindowView.getContainer();
   const overlayRoot = container?.parentElement;

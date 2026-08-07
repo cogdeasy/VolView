@@ -53,6 +53,19 @@ const coreManifestSchema = ManifestSchema.pick({
   datasetFilePath: true,
 });
 
+/** Deletes the key-image members belonging to a findings root being dropped. */
+function removeKeyImages(findings: unknown, zip: JSZip) {
+  if (!isRecord(findings) || !Array.isArray(findings.findings)) return;
+  findings.findings.forEach((finding) => {
+    if (
+      isRecord(finding) &&
+      isRecord(finding.keyImage) &&
+      typeof finding.keyImage.path === 'string'
+    )
+      zip.remove(finding.keyImage.path);
+  });
+}
+
 function validateCoreGraph(core: Manifest, zip: JSZip) {
   if (core.version !== MANIFEST_VERSION) {
     throw new Error(
@@ -263,6 +276,9 @@ export function normalizeManifest(manifest: Manifest, zip: JSZip) {
     const parsed = ManifestSchema.shape[key].safeParse(candidate[key]);
     if (!parsed.success) {
       omitted.push(`${key}: invalid optional state`);
+      // Dropped findings leave their key-image PNGs behind, the same dead
+      // bytes an orphaned segment group would.
+      if (key === 'findings') removeKeyImages(candidate[key], zip);
       return [];
     }
     return [[key, parsed.data] as const];

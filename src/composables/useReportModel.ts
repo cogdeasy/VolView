@@ -6,6 +6,7 @@ import { isDicomImage } from '@/src/utils/dataSelection';
 import { worldPointToIndex } from '@/src/utils/imageSpace';
 import { frameOfReferenceToImageSliceAndAxis } from '@/src/utils/frameOfReference';
 import { summarizeFindingMeasurements } from '@/src/core/findings/summarize';
+import { centroid } from '@/src/core/findings/measurements';
 import { LATERALITY_LABELS } from '@/src/core/findings/taxonomy';
 import type {
   Report,
@@ -76,11 +77,12 @@ export function useReportModel() {
           }`;
 
     const image = currentImageData.value;
-    const centroid = findingsStore.measurementCentroid(finding);
-    const hasGeometry = finding.measurements.length > 0;
+    // Points, not links: a finding whose annotations were deleted has no
+    // position to report, and the centroid of nothing is the origin.
+    const points = findingsStore.measurementPoints(finding);
     const coordinates =
-      image && hasGeometry
-        ? `IJK ${[...worldPointToIndex(image, centroid)]
+      image && points.length > 0
+        ? `IJK ${[...worldPointToIndex(image, centroid(points))]
             .map((component) => Math.round(component))
             .join(', ')}`
         : '';

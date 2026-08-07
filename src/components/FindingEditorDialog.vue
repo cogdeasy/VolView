@@ -7,6 +7,7 @@ import { useKeyImageCapture } from '@/src/composables/useKeyImageCapture';
 import { useReportModel } from '@/src/composables/useReportModel';
 import { useCurrentImage } from '@/src/composables/useCurrentImage';
 import { useAnnotationToolStore } from '@/src/store/tools';
+import { useMessageStore } from '@/src/store/messages';
 import { AnnotationToolType } from '@/src/store/tools/types';
 import { frameOfReferenceToImageSliceAndAxis } from '@/src/utils/frameOfReference';
 import { summarizeMeasurement } from '@/src/core/findings/summarize';
@@ -129,10 +130,12 @@ watch(currentImageID, () => uiStore.closeEditor());
 // --- measurements --- //
 
 const measurementRows = computed(() =>
-  (finding.value?.measurements ?? []).map((measurement) => ({
-    ...measurement,
-    summary: summarizeMeasurement(measurement),
-  }))
+  (finding.value ? findingsStore.liveMeasurements(finding.value) : []).map(
+    (measurement) => ({
+      ...measurement,
+      summary: summarizeMeasurement(measurement),
+    })
+  )
 );
 
 const AnnotationTypes = [
@@ -205,10 +208,16 @@ async function capture() {
   if (!editingFindingID.value) return;
   capturing.value = true;
   try {
-    await captureKeyImage(
+    const captured = await captureKeyImage(
       editingFindingID.value,
       captureViewID.value ?? undefined
     );
+    if (!captured)
+      useMessageStore().addWarning('That view is not available to capture');
+  } catch (err) {
+    useMessageStore().addError('Could not capture a key image', {
+      error: err instanceof Error ? err : new Error(String(err)),
+    });
   } finally {
     capturing.value = false;
   }

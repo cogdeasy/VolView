@@ -80,6 +80,18 @@ export const useFindingsStore = defineStore('findings', () => {
     return store.getPoints(measurement.toolID);
   }
 
+  /**
+   * The measurements whose annotation still exists. Deleting an annotation
+   * only unlinks it from its finding, and nothing walks the findings on the
+   * way, so dead links are filtered where they are read.
+   */
+  const liveMeasurements = (finding: Finding) =>
+    finding.measurements.filter(
+      (measurement) =>
+        measurement.toolID in
+        useAnnotationToolStore(measurement.toolType).toolByID
+    );
+
   function addFinding(patch: NewFinding): FindingID {
     const id = useIdStore().nextId() as FindingID;
     const measurements = patch.measurements ?? [];
@@ -201,8 +213,11 @@ export const useFindingsStore = defineStore('findings', () => {
     updateFinding(id, { keyImage });
   }
 
+  const measurementPoints = (finding: Finding) =>
+    finding.measurements.flatMap(getToolPoints);
+
   const measurementCentroid = (finding: Finding) =>
-    centroid(finding.measurements.flatMap(getToolPoints));
+    centroid(measurementPoints(finding));
 
   // --- taxonomy --- //
 
@@ -253,6 +268,8 @@ export const useFindingsStore = defineStore('findings', () => {
       types: findingTypes.value.filter((type) => !type.builtin),
       findings: findingIDs.value.map((id) => {
         const { keyImage, ...finding } = findingByID.value[id];
+        // A link to a deleted annotation is not worth saving.
+        finding.measurements = liveMeasurements(findingByID.value[id]);
         if (!keyImage) return finding;
         const path = keyImagePath(id);
         zip.file(path, dataURLToBase64(keyImage.dataURL), { base64: true });
@@ -345,6 +362,8 @@ export const useFindingsStore = defineStore('findings', () => {
     jumpToFinding,
     setKeyImage,
     measurementCentroid,
+    measurementPoints,
+    liveMeasurements,
     getToolPoints,
     addFindingType,
     upsertFindingType,

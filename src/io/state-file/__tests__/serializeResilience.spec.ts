@@ -132,6 +132,30 @@ describe('state-file serialization resilience', () => {
     );
   });
 
+  it('omits an invalid findings root with its key images', () => {
+    const zip = new JSZip();
+    zip.file('findings/keyImages/finding-1.png', 'bytes');
+    const manifest = {
+      version: MANIFEST_VERSION,
+      datasets: [{ id: 'dataset-1', dataSourceId: 1 }],
+      dataSources: [{ id: 1, type: 'uri', uri: '/dataset-1' }],
+      findings: {
+        findings: [
+          {
+            id: 'finding-1',
+            keyImage: { path: 'findings/keyImages/finding-1.png' },
+          },
+        ],
+      },
+    } as unknown as Manifest;
+
+    const normalized = normalizeManifest(manifest, zip);
+
+    expect(normalized.manifest).not.toHaveProperty('findings');
+    expect(zip.file('findings/keyImages/finding-1.png')).toBeNull();
+    expect(normalized.omitted).toContain('findings: invalid optional state');
+  });
+
   it('omits the complete view layout when viewByID is invalid', () => {
     const manifest = {
       ...manifestWithSelection('dataset-1'),

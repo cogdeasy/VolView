@@ -216,6 +216,19 @@ describe('findings store', () => {
     expect(restored.findings[0].measurements).toEqual([]);
   });
 
+  it('ignores a link to an annotation the user deleted', async () => {
+    const toolID = addRuler('image-1');
+    const store = useFindingsStore();
+    const id = store.promoteMeasurement(AnnotationToolType.Ruler, toolID)!;
+    useRulerStore().removeRuler(toolID);
+
+    expect(store.liveMeasurements(store.findingByID[id])).toEqual([]);
+    expect(store.measurementPoints(store.findingByID[id])).toEqual([]);
+
+    const { manifest } = await serializeFindings();
+    expect(manifest.findings?.findings?.[0].measurements).toEqual([]);
+  });
+
   it('skips a finding whose image did not restore', async () => {
     const toolID = addRuler('image-1');
     useFindingsStore().promoteMeasurement(AnnotationToolType.Ruler, toolID);

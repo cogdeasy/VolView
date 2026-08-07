@@ -3,19 +3,28 @@ import { computed } from 'vue';
 import { useFindingsStore } from '@/src/store/findings';
 import { useFindingsUIStore } from '@/src/store/findings-ui';
 import { useCurrentImage } from '@/src/composables/useCurrentImage';
+import { useViewLocator } from '@/src/composables/useViewLocator';
+import { locatorPatch } from '@/src/core/annotations/locator';
 import { measurementHeadline } from '@/src/core/findings/summarize';
 import { LATERALITY_LABELS } from '@/src/core/findings/taxonomy';
+import { useViewStore } from '@/src/store/views';
 import { AXIAL_FRAME_OF_REFERENCE } from '@/src/utils/frameOfReference';
 
 const findingsStore = useFindingsStore();
 const uiStore = useFindingsUIStore();
+const viewStore = useViewStore();
 const { currentImageID } = useCurrentImage();
+const { locator } = useViewLocator(
+  computed(() => viewStore.activeView ?? ''),
+  currentImageID
+);
 
 const findings = computed(() =>
   findingsStore.findingsForImage(currentImageID.value).map((finding) => ({
     ...finding,
     typeLabel: findingsStore.findingTypeByID[finding.typeID]?.label ?? '',
     headline: measurementHeadline(finding),
+    liveMeasurements: findingsStore.liveMeasurements(finding),
     lateralityLabel:
       finding.laterality === 'unknown'
         ? ''
@@ -28,7 +37,11 @@ function addBlankFinding() {
   const id = findingsStore.addFinding({
     imageID: currentImageID.value,
     title: 'New finding',
-    frameOfReference: AXIAL_FRAME_OF_REFERENCE,
+    // Where the user is looking, stamped the same way a placed annotation is.
+    // A 3D or otherwise unlocatable active view leaves the default plane.
+    ...(locator.value.kind === 'none'
+      ? { slice: 0, frameOfReference: AXIAL_FRAME_OF_REFERENCE }
+      : locatorPatch(locator.value)),
   });
   uiStore.editFinding(id);
 }
@@ -135,9 +148,9 @@ function move(index: number, offset: number) {
               </div>
               <div class="text-caption text-disabled mt-1">
                 Slice {{ finding.slice + 1 }}
-                <span v-if="finding.measurements.length">
-                  · {{ finding.measurements.length }} measurement<span
-                    v-if="finding.measurements.length > 1"
+                <span v-if="finding.liveMeasurements.length">
+                  · {{ finding.liveMeasurements.length }} measurement<span
+                    v-if="finding.liveMeasurements.length > 1"
                     >s</span
                   >
                 </span>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue';
+import { refDebounced } from '@vueuse/core';
 import { storeToRefs } from 'pinia';
 import { useTheme } from 'vuetify';
 import { saveAs } from 'file-saver';
@@ -19,6 +20,10 @@ const theme = useTheme();
 
 /** How long the hidden print frame outlives the print() call. */
 const PRINT_FRAME_LIFETIME_MS = 60000;
+/** How long a print frame may take to load before it is given up on. */
+const PRINT_FRAME_LOAD_TIMEOUT_MS = 10000;
+/** Keeps typing in the impression box from re-rendering the preview frame. */
+const PREVIEW_DEBOUNCE_MS = 300;
 
 const documentTheme = computed<'dark' | 'light'>(() =>
   theme.global.current.value.dark ? 'dark' : 'light'
@@ -26,8 +31,13 @@ const documentTheme = computed<'dark' | 'light'>(() =>
 
 // The preview is the exported document itself, rendered in a sandboxed frame,
 // so what the radiologist signs off is byte-for-byte what leaves the app.
-const previewHtml = computed(() =>
-  renderReportHtml(report.value, { theme: documentTheme.value })
+// Debounced because every srcdoc change reloads the frame and its inline
+// key images; the exports re-render from live state regardless.
+const previewHtml = refDebounced(
+  computed(() =>
+    renderReportHtml(report.value, { theme: documentTheme.value })
+  ),
+  PREVIEW_DEBOUNCE_MS
 );
 
 const fileStem = computed(() => {
@@ -88,19 +98,24 @@ function printReport() {
   });
   printing.value = true;
   printFrame = frame;
+  // Every timer checks identity first, so a stale one cannot take down the
+  // frame of a later print.
+  const disposeIfCurrent = () => {
+    if (printFrame === frame) disposePrintFrame();
+  };
   frame.onload = () => {
     const frameWindow = frame.contentWindow;
     frameWindow?.focus();
     frameWindow?.print();
-    printing.value = false;
+    if (printFrame === frame) printing.value = false;
     // The print dialog needs the document to outlive this handler.
-    window.setTimeout(disposePrintFrame, PRINT_FRAME_LIFETIME_MS);
+    window.setTimeout(disposeIfCurrent, PRINT_FRAME_LIFETIME_MS);
   };
-  frame.onerror = disposePrintFrame;
+  frame.onerror = disposeIfCurrent;
   // A frame that never loads must not leave the button spinning.
   window.setTimeout(() => {
-    if (printing.value) disposePrintFrame();
-  }, PRINT_FRAME_LIFETIME_MS);
+    if (printFrame === frame && printing.value) disposePrintFrame();
+  }, PRINT_FRAME_LOAD_TIMEOUT_MS);
   document.body.appendChild(frame);
 }
 
@@ -159,7 +174,7 @@ onBeforeUnmount(disposePrintFrame);
         <iframe
           class="report-preview flex-grow-1"
           title="Report preview"
-          sandbox="allow-same-origin"
+          sandbox=""
           :srcdoc="previewHtml"
           data-testid="report-preview"
         ></iframe>
