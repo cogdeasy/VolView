@@ -11,8 +11,12 @@ vi.mock('@/src/core/findings/keyImage', () => ({
   captureViewKeyImage: vi.fn(async () => 'data:image/png;base64,AAAA'),
 }));
 
+const { registeredViews } = vi.hoisted(() => ({
+  registeredViews: [] as Array<{ id: string; name: string }>,
+}));
+
 vi.mock('@/src/core/views/viewApiRegistry', () => ({
-  getRegisteredViews: () => [{ id: 'view-axial', name: 'Axial' }],
+  getRegisteredViews: () => registeredViews,
 }));
 
 vi.mock('@/src/composables/useCurrentImage', async (importOriginal) => {
@@ -31,13 +35,14 @@ vi.mock('@/src/composables/useCurrentImage', async (importOriginal) => {
 describe('useKeyImageCapture', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
+    registeredViews.length = 0;
+    registeredViews.push({ id: 'view-axial', name: 'Axial' });
   });
 
   const findingOn = (imageID: string) =>
     useFindingsStore().addFinding({ imageID, title: 'Lesion' });
 
-  const axialViewOf = (dataID: string) => {
-    const id = 'view-axial';
+  const axialViewOf = (dataID: string, id = 'view-axial') => {
     useViewStore().viewByID[id] = {
       id,
       type: '2D',
@@ -60,6 +65,16 @@ describe('useKeyImageCapture', () => {
     expect(findingsStore.findingByID[id].keyImage?.slice).toBe(
       sliceStore.getConfig(viewID, 'image-1').slice
     );
+  });
+
+  it('captures from a view showing the finding, not the first of its plane', () => {
+    axialViewOf('image-2', 'view-other-series');
+    const own = axialViewOf('image-1');
+    registeredViews.unshift({ id: 'view-other-series', name: 'Axial (other)' });
+
+    const id = findingOn('image-1');
+
+    expect(useKeyImageCapture().preferredViewID(id)).toBe(own);
   });
 
   it('records no slice when the view shows another image', async () => {

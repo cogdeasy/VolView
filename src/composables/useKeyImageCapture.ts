@@ -47,12 +47,20 @@ export function useKeyImageCapture() {
 
   /**
    * The view that best documents a finding: a 2D view along the finding's own
-   * plane, else the active view, else whatever is mounted.
+   * plane, else the active view, else whatever is mounted. Views bound to
+   * another series are considered last — a picture of the wrong image
+   * documents nothing — while a composite layout's panels, which the view
+   * store does not hold, render the current image and stay eligible.
    */
   function preferredViewID(findingID: FindingID): string | undefined {
     const finding = findingsStore.findingByID[findingID];
-    const available = candidates();
-    if (available.length === 0) return undefined;
+    const mounted = candidates();
+    if (mounted.length === 0) return undefined;
+    const showingFinding = mounted.filter((candidate) => {
+      const view = viewStore.getView(candidate.id);
+      return !view || view.dataID === finding?.imageID;
+    });
+    const available = showingFinding.length > 0 ? showingFinding : mounted;
     const axis = finding
       ? frameOfReferenceToImageSliceAndAxis(
           finding.frameOfReference,

@@ -155,7 +155,8 @@ export function useReportModel() {
       { label: 'Modality', value: modality.value },
       { label: 'Series #', value: info?.volume.SeriesNumber ?? '' },
       {
-        label: 'Slices',
+        // A cine series counts the same field in frames.
+        label: info?.volume.kind === 'cine' ? 'Frames' : 'Slices',
         value: info ? String(info.volume.NumberOfSlices) : '',
       },
     ];

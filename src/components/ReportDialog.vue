@@ -46,9 +46,14 @@ const documentTheme = computed<'dark' | 'light'>(() =>
 // The generation time is stamped once per opening, so it does not tick while
 // the report is edited. An export stamps its own.
 const openedAt = ref('');
-watch(reportOpen, (open) => {
-  if (open) openedAt.value = new Date().toLocaleString();
-});
+watch(
+  reportOpen,
+  (open) => {
+    if (open) openedAt.value = new Date().toLocaleString();
+  },
+  // A report already open when this mounts still gets its stamp.
+  { immediate: true }
+);
 
 const previewHtml = refDebounced(
   computed(() =>
