@@ -205,29 +205,29 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
 
     // Every view is written even though windowing sync mirrors the first one:
     // sync can be off, and a handful of views makes the redundancy cheap.
+    // `userTriggered` is left alone: a protocol window is not a reader edit.
     viewIDs.forEach((viewID) => {
       if (spec.kind === 'dicom') {
         windowingStore.resetConfig(viewID, imageID);
         return;
       }
       if (spec.kind === 'auto') {
-        windowingStore.updateConfig(
-          viewID,
-          imageID,
-          { auto: spec.auto as AutoRangeKey, useAuto: true },
-          true
-        );
+        windowingStore.updateConfig(viewID, imageID, {
+          auto: spec.auto as AutoRangeKey,
+          useAuto: true,
+        });
         return;
       }
       const preset =
         spec.kind === 'preset' ? getWindowLevelPreset(spec.preset) : spec;
       if (!preset) return;
-      windowingStore.updateConfig(
-        viewID,
-        imageID,
-        { width: preset.width, level: preset.level, useAuto: false },
-        true
-      );
+      // `useAuto: false` is what keeps the auto-range machinery from
+      // overwriting the window the protocol asked for.
+      windowingStore.updateConfig(viewID, imageID, {
+        width: preset.width,
+        level: preset.level,
+        useAuto: false,
+      });
     });
   }
 
@@ -319,6 +319,24 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
   }
 
   /**
+   * The chrome a protocol owns, without the panel focus jump. Used when the
+   * reader comes back to a study that is already hung: what is on screen must
+   * agree with the protocol the indicator names, but the side panel should not
+   * move under them.
+   */
+  function setPresentationChrome(protocol: HangingProtocol) {
+    overlays.value = { ...protocol.overlays };
+    focusedModule.value = protocol.focusedModule;
+  }
+
+  /**
+   * Protocols match DICOM attributes, so a plain volume — an NRRD, a sample
+   * image, a model — has nothing to match and gets no indicator at all.
+   */
+  const isMatchable = (imageID: Maybe<string>) =>
+    !!imageID && isDicomImage(imageID);
+
+  /**
    * Re-runs the parts of the applied protocol that need pixel data: the window
    * (an auto window needs the histogram, and a slice view that mounts before
    * the histogram exists pins the config to the placeholder W/L of 1 / 0.5),
@@ -381,6 +399,10 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     // clears it.
     if (!imageID || !restoredImages.value.has(imageID)) return false;
     resetPresentationChrome();
+    if (!isMatchable(imageID)) {
+      applied.value = null;
+      return true;
+    }
     applied.value = {
       protocolId: null,
       reason: 'restored',
@@ -405,6 +427,12 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     if (!settings.value.autoApply && !options?.force) {
       // Nothing hangs this study, so the previous study's protocol must not
       // linger in the indicator, the chrome or the after-load phase.
+      applied.value = null;
+      resetPresentationChrome();
+      return null;
+    }
+
+    if (!isMatchable(imageID)) {
       applied.value = null;
       resetPresentationChrome();
       return null;
@@ -451,6 +479,11 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
    */
   function reportForImage(imageID: Maybe<string>) {
     if (!settings.value.autoApply) return;
+    if (!isMatchable(imageID)) {
+      applied.value = null;
+      resetPresentationChrome();
+      return;
+    }
     const studyUID = getStudyUID(imageID);
     const selection = selectProtocol(
       protocols.value,
@@ -460,6 +493,11 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
         defaultId: settings.value.defaultProtocolId,
       }
     );
+    // The overlay flags and the focused module are global runtime state, so a
+    // study viewed in between will have left its own behind. Put back the ones
+    // belonging to the protocol the indicator is about to name.
+    if (selection.protocol) setPresentationChrome(selection.protocol);
+    else resetPresentationChrome();
     applied.value = {
       protocolId: selection.protocol?.id ?? null,
       reason: selection.reason,
@@ -467,6 +505,7 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
       explanation: explainSelection(selection),
       studyInstanceUID: studyUID,
     };
+    indicatorDismissed.value = false;
   }
 
   /** Reader picked a protocol by hand; remember it for this study. */

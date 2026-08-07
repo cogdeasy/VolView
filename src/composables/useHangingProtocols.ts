@@ -19,6 +19,11 @@ export function useHangingProtocolAutoApply() {
   let appliedFor: string | null = null;
   let finalizedFor: string | null = null;
   /**
+   * The image this tab hung, as opposed to one it only reported on. Only that
+   * one may have its window written again later.
+   */
+  let hangingFor: string | null = null;
+  /**
    * Images this tab has already hung. `currentImageID` follows the active
    * view's data, so it also changes when the reader drops an image into a
    * pane or focuses a pane bound to something else; re-hanging then would
@@ -37,11 +42,13 @@ export function useHangingProtocolAutoApply() {
       if (!imageID) {
         appliedFor = null;
         finalizedFor = null;
+        hangingFor = null;
         return;
       }
       if (imageID === appliedFor) return;
       appliedFor = imageID;
       finalizedFor = null;
+      hangingFor = null;
       // A study restored from a saved session keeps the presentation the
       // reader saved with it.
       if (store.reportRestoredPresentation(imageID)) {
@@ -56,6 +63,7 @@ export function useHangingProtocolAutoApply() {
         return;
       }
       hung.add(imageID);
+      hangingFor = imageID;
       store.applyForImage(imageID);
     },
     { immediate: true }
@@ -78,10 +86,13 @@ export function useHangingProtocolAutoApply() {
 
   // An auto window is the one setting that does need the histogram: a view
   // that mounted before the ranges existed is pinned to the placeholder W/L,
-  // so the window is written again when they arrive.
+  // so the window is written again when they arrive. Only for a study this
+  // tab hung: on a study it merely reported on, the window on screen may be
+  // one the reader set by hand.
   watch(autoRangesReady, (ready) => {
     const imageID = currentImageID.value;
-    if (!ready || !imageID || imageID !== finalizedFor) return;
+    if (!ready || !imageID) return;
+    if (imageID !== finalizedFor || imageID !== hangingFor) return;
     store.applyAppliedWindowLevel(imageID);
   });
 }

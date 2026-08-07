@@ -6,7 +6,7 @@ import { useCurrentImage } from '@/src/composables/useCurrentImage';
 import { describeWindowLevel } from '@/src/core/hanging-protocols/describe';
 
 const store = useHangingProtocolStore();
-const { applied, appliedProtocol, indicatorDismissed, protocols } =
+const { applied, appliedProtocol, indicatorDismissed, protocols, settings } =
   storeToRefs(store);
 const { currentImageID } = useCurrentImage('global');
 
@@ -29,6 +29,19 @@ const summary = computed(() => {
 
 const switchTo = (protocolId: string) => {
   store.applyManually(protocolId, currentImageID.value);
+  showWhy.value = false;
+};
+
+/** Whether this study is pinned to a protocol the reader picked by hand. */
+const pinned = computed(() => {
+  const studyUID = applied.value?.studyInstanceUID;
+  return !!studyUID && !!settings.value.overrides[studyUID];
+});
+
+/** Drops the pin and hangs the study with whatever matching picks instead. */
+const unpin = () => {
+  store.clearOverride(currentImageID.value);
+  store.applyForImage(currentImageID.value, { force: true });
   showWhy.value = false;
 };
 </script>
@@ -101,6 +114,19 @@ const switchTo = (protocolId: string) => {
               </v-list-item-subtitle>
             </v-list-item>
             <v-divider class="my-1" />
+            <v-list-item
+              v-if="pinned"
+              data-testid="protocol-indicator-unpin"
+              @click="unpin"
+            >
+              <template v-slot:prepend>
+                <v-icon size="18">mdi-pin-off-outline</v-icon>
+              </template>
+              <v-list-item-title>Stop pinning this study</v-list-item-title>
+              <v-list-item-subtitle>
+                Hang it by the matching rules again
+              </v-list-item-subtitle>
+            </v-list-item>
             <v-list-item @click="store.managerOpen = true">
               <template v-slot:prepend>
                 <v-icon size="18">mdi-cog-outline</v-icon>

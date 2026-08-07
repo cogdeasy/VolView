@@ -282,6 +282,9 @@ const segmentations = computed(() => {
 
 const selectionStore = useToolSelectionStore();
 const selectionPoints = computed(() => {
+  // Nothing is drawn while annotations are hidden, so outlining a selection
+  // would frame empty pixel data.
+  if (!showAnnotations.value) return [];
   return selectionStore.selection
     .map((sel) => {
       const store = useAnnotationToolStore(sel.type);

@@ -51,7 +51,9 @@ const selectNamedLayout = (name: string | null) => {
   // "Custom" only describes a layout captured from the viewer; picking it
   // again must not blank the protocol's layout.
   if (!name || !(name in DefaultNamedLayouts)) return;
-  patch({ layout: DefaultNamedLayouts[name] });
+  // Copied, not referenced: the protocol is stored and must never share an
+  // object with the app-wide named layouts.
+  patch({ layout: JSON.parse(JSON.stringify(DefaultNamedLayouts[name])) });
 };
 
 const windowKinds: Array<{ value: WindowLevelSpec['kind']; title: string }> = [
