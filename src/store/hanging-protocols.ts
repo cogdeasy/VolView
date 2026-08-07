@@ -264,6 +264,11 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     imageID: string
   ) {
     if (protocol.slicePolicy === 'preserve') return;
+    // Without the pixel data the slice bounds are the placeholder 0..1, so a
+    // write here would store a slice that means nothing and would be saved
+    // into the session if the reader saved in that window. The policy runs
+    // again once the image has loaded.
+    if (!getImageData(imageID)) return;
     const sliceStore = useViewSliceStore();
     viewIDs.forEach((viewID) => {
       if (protocol.slicePolicy === 'middle') {
@@ -273,6 +278,34 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
       const config = sliceStore.getConfig(viewID, imageID);
       sliceStore.updateConfig(viewID, imageID, { slice: config.min });
     });
+  }
+
+  /**
+   * The panes this study is actually in. The layout's own views, not the
+   * visible ones: with a pane maximized, `visibleViews` is that pane alone and
+   * the rest would keep whatever settings they had before. Panes the reader
+   * bound to another series are left out — a config written under that view
+   * and this image shows nothing but is still saved into the session.
+   */
+  const viewsShowing = (imageID: string) =>
+    useViewStore().layoutViews.filter((view) => view.dataID === imageID);
+
+  function applyToViews(
+    protocol: HangingProtocol,
+    views: { id: string; type: string }[],
+    imageID: string
+  ) {
+    applyWindowLevel(protocol, windowedViewIDs(views), imageID);
+    applyVolumeColoring(
+      protocol,
+      views.filter((view) => view.type === '3D').map((view) => view.id),
+      imageID
+    );
+    applySlicePolicy(
+      protocol,
+      views.filter((view) => view.type === '2D').map((view) => view.id),
+      imageID
+    );
   }
 
   /**
@@ -289,22 +322,12 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     );
 
     if (imageID) {
-      const views = viewStore.visibleViews;
       // A protocol with more views than the previous layout gets fresh, unbound
       // views; without this they hang as empty panes.
-      views
+      viewStore.layoutViews
         .filter((view) => !view.dataID)
         .forEach((view) => viewStore.setDataForView(view.id, imageID));
-      const twoDViewIDs = views
-        .filter((view) => view.type === '2D')
-        .map((view) => view.id);
-      const threeDViewIDs = views
-        .filter((view) => view.type === '3D')
-        .map((view) => view.id);
-
-      applyWindowLevel(protocol, windowedViewIDs(views), imageID);
-      applyVolumeColoring(protocol, threeDViewIDs, imageID);
-      applySlicePolicy(protocol, twoDViewIDs, imageID);
+      applyToViews(protocol, viewsShowing(imageID), imageID);
     }
 
     overlays.value = { ...protocol.overlays };
@@ -347,19 +370,7 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
   function applyLoadedImageSettings(imageID: Maybe<string>) {
     const protocol = appliedProtocol.value;
     if (!protocol || !imageID) return;
-
-    const views = useViewStore().visibleViews;
-    applyWindowLevel(protocol, windowedViewIDs(views), imageID);
-    applyVolumeColoring(
-      protocol,
-      views.filter((view) => view.type === '3D').map((view) => view.id),
-      imageID
-    );
-    applySlicePolicy(
-      protocol,
-      views.filter((view) => view.type === '2D').map((view) => view.id),
-      imageID
-    );
+    applyToViews(protocol, viewsShowing(imageID), imageID);
   }
 
   /**
@@ -369,11 +380,7 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
   function applyAppliedWindowLevel(imageID: Maybe<string>) {
     const protocol = appliedProtocol.value;
     if (!protocol || !imageID) return;
-    applyWindowLevel(
-      protocol,
-      windowedViewIDs(useViewStore().visibleViews),
-      imageID
-    );
+    applyWindowLevel(protocol, windowedViewIDs(viewsShowing(imageID)), imageID);
   }
 
   /** Whether the histogram-derived ranges an auto window needs are ready. */
@@ -706,11 +713,24 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     settings.value.autoApply = enabled;
   }
 
+  /**
+   * Puts the shipped protocols back as they were shipped, in place. Precedence
+   * is list order, so rebuilding the list built-ins-first would quietly demote
+   * everything the reader wrote below everything shipped: restoring a
+   * definition must not reorder anything.
+   */
   function restoreBuiltIns() {
-    const userProtocols = protocols.value.filter(
-      (protocol) => !protocol.builtIn
+    const fresh = new Map(
+      cloneBuiltIns().map((protocol) => [protocol.id, protocol])
     );
-    protocols.value = [...cloneBuiltIns(), ...userProtocols];
+    const restored = protocols.value.map(
+      (protocol) => fresh.get(protocol.id) ?? protocol
+    );
+    const present = new Set(protocols.value.map((protocol) => protocol.id));
+    const missing = cloneBuiltIns().filter(
+      (protocol) => !present.has(protocol.id)
+    );
+    protocols.value = [...restored, ...missing];
   }
 
   function exportProtocols(ids?: string[]) {

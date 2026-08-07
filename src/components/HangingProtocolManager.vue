@@ -15,7 +15,10 @@ import {
   cloneProtocol,
   ProtocolParseError,
 } from '@/src/core/hanging-protocols/serialization';
-import { evaluateProtocol } from '@/src/core/hanging-protocols/matching';
+import {
+  checkPattern,
+  evaluateProtocol,
+} from '@/src/core/hanging-protocols/matching';
 import {
   hangingProtocol,
   type HangingProtocol,
@@ -56,12 +59,21 @@ const dirty = computed(
 
 // Stored protocols are parsed on read, so a draft the schema rejects would be
 // dropped on the next start. Refuse the save instead of losing the reader's
-// work silently.
+// work silently. A pattern matching refuses to run is refused here too: the
+// rule would look configured and could never fire.
 const draftError = computed(() => {
   if (!draft.value) return null;
   const result = hangingProtocol.safeParse(draft.value);
-  if (result.success) return null;
-  return result.error.issues[0]?.message ?? 'This protocol cannot be saved.';
+  if (!result.success) {
+    return result.error.issues[0]?.message ?? 'This protocol cannot be saved.';
+  }
+  const { studyDescription, seriesDescription } = draft.value.match;
+  return (
+    [studyDescription, seriesDescription]
+      .filter((pattern): pattern is string => !!pattern)
+      .map((pattern) => checkPattern(pattern))
+      .find(({ safe }) => !safe)?.reason ?? null
+  );
 });
 
 // Keyed on the id, not the object: the stored protocol is replaced whenever

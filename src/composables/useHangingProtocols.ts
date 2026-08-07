@@ -16,80 +16,72 @@ export function useHangingProtocolAutoApply() {
   const store = useHangingProtocolStore();
   const { currentImageID, isImageLoading } = useCurrentImage('global');
 
-  let appliedFor: string | null = null;
-  let finalizedFor: string | null = null;
   /**
-   * The image this tab hung, as opposed to one it only reported on. Only that
-   * one may have its window written again later.
-   */
-  let hangingFor: string | null = null;
-  /**
-   * Images this tab has already hung. `currentImageID` follows the active
-   * view's data, so it also changes when the reader drops an image into a
-   * pane or focuses a pane bound to something else; re-hanging then would
-   * throw away the arrangement they just made by hand.
+   * Images this tab has hung, as opposed to ones it only reported on.
+   * `currentImageID` follows the active view's data, so it also changes when
+   * the reader drops an image into a pane or focuses a pane bound to something
+   * else; re-hanging then would throw away the arrangement they just made by
+   * hand. Only a study in here may have its settings written again later.
    */
   const hung = new Set<string>();
+  /**
+   * Images whose deferred, pixel-data phase has run. Kept apart from `hung`
+   * because a study can be left mid-load: the reader opens A, switches to B
+   * and comes back before A finished, and A still needs finalizing.
+   */
+  const finalized = new Set<string>();
 
   // Loading the same series again is a new study opening, so it hangs again.
   onImageDeleted((deletedIDs) => {
-    deletedIDs.forEach((id) => hung.delete(id));
+    deletedIDs.forEach((id) => {
+      hung.delete(id);
+      finalized.delete(id);
+    });
   });
 
   watch(
     currentImageID,
     (imageID) => {
-      if (!imageID) {
-        appliedFor = null;
-        finalizedFor = null;
-        hangingFor = null;
-        return;
-      }
-      if (imageID === appliedFor) return;
-      appliedFor = imageID;
-      finalizedFor = null;
-      hangingFor = null;
+      if (!imageID) return;
       // A study restored from a saved session keeps the presentation the
       // reader saved with it.
-      if (store.reportRestoredPresentation(imageID)) {
-        finalizedFor = imageID;
-        return;
-      }
+      if (store.reportRestoredPresentation(imageID)) return;
       if (hung.has(imageID)) {
         // Coming back to a study that was hung earlier: say which protocol
         // owns it, but leave the views alone.
-        finalizedFor = imageID;
         store.reportForImage(imageID);
         return;
       }
       // Only a study a protocol actually hung counts as hung: with automatic
       // hanging off, or with nothing matching, the views were left alone and
       // the study must still be hangable later.
-      if (store.applyForImage(imageID)) {
-        hung.add(imageID);
-        hangingFor = imageID;
-      }
+      if (store.applyForImage(imageID)) hung.add(imageID);
     },
     { immediate: true }
   );
 
-  // Turning automatic hanging on hangs what is already on screen, rather than
-  // leaving the reader with an unhung study and no way to trigger one short of
-  // reloading it.
+  // The switch has to be true in both directions: turning hanging on hangs
+  // what is already on screen rather than leaving the reader with an unhung
+  // study and no way to trigger one short of reloading it, and turning it off
+  // stops the pill and the protocol's chrome claiming the study.
   watch(
     () => store.settings.autoApply,
     (on) => {
       const imageID = currentImageID.value;
-      if (!on || !imageID || imageID !== appliedFor || hung.has(imageID))
-        return;
+      if (!imageID) return;
       if (store.reportRestoredPresentation(imageID)) return;
+      // Already hung: the views stay as they are either way, and reporting
+      // takes the indicator and chrome with the switch.
+      if (!on || hung.has(imageID)) {
+        store.reportForImage(imageID);
+        return;
+      }
       if (!store.applyForImage(imageID)) return;
       hung.add(imageID);
-      hangingFor = imageID;
       // The image is already loaded, so the phase that waits on pixel data
       // will not run again on its own.
       if (isImageLoading.value) return;
-      finalizedFor = imageID;
+      finalized.add(imageID);
       store.applyLoadedImageSettings(imageID);
     }
   );
@@ -104,8 +96,8 @@ export function useHangingProtocolAutoApply() {
   // would strand those studies with no protocol settings at all.
   watch([currentImageID, isImageLoading], ([imageID, loading]) => {
     if (!imageID || loading) return;
-    if (imageID !== appliedFor || imageID === finalizedFor) return;
-    finalizedFor = imageID;
+    if (!hung.has(imageID) || finalized.has(imageID)) return;
+    finalized.add(imageID);
     store.applyLoadedImageSettings(imageID);
   });
 
@@ -117,7 +109,7 @@ export function useHangingProtocolAutoApply() {
   watch(autoRangesReady, (ready) => {
     const imageID = currentImageID.value;
     if (!ready || !imageID) return;
-    if (imageID !== finalizedFor || imageID !== hangingFor) return;
+    if (!hung.has(imageID) || !finalized.has(imageID)) return;
     store.applyAppliedWindowLevel(imageID);
   });
 }

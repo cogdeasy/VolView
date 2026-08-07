@@ -1,8 +1,10 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, beforeEach, expect } from 'vitest';
+import { setActivePinia, createPinia } from 'pinia';
 import {
   MAX_REMEMBERED_OVERRIDES,
   readStoredProtocols,
   rememberOverride,
+  useHangingProtocolStore,
 } from '@/src/store/hanging-protocols';
 import { BUILT_IN_PROTOCOLS } from '@/src/core/hanging-protocols/seeds';
 
@@ -25,6 +27,38 @@ describe('stored protocol list', () => {
     const protocols = readStoredProtocols(stored);
     expect(protocols).toHaveLength(1);
     expect(protocols[0].id).toBe(BUILT_IN_PROTOCOLS[0].id);
+  });
+});
+
+describe('restoring the shipped protocols', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    localStorage.clear();
+  });
+
+  it('leaves the precedence order alone', () => {
+    const store = useHangingProtocolStore();
+    const mine = { ...store.protocols[1], id: 'mine', builtIn: false };
+    store.addProtocol(mine);
+    const order = store.protocols.map((protocol) => protocol.id);
+    store.updateProtocol(BUILT_IN_PROTOCOLS[0].id, { name: 'Edited' });
+
+    store.restoreBuiltIns();
+
+    expect(store.protocols.map((protocol) => protocol.id)).toEqual(order);
+    expect(store.getProtocol(BUILT_IN_PROTOCOLS[0].id)?.name).toBe(
+      BUILT_IN_PROTOCOLS[0].name
+    );
+  });
+
+  it('brings back a built-in the reader deleted', () => {
+    const store = useHangingProtocolStore();
+    store.removeProtocol(BUILT_IN_PROTOCOLS[0].id);
+
+    store.restoreBuiltIns();
+
+    expect(store.protocols).toHaveLength(BUILT_IN_PROTOCOLS.length);
+    expect(store.getProtocol(BUILT_IN_PROTOCOLS[0].id)).not.toBeNull();
   });
 });
 
