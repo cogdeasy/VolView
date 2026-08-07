@@ -167,7 +167,8 @@ export default defineComponent({
     // Launching with data goes straight to the viewer; the worklist must not
     // flash in front of it while the URLs load. A config-only launch brings no
     // studies with it, so it still lands on the worklist.
-    if (urlParams.urls) {
+    const launchDismissedWorklist = Boolean(urlParams.urls);
+    if (launchDismissedWorklist) {
       worklistStore.dismissForExternalLoad();
     }
 
@@ -217,8 +218,9 @@ export default defineComponent({
         // inherit an exemption the config load did not consume.
         launchConfigLoad = false;
         // A launch whose URLs brought nothing in has no viewer to show, so the
-        // dismissal it triggered is taken back.
-        worklistStore.restoreIfEmpty();
+        // dismissal it triggered is taken back. Only its own dismissal: one the
+        // reader made while the load ran is theirs to keep.
+        if (launchDismissedWorklist) worklistStore.restoreIfEmpty();
       }
       // Feature entry points subscribe to this (see launchLoad.ts).
       await signalLaunchLoadComplete();
