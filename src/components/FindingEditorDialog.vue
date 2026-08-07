@@ -174,6 +174,12 @@ const attachableMeasurements = computed(() => {
 
 const measurementToAttach = ref<FindingMeasurement | null>(null);
 
+// The picker is per-finding: an unlinked pick must not follow the editor to
+// the next finding, where the Link button would attach it to the wrong one.
+watch(editingFindingID, () => {
+  measurementToAttach.value = null;
+});
+
 function attachMeasurement() {
   const measurement = measurementToAttach.value;
   if (!measurement || !editingFindingID.value) return;
