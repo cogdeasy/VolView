@@ -1,6 +1,9 @@
 import 'vue-toastification/dist/index.css';
 import 'vuetify/lib/styles/main.css';
+import '@/src/styles/fonts.css';
 import '@/src/global.css';
+// Loaded after global.css so token-driven rules win over the legacy overrides.
+import '@/src/styles/tokens.css';
 
 import '@kitware/vtk.js/Rendering/OpenGL/Profiles/Geometry';
 import '@kitware/vtk.js/Rendering/OpenGL/Profiles/Volume';
@@ -17,6 +20,7 @@ import itkConfig from '@/src/io/itk/itkConfig';
 
 import App from './components/App.vue';
 import vuetify from './plugins/vuetify';
+import { installDesignTokens } from './plugins/designTokens';
 import { FILE_READERS } from './io';
 import { registerAllReaders } from './io/readers';
 import { CorePiniaProviderPlugin } from './core/provider';
@@ -55,4 +59,8 @@ initErrorReporting(app);
 app.use(pinia);
 app.use(VueToast);
 app.use(vuetify);
+
+// Needs Pinia (density token) and Vuetify (global defaults) to be installed.
+installDesignTokens(vuetify);
+
 app.mount('#app');

@@ -38,6 +38,13 @@ export const Brand = {
   colors: BrandColors,
 } as const;
 
+// The visual system built on top of these primitives — type, space, radii,
+// elevation, density and the semantic palettes — lives in
+// `src/design-tokens.ts`, which re-exports everything in this file, so
+// `@/src/design-tokens` is the single import for both. The re-export runs in
+// that direction because the tokens are derived from `BrandColors`; going the
+// other way round would be an ESM initialization cycle.
+
 /** Copyright line shown in the about dialog. */
 export const copyright = () =>
   `© ${new Date().getFullYear()} ${Brand.companyLegalName}. All rights reserved.`;

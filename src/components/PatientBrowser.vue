@@ -135,7 +135,6 @@ export default defineComponent({
         class="patient-data-study-panel"
       >
         <v-expansion-panel-title
-          color="#1976fa0a"
           class="pl-3 no-select"
           :title="study.StudyDate"
         >

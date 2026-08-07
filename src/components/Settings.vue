@@ -13,26 +13,45 @@
       <v-switch
         :label="`Dark Theme (${dark ? 'On' : 'Off'})`"
         v-model="dark"
-        color="secondary"
-        density="compact"
-        hide-details
       ></v-switch>
 
+      <div class="mt-2">
+        <div class="pv-text-label mb-1">Control density</div>
+        <div class="pv-text-caption pv-text-muted mb-2">
+          Comfortable keeps hit targets large; compact fits more rows on screen
+          for long reading sessions.
+        </div>
+        <v-btn-toggle
+          :model-value="density"
+          @update:model-value="onDensityChange"
+          mandatory
+          divided
+          variant="outlined"
+          color="primary"
+          data-testid="density-toggle"
+        >
+          <v-btn
+            v-for="option in densities"
+            :key="option"
+            :value="option"
+            :data-testid="`density-${option}`"
+            class="text-capitalize"
+          >
+            {{ option }}
+          </v-btn>
+        </v-btn-toggle>
+      </div>
+
       <v-switch
+        class="mt-2"
         :label="`Camera Auto Reset (${disableCameraAutoReset ? 'On' : 'Off'})`"
         v-model="disableCameraAutoReset"
-        color="secondary"
-        density="compact"
-        hide-details
       ></v-switch>
 
       <v-switch
         v-if="errorReportingConfigured"
         :label="`Error Reporting (${reportingEnabled ? 'On' : 'Off'})`"
         v-model="reportingEnabled"
-        color="secondary"
-        density="compact"
-        hide-details
       ></v-switch>
 
       <v-divider class="mt-2 mb-6"></v-divider>
@@ -52,6 +71,8 @@ import { useLocalStorage } from '@vueuse/core';
 
 import { useKeyboardShortcutsStore } from '@/src/store/keyboard-shortcuts';
 import { useViewCameraStore } from '@/src/store/view-configs/camera';
+import { useUiDensityStore } from '@/src/store/ui-density';
+import { Densities, type DensityName } from '@/src/design-tokens';
 import DicomWebSettings from './dicom-web/DicomWebSettings.vue';
 import ServerSettings from './ServerSettings.vue';
 import { DarkTheme, LightTheme, ThemeStorageKey } from '../constants';
@@ -79,6 +100,12 @@ export default defineComponent({
 
     const { disableCameraAutoReset } = storeToRefs(useViewCameraStore());
 
+    const densityStore = useUiDensityStore();
+    const { density } = storeToRefs(densityStore);
+    const onDensityChange = (value: DensityName) => {
+      densityStore.setDensity(value);
+    };
+
     const keyboardStore = useKeyboardShortcutsStore();
     const openKeyboardShortcuts = () => {
       keyboardStore.settingsOpen = true;
@@ -90,6 +117,9 @@ export default defineComponent({
       errorReportingConfigured,
       openKeyboardShortcuts,
       disableCameraAutoReset,
+      density,
+      densities: Densities,
+      onDensityChange,
     };
   },
   components: {

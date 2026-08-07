@@ -8,7 +8,7 @@ export default defineComponent({
   props: {
     icon: { type: String, required: true },
     name: { type: String, required: true },
-    size: { type: [Number, String], default: 40 },
+    size: { type: [Number, String], default: null },
     active: Boolean,
     disabled: Boolean,
     mobileOnlyMenu: Boolean,
@@ -73,7 +73,7 @@ export default defineComponent({
       </control-button>
     </template>
 
-    <div class="menu-content elevation-24">
+    <div class="menu-content pv-elevation-overlay">
       <slot />
     </div>
   </v-menu>

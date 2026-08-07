@@ -20,19 +20,12 @@ body {
 }
 
 .v-card--variant-outlined {
-  border: thin solid rgb(var(--v-theme-on-surface-variant)) !important;
-}
-
-.v-tooltip .v-overlay__content {
-  background-color: rgba(255, 255, 255, 0.9) !important;
-}
-
-.v-slider-thumb__label {
-  background-color: rgba(255, 255, 255, 0.9) !important;
+  border: var(--pv-border-width-hairline) solid
+    rgb(var(--v-theme-border-strong)) !important;
 }
 
 ul:not([class]),
 ol:not([class]) {
-  padding-left: 20px;
-  margin-bottom: 16px;
+  padding-left: var(--pv-space-xl);
+  margin-bottom: var(--pv-space-lg);
 }

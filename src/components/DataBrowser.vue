@@ -213,7 +213,7 @@ export default defineComponent({
 
 .collection-header-icon {
   flex: 0;
-  margin-right: 16px;
+  margin-right: var(--pv-space-lg);
 }
 
 .patient-header {

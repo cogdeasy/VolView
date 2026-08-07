@@ -7,7 +7,7 @@
     :width="sizeV"
     :min-width="sizeV"
     :max-width="sizeV"
-    :class="classV"
+    :class="['pv-control-button', classV]"
     :data-testid="`control-button-${name}`"
     v-bind="$attrs"
   >
@@ -29,17 +29,21 @@ export default {
   props: {
     icon: { type: String, required: true },
     name: { type: String, required: true },
-    size: { type: [Number, String], default: 40 },
+    /**
+     * Explicit pixel edge. Left unset, the button sizes itself from the
+     * density token (`--pv-density-tool-button-size`).
+     */
+    size: { type: [Number, String], default: null },
     buttonClass: [String, Array, Object],
     tooltipLocation: { type: String, default: 'right' },
   },
 
   computed: {
     sizeV() {
-      return Number(this.size);
+      return this.size == null ? undefined : Number(this.size);
     },
     iconSize() {
-      return Math.floor(0.6 * this.sizeV);
+      return this.sizeV == null ? undefined : Math.floor(0.6 * this.sizeV);
     },
     classV() {
       const classSpec = this.buttonClass;
@@ -59,3 +63,17 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+/* Sized by the density token unless an explicit `size` is passed. */
+.pv-control-button:not([style*='height']) {
+  height: var(--pv-density-tool-button-size);
+  width: var(--pv-density-tool-button-size);
+  min-width: var(--pv-density-tool-button-size);
+  max-width: var(--pv-density-tool-button-size);
+}
+
+.pv-control-button :deep(.v-icon) {
+  font-size: var(--pv-density-tool-icon-size);
+}
+</style>

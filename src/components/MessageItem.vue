@@ -79,15 +79,18 @@ export default defineComponent({
 
 <style scoped>
 .error-message {
-  background-color: #ef5350;
+  background-color: rgb(var(--v-theme-error));
+  color: rgb(var(--v-theme-on-error));
 }
 
 .warn-message {
-  background-color: #ffa726;
+  background-color: rgb(var(--v-theme-warning));
+  color: rgb(var(--v-theme-on-warning));
 }
 
 .info-message {
-  background-color: #26c6da;
+  background-color: rgb(var(--v-theme-info));
+  color: rgb(var(--v-theme-on-info));
 }
 
 .header {

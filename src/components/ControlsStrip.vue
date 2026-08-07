@@ -92,16 +92,14 @@ const { count: msgCount, badgeColor: msgBadgeColor } = useMessageBubble();
 <template>
   <div
     id="tools-strip"
-    class="bg-grey-darken-4 d-flex flex-column align-center"
+    class="pv-surface-sunken d-flex flex-column align-center"
   >
     <control-button
-      size="40"
       icon="mdi-folder-open"
       name="Open files"
       @click="loadUserPromptedFiles"
     />
     <control-button
-      size="40"
       icon="mdi-content-save-all"
       name="Save session"
       :loading="isSaving"
@@ -113,7 +111,6 @@ const { count: msgCount, badgeColor: msgBadgeColor } = useMessageBubble();
         <div>
           <control-button
             v-bind="props"
-            size="40"
             icon="mdi-view-dashboard"
             name="Layouts"
           />
@@ -129,7 +126,6 @@ const { count: msgCount, badgeColor: msgBadgeColor } = useMessageBubble();
     <v-spacer />
     <control-button
       v-if="serverUrl"
-      size="40"
       :icon="connIcon"
       name="Open Server Settings"
       @click="settingsDialog = true"
@@ -143,14 +139,12 @@ const { count: msgCount, badgeColor: msgBadgeColor } = useMessageBubble();
       id="notifications"
     >
       <control-button
-        size="40"
         icon="mdi-bell-outline"
         name="Notifications"
         @click="messageDialog = true"
       />
     </v-badge>
     <control-button
-      size="40"
       icon="mdi-cog"
       name="Settings"
       @click="settingsDialog = true"
@@ -175,14 +169,15 @@ const { count: msgCount, badgeColor: msgBadgeColor } = useMessageBubble();
 <style src="@/src/components/styles/utils.css"></style>
 <style scoped>
 #tools-strip {
-  border-left: 1px solid #212121;
-  flex: 0 0 40px;
+  border-left: var(--pv-border-width-hairline) solid rgb(var(--v-theme-border));
+  flex: 0 0 var(--pv-density-tool-button-size);
 }
 
 .tool-separator {
   width: 75%;
-  height: 1px;
+  height: var(--pv-border-width-hairline);
   border: none;
-  border-top: 1px solid rgb(112, 112, 112);
+  border-top: var(--pv-border-width-hairline) solid
+    rgb(var(--v-theme-border-strong));
 }
 </style>

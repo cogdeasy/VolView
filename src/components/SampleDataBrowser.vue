@@ -208,7 +208,7 @@ export default defineComponent({
 <style scoped>
 .sample-progress {
   background: rgba(0, 0, 0, 0.75);
-  border-radius: 16px;
+  border-radius: var(--pv-radius-circle);
   box-shadow: 0 0 8px 8px rgba(0, 0, 0, 0.75);
 }
 </style>

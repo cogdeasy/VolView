@@ -1,7 +1,12 @@
 import { createVuetify } from 'vuetify';
 import { useLocalStorage } from '@vueuse/core';
 
-import { BrandColors } from '@/src/branding';
+import {
+  DarkPalette,
+  LightPalette,
+  Density,
+  DefaultDensity,
+} from '@/src/design-tokens';
 import {
   DefaultTheme,
   DarkTheme,
@@ -10,30 +15,116 @@ import {
   ThemeStorageKey,
 } from '@/src/constants';
 
+/**
+ * Emphasis opacities are part of the token layer because they change measured
+ * contrast: `.text-medium-emphasis` is `on-surface` blended into the surface at
+ * this alpha, which is >= 6:1 in both themes at 0.7.
+ */
+function themeVariables(palette) {
+  return {
+    'border-color': palette['border-strong'],
+    'border-opacity': 1,
+    'high-emphasis-opacity': 1,
+    'medium-emphasis-opacity': 0.7,
+    'disabled-opacity': 0.38,
+    'hover-opacity': 0.08,
+    'focus-opacity': 0.12,
+    'selected-opacity': 0.1,
+    'activated-opacity': 0.12,
+    'pressed-opacity': 0.14,
+    'dragged-opacity': 0.08,
+  };
+}
+
 const vuetify = createVuetify({
   theme: {
     defaultTheme: DefaultTheme,
     themes: {
       [DarkTheme]: {
         dark: true,
-        colors: {
-          primary: BrandColors.primaryLight,
-          secondary: BrandColors.accent,
-          'selection-bg-color': BrandColors.selectionDark,
-          'selection-border-color': BrandColors.selectionDark,
-        },
+        colors: { ...DarkPalette },
+        variables: themeVariables(DarkPalette),
       },
       [LightTheme]: {
         dark: false,
-        colors: {
-          primary: BrandColors.primary,
-          secondary: BrandColors.accent,
-          'selection-bg-color': BrandColors.selectionLight,
-          'selection-border-color': BrandColors.selectionLight,
-          surface: '#f0f0f0',
-          'on-surface-variant': '#d0d0d0',
-        },
+        colors: { ...LightPalette },
+        variables: themeVariables(LightPalette),
       },
+    },
+  },
+  // Philips defaults, so components inherit the design language instead of
+  // repeating density/variant/rounding props at every call site.
+  defaults: {
+    global: {
+      density: Density[DefaultDensity].vuetify,
+    },
+    VBtn: {
+      variant: 'flat',
+      rounded: 'pv-md',
+      // Philips uses sentence case; Material's uppercase button text is loud
+      // and hurts legibility of clinical terms.
+      class: 'text-none',
+    },
+    VCard: {
+      rounded: 'pv-md',
+    },
+    VSheet: {
+      rounded: 'pv-md',
+    },
+    VChip: {
+      rounded: 'pv-sm',
+    },
+    VTextField: {
+      variant: 'outlined',
+      hideDetails: 'auto',
+    },
+    VTextarea: {
+      variant: 'outlined',
+      hideDetails: 'auto',
+    },
+    VSelect: {
+      variant: 'outlined',
+      hideDetails: 'auto',
+    },
+    VCombobox: {
+      variant: 'outlined',
+      hideDetails: 'auto',
+    },
+    VAutocomplete: {
+      variant: 'outlined',
+      hideDetails: 'auto',
+    },
+    VFileInput: {
+      variant: 'outlined',
+      hideDetails: 'auto',
+    },
+    VSwitch: {
+      color: 'primary',
+      hideDetails: 'auto',
+    },
+    VCheckbox: {
+      color: 'primary',
+      hideDetails: 'auto',
+    },
+    VRadioGroup: {
+      color: 'primary',
+    },
+    VSlider: {
+      color: 'primary',
+      hideDetails: 'auto',
+    },
+    VRangeSlider: {
+      color: 'primary',
+      hideDetails: 'auto',
+    },
+    VProgressLinear: {
+      color: 'primary',
+    },
+    VTabs: {
+      color: 'primary',
+    },
+    VTooltip: {
+      contentClass: 'pv-tooltip',
     },
   },
   display: {
