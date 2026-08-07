@@ -150,16 +150,6 @@ export function useCommands() {
       icon: 'mdi-folder-open',
       run: () => loadUserPromptedFiles(),
     },
-    {
-      id: 'data.saveSession',
-      title: 'Save session…',
-      group: 'data',
-      keywords: 'export state volview zip download',
-      icon: 'mdi-content-save-all',
-      run: () => {
-        dialogStore.saveSessionOpen = true;
-      },
-    },
   ]);
 
   const appCommands = computed<Command[]>(() => [

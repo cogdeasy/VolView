@@ -18,12 +18,32 @@ const highlighted = ref(0);
 const searchField = ref<HTMLInputElement | null>(null);
 const listElement = ref<HTMLElement | null>(null);
 
-const results = computed(() =>
+const ranked = computed(() =>
   fuzzyRank(
     commands.value.filter((command) => !command.disabled),
     query.value,
     { text: (command) => command.title, keywords: (c) => c.keywords ?? '' }
   ).map(({ item }) => item)
+);
+
+/**
+ * Ranked commands bucketed by group so a heading is only ever shown once.
+ * Groups are ordered by their best-ranked member, keeping the closest match
+ * to the query at the top of the list.
+ */
+const groups = computed(() => {
+  const buckets = new Map<ActionGroup, Command[]>();
+  ranked.value.forEach((command) => {
+    const bucket = buckets.get(command.group);
+    if (bucket) bucket.push(command);
+    else buckets.set(command.group, [command]);
+  });
+  return [...buckets.entries()];
+});
+
+/** Navigable order; matches the rendered order. */
+const results = computed(() =>
+  groups.value.flatMap(([, groupCommands]) => groupCommands)
 );
 
 /** Results in display order, with a header before each group. */
@@ -33,19 +53,17 @@ type Row =
 
 const rows = computed<Row[]>(() => {
   const out: Row[] = [];
-  let seenGroup: ActionGroup | null = null;
   let index = 0;
-  results.value.forEach((command) => {
-    if (command.group !== seenGroup) {
-      seenGroup = command.group;
-      out.push({
-        kind: 'header',
-        id: `header-${command.group}`,
-        label: ACTION_GROUPS[command.group],
-      });
-    }
-    out.push({ kind: 'command', id: command.id, command, index });
-    index += 1;
+  groups.value.forEach(([group, groupCommands]) => {
+    out.push({
+      kind: 'header',
+      id: `header-${group}`,
+      label: ACTION_GROUPS[group],
+    });
+    groupCommands.forEach((command) => {
+      out.push({ kind: 'command', id: command.id, command, index });
+      index += 1;
+    });
   });
   return out;
 });
@@ -118,8 +136,9 @@ function onKeydown(event: KeyboardEvent) {
       commandPaletteOpen.value = false;
       break;
     default:
-      // Keep every other key inside the palette's search field.
-      event.stopPropagation();
+      // Keep typing inside the search field, but let chorded shortcuts
+      // through so Ctrl+K closes the palette the way it opened it.
+      if (!event.ctrlKey && !event.metaKey) event.stopPropagation();
   }
 }
 </script>

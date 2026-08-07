@@ -80,17 +80,68 @@ function isHoldAction(action: Action) {
   return 'hold' in ACTIONS[action] && ACTIONS[action].hold;
 }
 
+function isDestructiveAction(action: Action) {
+  return 'destructive' in ACTIONS[action] && ACTIONS[action].destructive;
+}
+
+/** Widgets that activate on Space or Enter. */
+const ACTIVATABLE_WIDGET =
+  'button, summary, a[href], [role="button"], [role="link"], [role="tab"], ' +
+  '[role="checkbox"], [role="switch"], [role="radio"], [role="menuitem"], ' +
+  '[role="menuitemcheckbox"], [role="menuitemradio"], [role="option"]';
+
+/** Widgets that move a selection or value with the arrow, page and home keys. */
+const NAVIGABLE_WIDGET =
+  '[role="slider"], [role="spinbutton"], [role="menu"], [role="menubar"], ' +
+  '[role="menuitem"], [role="listbox"], [role="option"], [role="tablist"], ' +
+  '[role="tab"], [role="radiogroup"], [role="tree"], [role="grid"]';
+
+const ACTIVATION_KEYS = new Set([' ', 'spacebar', 'enter']);
+const NAVIGATION_KEYS = new Set([
+  'arrowup',
+  'arrowdown',
+  'arrowleft',
+  'arrowright',
+  'home',
+  'end',
+  'pageup',
+  'pagedown',
+]);
+
+/**
+ * True when the focused widget already owns this key - Space on a button,
+ * arrows in a menu. Unchorded shortcuts stand down rather than stealing the
+ * key from the control the user is operating.
+ */
+export function focusHandlesKey(
+  event: KeyboardEvent,
+  activeElement: Element | null = document.activeElement
+) {
+  if (event.ctrlKey || event.metaKey || event.altKey) return false;
+  if (!(activeElement instanceof Element)) return false;
+
+  const key = event.key.toLowerCase();
+  if (ACTIVATION_KEYS.has(key))
+    return activeElement.closest(ACTIVATABLE_WIDGET) !== null;
+  if (NAVIGATION_KEYS.has(key))
+    return activeElement.closest(NAVIGABLE_WIDGET) !== null;
+  return false;
+}
+
 export function findActionForEvent(
   event: KeyboardEvent,
   bindings: Record<Action, string> = actionToKey.value
 ) {
+  if (focusHandlesKey(event)) return null;
+
   const typing = shouldIgnoreKeyboardShortcuts();
   return (
     getEntries(bindings).find(([action, binding]) => {
       if (isHoldAction(action)) return false;
       if (!eventMatchesBinding(event, binding)) return false;
-      // While the user is typing, only chorded shortcuts (Ctrl/Cmd) fire.
-      return !typing || event.ctrlKey || event.metaKey;
+      if (!typing) return true;
+      // While the user is typing, only non-destructive chorded shortcuts fire.
+      return (event.ctrlKey || event.metaKey) && !isDestructiveAction(action);
     })?.[0] ?? null
   );
 }

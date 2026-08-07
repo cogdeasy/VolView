@@ -177,8 +177,9 @@ export default {
 
       let next = null;
       if (ev.key in deltas) next = this.modelValue + deltas[ev.key];
-      else if (ev.key === 'Home') next = this.max;
-      else if (ev.key === 'End') next = this.min;
+      // Home/End follow the slider value, not the handle's screen position.
+      else if (ev.key === 'Home') next = this.min;
+      else if (ev.key === 'End') next = this.max;
       if (next === null) return;
 
       ev.preventDefault();

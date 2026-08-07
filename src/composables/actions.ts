@@ -108,6 +108,12 @@ const showCommandPalette = () => {
   dialogStore.commandPaletteOpen = !dialogStore.commandPaletteOpen;
 };
 
+const saveSession = () => {
+  const dialogStore = useDialogStore();
+  dialogStore.commandPaletteOpen = false;
+  dialogStore.saveSessionOpen = true;
+};
+
 const changeSlice = (offset: number) => () => {
   const target = activeSliceTarget();
   if (!target) return;
@@ -318,6 +324,7 @@ export const ACTION_TO_FUNC = {
   cycleWindowPreset,
   invertGrayscale,
 
+  saveSession,
   deleteCurrentImage: deleteCurrentImage(),
   clearScene: clearScene(),
 

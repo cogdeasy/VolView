@@ -237,6 +237,7 @@ export const ACTION_TO_KEY = {
   cycleWindowPreset: 'shift+w',
   invertGrayscale: 'i',
 
+  saveSession: 'ctrl+s',
   deleteCurrentImage: 'ctrl+.',
   clearScene: 'ctrl+/',
 

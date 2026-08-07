@@ -11,8 +11,10 @@ export const useAnnouncementStore = defineStore('announcements', () => {
   const polite = ref('');
   const assertive = ref('');
 
+  // The marker is toggled rather than appended, so a message repeated any
+  // number of times still changes the text each time.
   const withChangeMarker = (previous: string, message: string) =>
-    previous.replace(/\u200b$/, '') === message ? `${message}\u200b` : message;
+    previous.endsWith('\u200b') ? message : `${message}\u200b`;
 
   function announce(message: string) {
     polite.value = withChangeMarker(polite.value, message);

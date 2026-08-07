@@ -51,6 +51,8 @@ interface ActionInfo {
   keywords?: string;
   /** Held down while using the mouse rather than pressed on its own. */
   hold?: boolean;
+  /** Discards data, so it never fires from a text field. */
+  destructive?: boolean;
 }
 
 export const ACTIONS = {
@@ -219,15 +221,23 @@ export const ACTIONS = {
     keywords: 'negative polarity inverse',
   },
 
+  saveSession: {
+    readable: 'Save session…',
+    group: 'data',
+    keywords: 'export state volview zip download',
+  },
+
   deleteCurrentImage: {
     readable: 'Remove current active image',
     group: 'data',
+    destructive: true,
   },
 
   clearScene: {
     readable: 'Clear scene',
     group: 'data',
     keywords: 'close all remove',
+    destructive: true,
   },
 
   mergeNewPolygon: {
