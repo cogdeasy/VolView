@@ -238,12 +238,22 @@ export const useFindingsStore = defineStore('findings', () => {
     else findingTypes.value[index] = { ...findingTypes.value[index], ...type };
   }
 
-  function addFindingType(type: Omit<FindingType, 'id' | 'builtin'>) {
+  /**
+   * @param reservedIDs ids that are not in the taxonomy yet but are about to
+   *   be, so a restore cannot mint over a type it has not installed.
+   */
+  function addFindingType(
+    type: Omit<FindingType, 'id' | 'builtin'>,
+    reservedIDs: ReadonlySet<string> = new Set()
+  ) {
     const idStore = useIdStore();
     // A restored session re-seats saved type ids without advancing the id
     // store, so the next minted id can collide with one of them.
     let id = `custom-${idStore.nextId()}`;
-    while (findingTypes.value.some((existing) => existing.id === id)) {
+    while (
+      reservedIDs.has(id) ||
+      findingTypes.value.some((existing) => existing.id === id)
+    ) {
       id = `custom-${idStore.nextId()}`;
     }
     findingTypes.value.push({ ...type, id });
@@ -329,17 +339,21 @@ export const useFindingsStore = defineStore('findings', () => {
     // Re-seat those under a fresh id and re-point the restored findings, the
     // same way annotations are remapped.
     const typeIDMap: Record<string, string> = {};
+    const savedTypeIDs = new Set((section.types ?? []).map((type) => type.id));
     (section.types ?? []).forEach((type) => {
       const clash = findingTypes.value.find(
         (existing) => existing.id === type.id
       );
       if (clash && !sameFindingType(clash, type)) {
-        typeIDMap[type.id] = addFindingType({
-          label: type.label,
-          modalities: type.modalities,
-          defaultBodySite: type.defaultBodySite,
-          categoryScale: type.categoryScale,
-        });
+        typeIDMap[type.id] = addFindingType(
+          {
+            label: type.label,
+            modalities: type.modalities,
+            defaultBodySite: type.defaultBodySite,
+            categoryScale: type.categoryScale,
+          },
+          savedTypeIDs
+        );
         return;
       }
       upsertFindingType(type);

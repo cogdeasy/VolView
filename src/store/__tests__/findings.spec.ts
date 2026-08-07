@@ -283,6 +283,45 @@ describe('findings store', () => {
     );
   });
 
+  it('re-seats a colliding type clear of the ones still to be restored', async () => {
+    const store = useFindingsStore();
+    const type = (label: string) => ({
+      label,
+      modalities: ['MR'],
+      defaultBodySite: 'Left ventricle',
+      categoryScale: 'severity' as const,
+    });
+    const firstID = store.addFindingType(type('Papillary muscle'));
+    const spentID = store.addFindingType(type('Spent'));
+    const lastID = store.addFindingType(type('Trabecula'));
+    store.removeFindingType(spentID);
+    const id = store.addFinding({ imageID: 'image-1', title: 'LV long axis' });
+    store.updateFinding(id, { typeID: firstID });
+    const { manifest, stateFiles } = await serializeFindings();
+
+    // This session's counter stops one short of the last saved id, so the id
+    // minted to re-seat the first saved type lands on the last one.
+    setActivePinia(createPinia());
+    const restored = useFindingsStore();
+    const mineID = restored.addFindingType(type('Trabecula'));
+    restored.addFindingType(type('Chorda'));
+    expect(mineID).toBe(firstID);
+
+    await restored.deserialize(
+      manifest,
+      { 'image-1': 'image-1' },
+      {},
+      stateFiles
+    );
+
+    const restoredTypeID = restored.findings[0].typeID;
+    expect(restoredTypeID).not.toBe(lastID);
+    expect(restored.findingTypeByID[restoredTypeID].label).toBe(
+      'Papillary muscle'
+    );
+    expect(restored.findingTypeByID[lastID].label).toBe('Trabecula');
+  });
+
   it('drops a measurement whose annotation did not restore', async () => {
     const toolID = addRuler('image-1');
     const store = useFindingsStore();

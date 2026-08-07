@@ -89,9 +89,13 @@ export function useKeyImageCapture() {
     // The captured view's own slice, not the finding's: the user may capture a
     // finding from a view along another axis, where the finding's slice index
     // means nothing. A 3D view, an oblique panel or a cine frame has no slice
-    // index of its own to report.
+    // index of its own to report, and a view showing another image would only
+    // yield the default the slice store synthesizes for a pair it has never
+    // seen.
     const slice =
-      view?.type === '2D' && finding.frame == null
+      view?.type === '2D' &&
+      view.dataID === finding.imageID &&
+      finding.frame == null
         ? useViewSliceStore().getConfig(targetID, finding.imageID).slice
         : undefined;
     findingsStore.setKeyImage(findingID, {
