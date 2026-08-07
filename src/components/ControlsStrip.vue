@@ -170,7 +170,10 @@ const { count: msgCount, badgeColor: msgBadgeColor } = useMessageBubble();
 <style scoped>
 #tools-strip {
   border-left: var(--pv-border-width-hairline) solid rgb(var(--v-theme-border));
-  flex: 0 0 var(--pv-density-tool-button-size);
+  /* The hairline is inside the border box, so the basis has to carry it or the
+     buttons overflow the strip by a pixel. */
+  flex: 0 0
+    calc(var(--pv-density-tool-button-size) + var(--pv-border-width-hairline));
 }
 
 .tool-separator {

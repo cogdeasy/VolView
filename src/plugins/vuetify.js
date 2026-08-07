@@ -74,29 +74,39 @@ const vuetify = createVuetify({
     VChip: {
       rounded: 'pv-sm',
     },
+    // `hideDetails: 'auto'` reclaims the message slot under fields that have
+    // nothing to say. It is paired with `persistentHint` so a field that does
+    // have a hint reserves the slot permanently instead of growing on focus
+    // and shoving the rest of the dialog down.
     VTextField: {
       variant: 'outlined',
       hideDetails: 'auto',
+      persistentHint: true,
     },
     VTextarea: {
       variant: 'outlined',
       hideDetails: 'auto',
+      persistentHint: true,
     },
     VSelect: {
       variant: 'outlined',
       hideDetails: 'auto',
+      persistentHint: true,
     },
     VCombobox: {
       variant: 'outlined',
       hideDetails: 'auto',
+      persistentHint: true,
     },
     VAutocomplete: {
       variant: 'outlined',
       hideDetails: 'auto',
+      persistentHint: true,
     },
     VFileInput: {
       variant: 'outlined',
       hideDetails: 'auto',
+      persistentHint: true,
     },
     VSwitch: {
       color: 'primary',
