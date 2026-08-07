@@ -70,6 +70,13 @@ export const useRendererHealthStore = defineStore('renderer-health', () => {
   const noticeShown = ref(false);
 
   /**
+   * Whether the last failure stopped being reported because its view was
+   * closed rather than because anything was fixed. Closing the broken pane
+   * must not produce an all-clear.
+   */
+  const failureLeftWithView = ref(false);
+
+  /**
    * Bumped to force the whole render-window subtree to be torn down and
    * rebuilt. View state (camera, slice, window/level, layout) lives in
    * separate stores, so a remount restores the reader's place.
@@ -119,10 +126,18 @@ export const useRendererHealthStore = defineStore('renderer-health', () => {
   }
 
   function unregisterView(viewId: string) {
+    if (viewHealth[viewId] && !viewHealth[viewId].healthy) {
+      failureLeftWithView.value = true;
+    }
     delete viewHealth[viewId];
   }
 
+  function acknowledgeFailureLeftWithView() {
+    failureLeftWithView.value = false;
+  }
+
   function reportContextLost() {
+    failureLeftWithView.value = false;
     contextLostCount.value += 1;
     lastFailureAt.value = Date.now();
     failureReason.value = 'context-lost';
@@ -137,6 +152,9 @@ export const useRendererHealthStore = defineStore('renderer-health', () => {
   function reportViewBlank(viewId: string) {
     registerView(viewId);
     const current = viewHealth[viewId];
+    // Already failed: counting higher changes nothing and keeps every
+    // dependent computed churning for as long as the view stays black.
+    if (!current.healthy) return current.blankSamples;
     const blankSamples = current.blankSamples + 1;
     viewHealth[viewId] = {
       ...current,
@@ -148,6 +166,9 @@ export const useRendererHealthStore = defineStore('renderer-health', () => {
 
   function reportViewFailed(viewId: string, reason: RendererFailureReason) {
     registerView(viewId);
+    const current = viewHealth[viewId];
+    if (!current.healthy && current.reason === reason) return;
+    failureLeftWithView.value = false;
     viewHealth[viewId] = {
       ...viewHealth[viewId],
       healthy: false,
@@ -166,6 +187,8 @@ export const useRendererHealthStore = defineStore('renderer-health', () => {
     // Called on every sample tick for every view; writing an unchanged record
     // would invalidate every dependent computed twice a second for nothing.
     if (current.healthy && current.blankSamples === 0) return;
+    // A view that was broken and is now painting again is a real recovery.
+    if (!current.healthy) failureLeftWithView.value = false;
     viewHealth[viewId] = {
       ...viewHealth[viewId],
       healthy: true,
@@ -202,6 +225,7 @@ export const useRendererHealthStore = defineStore('renderer-health', () => {
     status.value = 'healthy';
     failureReason.value = null;
     lastRecoveryAt.value = Date.now();
+    failureLeftWithView.value = false;
     markAllViews(true, 'context-lost');
   }
 
@@ -211,21 +235,6 @@ export const useRendererHealthStore = defineStore('renderer-health', () => {
 
   function setNoticeShown(shown: boolean) {
     noticeShown.value = shown;
-  }
-
-  function $reset() {
-    status.value = 'healthy';
-    failureReason.value = null;
-    contextLostCount.value = 0;
-    contextRestoredCount.value = 0;
-    lastFailureAt.value = null;
-    lastRecoveryAt.value = null;
-    lastRecoveryAttemptAt.value = null;
-    recoveryAttempts.value = 0;
-    framesRendered.value = 0;
-    approxTextureBytes.value = 0;
-    noticeShown.value = false;
-    Object.keys(viewHealth).forEach((id) => delete viewHealth[id]);
   }
 
   return {
@@ -243,6 +252,7 @@ export const useRendererHealthStore = defineStore('renderer-health', () => {
     viewHealth,
     renderTreeEpoch,
     noticeShown,
+    failureLeftWithView,
     healthy,
     recovering,
     unhealthyViewIds,
@@ -251,6 +261,7 @@ export const useRendererHealthStore = defineStore('renderer-health', () => {
     isViewUnhealthy,
     registerView,
     unregisterView,
+    acknowledgeFailureLeftWithView,
     reportContextLost,
     reportContextRestored,
     reportViewBlank,
@@ -263,7 +274,6 @@ export const useRendererHealthStore = defineStore('renderer-health', () => {
     confirmRecovery,
     reportRecoveryFailed,
     setNoticeShown,
-    $reset,
   };
 });
 

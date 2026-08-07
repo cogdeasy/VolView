@@ -52,6 +52,15 @@ export function useRendererHealthMonitor(api: VtkRenderWindowParentApi) {
     (canvas?.getContext('webgl2') ??
       canvas?.getContext('webgl')) as WebGLRenderingContext | null;
 
+  // No context at all is as bad as a lost one - a rebuild whose context
+  // creation failed outright must never be mistaken for a working display.
+  const contextUsable = () => {
+    const gl = getContext();
+    return gl != null && !gl.isContextLost();
+  };
+
+  const hadContextAtMount = getContext() != null;
+
   health.setWebglInfo(collectWebGLInfo(getContext()));
 
   const onContextLost = () => {
@@ -87,10 +96,9 @@ export function useRendererHealthMonitor(api: VtkRenderWindowParentApi) {
   });
 
   useIntervalFn(() => {
-    const gl = getContext();
     // Only while healthy: a context already known to be gone must not be
     // re-reported while recovery is in flight or after it was given up on.
-    if (health.status === 'healthy' && gl?.isContextLost()) {
+    if (health.status === 'healthy' && hadContextAtMount && !contextUsable()) {
       // Covers drivers that drop the context without firing the event.
       onContextLost();
     }
@@ -105,8 +113,13 @@ export function useRendererHealthMonitor(api: VtkRenderWindowParentApi) {
   let confirmDeadline = 0;
   const confirmTimer = useIntervalFn(
     () => {
-      const gl = getContext();
-      if (frameCounter.total > framesAtMount && !gl?.isContextLost()) {
+      // The renderer may have failed again since this timer was armed, in
+      // which case its verdict is about a state that no longer exists.
+      if (!health.recovering) {
+        confirmTimer.pause();
+        return;
+      }
+      if (frameCounter.total > framesAtMount && contextUsable()) {
         confirmTimer.pause();
         health.confirmRecovery();
       } else if (Date.now() > confirmDeadline) {
@@ -140,6 +153,9 @@ export function useRendererHealthMonitor(api: VtkRenderWindowParentApi) {
         confirmDeadline = Date.now() + RECOVERY_CONFIRM_TIMEOUT;
         confirmTimer.resume();
       }
+      if (status !== 'recovering' && previous?.status === 'recovering') {
+        confirmTimer.pause();
+      }
       // On the transition only: the watch source is a fresh object each time,
       // so an unguarded branch here would stack up duplicate errors.
       if (status === 'unrecoverable' && previous?.status !== 'unrecoverable') {
@@ -153,9 +169,15 @@ export function useRendererHealthMonitor(api: VtkRenderWindowParentApi) {
         messageStore.messages
           .filter((msg) => RENDERER_MESSAGE_TITLES.includes(msg.title))
           .forEach((msg) => messageStore.clearOne(msg.id));
-        messageStore.addSuccess(Messages.RendererRecovered.title, {
-          details: Messages.RendererRecovered.details,
-        });
+        // Closing the broken view ends the warning, but nothing was repaired:
+        // telling the reader rendering is back would be a lie.
+        if (health.failureLeftWithView) {
+          health.acknowledgeFailureLeftWithView();
+        } else {
+          messageStore.addSuccess(Messages.RendererRecovered.title, {
+            details: Messages.RendererRecovered.details,
+          });
+        }
       }
     },
     { immediate: true }

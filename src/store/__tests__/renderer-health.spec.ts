@@ -136,4 +136,50 @@ describe('Renderer health store', () => {
 
     expect(health.unhealthyViewIds).toEqual([]);
   });
+
+  it('remembers that a failure left with its view rather than being fixed', () => {
+    const health = useRendererHealthStore();
+    health.registerView('Axial');
+    health.reportViewFailed('Axial', 'blank-frame');
+
+    health.unregisterView('Axial');
+    expect(health.failureLeftWithView).toBe(true);
+
+    health.acknowledgeFailureLeftWithView();
+    expect(health.failureLeftWithView).toBe(false);
+  });
+
+  it('does not flag a healthy view leaving as an unresolved failure', () => {
+    const health = useRendererHealthStore();
+    health.registerView('Axial');
+    health.unregisterView('Axial');
+
+    expect(health.failureLeftWithView).toBe(false);
+  });
+
+  it('treats a view that starts painting again as a real recovery', () => {
+    const health = useRendererHealthStore();
+    health.registerView('Axial');
+    health.registerView('Coronal');
+    health.reportViewFailed('Axial', 'blank-frame');
+    health.unregisterView('Axial');
+    health.reportViewFailed('Coronal', 'blank-frame');
+
+    health.reportViewHealthy('Coronal');
+
+    expect(health.failureLeftWithView).toBe(false);
+  });
+
+  it('stops rewriting state while a failed view stays blank', () => {
+    const health = useRendererHealthStore();
+    health.registerView('Axial');
+    health.reportViewBlank('Axial');
+    health.reportViewFailed('Axial', 'blank-frame');
+    const failedAt = health.getViewHealth('Axial');
+
+    expect(health.reportViewBlank('Axial')).toBe(1);
+    health.reportViewFailed('Axial', 'blank-frame');
+
+    expect(health.getViewHealth('Axial')).toBe(failedAt);
+  });
 });
