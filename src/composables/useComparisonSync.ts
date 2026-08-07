@@ -320,6 +320,10 @@ export function useComparisonSync() {
 
   // --- window / level --- //
 
+  // Held across one write and everything it triggers. `WindowingUpdateEvent`
+  // is emitted synchronously from `updateConfig`, so the fan-out
+  // `useSyncWindowing` performs happens inside the flag: were delivery ever
+  // made asynchronous, this would have to become a value comparison instead.
   let windowingEcho = false;
 
   function copyWindowLevel(
@@ -407,8 +411,18 @@ export function useComparisonSync() {
   const cameraEchoes = new Map<string, string>();
   let previousCameras = new Map<string, string>();
 
+  // A pane counts as seen only once its camera exists. `usePersistCameraConfig`
+  // writes a view's camera a tick or more after the pane appears, so recording
+  // an empty camera as a sighting would let the arrival of the *prior's*
+  // auto-fit read as the reader moving it, and the first thing a comparison
+  // did would be to pull the study under the reader's eyes onto the old
+  // study's framing.
   const cameraSnapshot = (cameras: PaneCamera[]) =>
-    new Map(cameras.map((camera) => [paneKey(camera), cameraKey(camera)]));
+    new Map(
+      cameras
+        .filter((camera) => camera.parallelScale != null)
+        .map((camera) => [paneKey(camera), cameraKey(camera)])
+    );
 
   function driveCameras(drivers: PaneCamera[], cameras: PaneCamera[]) {
     drivers.forEach((driver) => {
@@ -485,16 +499,19 @@ export function useComparisonSync() {
       const changed = cameras.filter((camera) => {
         const key = cameraKey(camera);
         const before = previousCameras.get(paneKey(camera));
+        if (before === key) return false;
+        // Echoes are consumed before the first-sight rule, since a pane can be
+        // written into existence by the pair itself: an echo nothing ever
+        // matches would swallow a later move onto the same camera.
+        if (cameraEchoes.get(paneKey(camera)) === key) {
+          cameraEchoes.delete(paneKey(camera));
+          return false;
+        }
         // A pane seen for the first time — a new pair, a study switch — may
         // only drive from the current side, so a comparison opens with the
         // prior on the current's zoom instead of on its own auto-fit.
         if (before === undefined)
           return camera.role === 'current' && camera.parallelScale != null;
-        if (before === key) return false;
-        if (cameraEchoes.get(paneKey(camera)) === key) {
-          cameraEchoes.delete(paneKey(camera));
-          return false;
-        }
         return true;
       });
 

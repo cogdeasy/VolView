@@ -10,6 +10,7 @@ import { useImageStore } from '@/src/store/datasets-images';
 import { useImageCacheStore } from '@/src/store/image-cache';
 import { useViewStore } from '@/src/store/views';
 import { useViewSliceStore } from '@/src/store/view-configs/slicing';
+import { useViewCameraStore } from '@/src/store/view-configs/camera';
 import {
   ComparisonLayoutNames,
   ComparisonLayouts,
@@ -81,5 +82,56 @@ describe('useComparisonSync — slice ranges', () => {
     await nextTick();
 
     expect(sliceStore.getConfig(priorViewID, 'prior').max).toBe(7);
+  });
+});
+
+describe('useComparisonSync — camera link', () => {
+  let scope: EffectScope;
+
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    scope = effectScope(true);
+  });
+  afterEach(() => scope.stop());
+
+  const openPair = () => {
+    const viewStore = useViewStore();
+    const comparison = useComparisonStore();
+    seatImage('current', 8);
+    seatImage('prior', 8);
+    viewStore.setNamedLayoutsFromConfig(ComparisonLayouts);
+    viewStore.switchToNamedLayout(ComparisonLayoutNames.pair);
+    comparison.setCurrentImageID('current');
+    comparison.setPriorImageID('prior');
+    scope.run(() => useComparisonSync());
+    const viewIDOf = (name: string) =>
+      viewStore.visibleViews.find((view) => view?.name === name)!.id;
+    return {
+      currentViewID: viewIDOf(ComparisonViewNames.currentAxial),
+      priorViewID: viewIDOf(ComparisonViewNames.priorAxial),
+    };
+  };
+
+  it('does not let the prior study, auto-fitted a tick later, reframe the current one', async () => {
+    const { currentViewID, priorViewID } = openPair();
+    const cameraStore = useViewCameraStore();
+
+    // The prior pane's own auto-fit lands before the current pane's.
+    cameraStore.updateConfig(priorViewID, 'prior', { parallelScale: 120 });
+    await nextTick();
+
+    expect(cameraStore.getConfig(currentViewID, 'current')?.parallelScale).toBe(
+      undefined
+    );
+  });
+
+  it('pulls the prior onto the current study once the current pane has a camera', async () => {
+    const { currentViewID, priorViewID } = openPair();
+    const cameraStore = useViewCameraStore();
+
+    cameraStore.updateConfig(currentViewID, 'current', { parallelScale: 40 });
+    await nextTick();
+
+    expect(cameraStore.getConfig(priorViewID, 'prior')?.parallelScale).toBe(40);
   });
 });
