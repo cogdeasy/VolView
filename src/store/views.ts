@@ -13,6 +13,7 @@ import {
 import type { Manifest, StateFile } from '../io/state-file/schema';
 import { onImageDeleted } from '@/src/composables/onImageDeleted';
 import { declareManifestRefs } from '@/src/core/manifestRefs';
+import { comparisonPaneSpec } from '@/src/core/comparison/layout';
 import { isRecord } from '@/src/utils';
 
 // The manifest references this store's remove cascade keeps clean (see the
@@ -148,8 +149,10 @@ export const useViewStore = defineStore('view', () => {
     );
   });
 
-  const visibleViews = computed(() => {
-    if (maximizedView.value) return [maximizedView.value];
+  // The views the layout is made of, whether or not one of them is currently
+  // filling the window. Maximizing is a way of looking at a layout, not a
+  // different layout.
+  const layoutViews = computed(() => {
     const views: ViewInfo[] = [];
     iterLayout(layout.value, (item) => {
       const viewId = layoutSlots.value[item.slotIndex];
@@ -157,6 +160,10 @@ export const useViewStore = defineStore('view', () => {
     });
     return views;
   });
+
+  const visibleViews = computed(() =>
+    maximizedView.value ? [maximizedView.value] : layoutViews.value
+  );
 
   const viewIDs = computed(() => Object.keys(viewByID));
 
@@ -261,8 +268,29 @@ export const useViewStore = defineStore('view', () => {
     });
   }
 
+  // Comparison panes are recognised by their name, so a view that is no longer
+  // one goes back to a plain orientation: a slot left holding the name off
+  // layout would re-arm comparison mode if it ever became visible again.
+  function releaseComparisonNames(slots: string[]) {
+    slots.forEach((viewID) => {
+      const view = viewByID[viewID];
+      const spec = view && comparisonPaneSpec(view.name);
+      if (!spec) return;
+      // Named for what the view shows, not for the axis its comparison name
+      // implied: the two agree in every layout the app builds, but a restored
+      // manifest can pair them off, and a view left labelled for an axis it
+      // does not render is a caption the rest of the app would believe — an
+      // anatomical name on a volume no less than the wrong axis on a slice.
+      if (view.type === '2D') view.name = view.options.orientation;
+      else view.name = view.type === '3D' ? 'Volume' : 'Oblique';
+    });
+  }
+
   function setLayoutFromGrid(gridSize: [number, number]) {
     currentLayoutName.value = null;
+    // A grid keeps the views that are already in its slots, and a hand-built
+    // grid is not a comparison.
+    releaseComparisonNames(layoutSlots.value);
     setLayout(generateLayoutFromGrid(gridSize));
   }
 
@@ -296,6 +324,11 @@ export const useViewStore = defineStore('view', () => {
             layoutSlots.value.push(addView(viewInit));
           }
         });
+        // Slots the new layout does not reach keep whatever name they were
+        // last given, which for a smaller layout can be a comparison pane.
+        releaseComparisonNames(
+          layoutSlots.value.slice(namedLayout.views.length)
+        );
       },
     });
   }
@@ -422,6 +455,7 @@ export const useViewStore = defineStore('view', () => {
       return layout.value;
     }),
     visibleViews,
+    layoutViews,
     viewIDs,
     activeView,
     viewByID,

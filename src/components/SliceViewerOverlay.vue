@@ -10,6 +10,7 @@ import DicomQuickInfoButton from '@/src/components/DicomQuickInfoButton.vue';
 import ViewTypeSwitcher from '@/src/components/ViewTypeSwitcher.vue';
 import { useImage } from '@/src/composables/useCurrentImage';
 import { computed } from 'vue';
+import { useComparisonStore } from '@/src/store/comparison';
 
 type Props = {
   viewId: string;
@@ -45,12 +46,31 @@ const LOCKED_ORIENTATION_SUFFIXES = [
 const isLockedOrientationView = computed(() =>
   LOCKED_ORIENTATION_SUFFIXES.some((suffix) => viewId.value.includes(suffix))
 );
+
+// A pane's orientation belongs to the comparison layout: switching its view
+// type renames the view, which quietly drops the pane out of the pair — so the
+// switcher goes as soon as the layout does, pair or no pair. A pane the pair
+// itself refuses, its name and its rendered orientation contradicting each
+// other, keeps the switcher: there is no pairing to protect, and using it is
+// how the reader gets such a view back to an ordinary one.
+const comparison = useComparisonStore();
+const isComparisonPane = computed(() => !!comparison.paneSpecFor(viewId.value));
+
+// Space is reserved for the study banner on the banner's own terms, so the
+// annotations cannot be pushed down for a caption that is not drawn, nor the
+// series name suppressed as a duplicate of one.
+const hasPaneLabel = computed(
+  () => comparison.active && !!comparison.paneStudyFor(viewId.value)
+);
 </script>
 
 <template>
-  <view-overlay-grid class="overlay-no-events view-annotations">
+  <view-overlay-grid
+    class="overlay-no-events view-annotations"
+    :class="{ 'comparison-inset': hasPaneLabel }"
+  >
     <template v-slot:top-left>
-      <div class="annotation-cell">
+      <div v-if="!hasPaneLabel" class="annotation-cell">
         <span>{{ metadata.name }}</span>
       </div>
     </template>
@@ -82,7 +102,11 @@ const isLockedOrientationView = computed(() =>
       </div>
     </template>
     <template #bottom-right>
-      <div v-if="!isLockedOrientationView" class="annotation-cell" @click.stop>
+      <div
+        v-if="!isLockedOrientationView && !isComparisonPane"
+        class="annotation-cell"
+        @click.stop
+      >
         <ViewTypeSwitcher :view-id="viewId" :image-id="imageId" />
       </div>
     </template>
@@ -90,3 +114,10 @@ const isLockedOrientationView = computed(() =>
 </template>
 
 <style scoped src="@/src/components/styles/vtk-view.css"></style>
+
+<style scoped>
+.comparison-inset {
+  box-sizing: border-box;
+  padding-top: var(--comparison-banner-height);
+}
+</style>

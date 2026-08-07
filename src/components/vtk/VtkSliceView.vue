@@ -14,6 +14,7 @@ import { Maybe } from '@/src/types';
 import { VtkViewApi } from '@/src/types/vtk-types';
 import { VtkViewContext } from '@/src/components/vtk/context';
 import { useViewCameraStore } from '@/src/store/view-configs/camera';
+import { onVTKEvent } from '@/src/composables/onVTKEvent';
 
 type Props = {
   viewId: string;
@@ -115,6 +116,15 @@ watchImmediate([imageMetadata, disableCameraAutoReset], () => {
   ) {
     view.renderer.resetCameraClippingRange(imageMetadata.value.worldBounds);
   }
+});
+
+// Camera changes that do not come from this view's own interactor — a linked
+// comparison pane, a restored view config — otherwise sit in the camera
+// without ever reaching the canvas. This is the renderer's existing onModified
+// hook extended to the camera, and so covers every 2D view rather than only a
+// comparison pane; the render it schedules is batched and skipped mid-gesture.
+onVTKEvent(view.renderer.getActiveCamera(), 'onModified', () => {
+  view.requestRender();
 });
 
 // exposed API

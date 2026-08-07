@@ -15,6 +15,27 @@ export const BrandColors = {
   onDark: '#FFFFFF',
   selectionDark: '#0A3F8F',
   selectionLight: '#CFE0FA',
+  /**
+   * Study-comparison pane accents. The current study carries the accent cyan
+   * so the reader's eye lands on it first; the prior study is deliberately
+   * neutral so it never competes with the live read.
+   */
+  currentStudy: '#00A3E0',
+  priorStudy: '#8A94A6',
+  /**
+   * A pane holding a study that is on neither side of the pair. Dimmer than
+   * either role, so it reads as standing outside the comparison rather than
+   * as the prior study it would otherwise be coloured like.
+   */
+  unpairedStudy: '#6E7787',
+  /**
+   * Chrome drawn over image data. The scrim keeps text legible on any
+   * anatomy without lifting the black point of the viewport, and advisory
+   * text is warm enough to read as a caveat rather than an error.
+   */
+  overlayScrim: 'rgba(0, 0, 0, 0.72)',
+  onOverlay: '#E8ECF2',
+  overlayCaution: '#FFCC80',
 } as const;
 
 export const Brand = {

@@ -7,6 +7,10 @@
 }
 
 .vtk-container {
+  /* Height of the comparison pane banner, read by the banner itself and by
+     the overlay that indents its annotations to clear it, so the two cannot
+     drift apart. */
+  --comparison-banner-height: 26px;
   padding: 0 !important;
   margin: 0 !important;
   /* prevent view from overflowing our app during resize */

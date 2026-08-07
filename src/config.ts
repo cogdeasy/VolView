@@ -5,6 +5,7 @@ import CTAHeadThumbnail from '@/src/assets/samples/CTA-Head_and_Neck.jpg';
 import USFetusThumbnail from '@/src/assets/samples/3DUS-Fetus.jpg';
 import USCineThumbnail from '@/src/assets/samples/US-Cine.jpg';
 import { SegmentMask } from '@/src/types/segment';
+import { ComparisonLayouts } from './core/comparison/layout';
 import type { LayoutConfig } from './utils/layoutParsing';
 import type { ViewInfoInit } from './types/views';
 import { SampleDataset } from './types';
@@ -105,6 +106,7 @@ export const DefaultNamedLayouts: Record<string, LayoutConfig> = {
       },
     ],
   },
+  ...ComparisonLayouts,
 };
 
 export const SAMPLE_DATA: SampleDataset[] = [

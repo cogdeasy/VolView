@@ -17,6 +17,7 @@
           <div class="fill-height d-flex flex-row flex-grow-1">
             <controls-strip :has-data="hasData"></controls-strip>
             <div class="d-flex flex-column flex-grow-1">
+              <comparison-bar v-if="hasData" />
               <VtkRenderWindowParent>
                 <layout-grid v-show="hasData" :layout="layout" />
               </VtkRenderWindowParent>
@@ -71,6 +72,7 @@ import {
 import WelcomePage from '@/src/components/WelcomePage.vue';
 import { useDICOMStore } from '@/src/store/datasets-dicom';
 import LayoutGrid from '@/src/components/LayoutGrid.vue';
+import ComparisonBar from '@/src/components/ComparisonBar.vue';
 import ModulePanel from '@/src/components/ModulePanel.vue';
 import DragAndDrop from '@/src/components/DragAndDrop.vue';
 import PersistentOverlay from '@/src/components/PersistentOverlay.vue';
@@ -87,6 +89,7 @@ import {
 import { defaultImageMetadata } from '@/src/core/progressiveImage';
 import VtkRenderWindowParent from '@/src/components/vtk/VtkRenderWindowParent.vue';
 import { useSyncWindowing } from '@/src/composables/useSyncWindowing';
+import { useComparisonSync } from '@/src/composables/useComparisonSync';
 import { readLaunchParams } from '@/src/utils/urlParams';
 import { Brand } from '@/src/branding';
 
@@ -94,6 +97,7 @@ export default defineComponent({
   name: 'App',
 
   components: {
+    ComparisonBar,
     ControlsStrip,
     LayoutGrid,
     DragAndDrop,
@@ -115,6 +119,7 @@ export default defineComponent({
     // --- sync handling --- //
 
     useSyncWindowing();
+    useComparisonSync();
 
     // --- file handling --- //
 
