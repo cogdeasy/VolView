@@ -7,6 +7,7 @@ import { useIdStore } from '@/src/store/id';
 import type { ViewInfo, ViewInfoInit, ViewType } from '@/src/types/views';
 import { DefaultNamedLayouts, getAvailableViews } from '@/src/config';
 import {
+  parseLayoutConfig,
   parseNamedLayouts,
   type LayoutConfig,
 } from '@/src/utils/layoutParsing';
@@ -148,15 +149,34 @@ export const useViewStore = defineStore('view', () => {
     );
   });
 
-  const visibleViews = computed(() => {
-    if (maximizedView.value) return [maximizedView.value];
+  /** The views of the layout itself, whether or not one is maximized. */
+  const layoutViews = computed(() => {
     const views: ViewInfo[] = [];
     iterLayout(layout.value, (item) => {
       const viewId = layoutSlots.value[item.slotIndex];
-      views.push(viewByID[viewId]);
+      // A slot can outlive the view it names while a layout is being swapped;
+      // callers index this by slot, so drop the hole rather than hand them one.
+      const view = viewByID[viewId];
+      if (view) views.push(view);
     });
     return views;
   });
+
+  const visibleViews = computed(() =>
+    maximizedView.value ? [maximizedView.value] : layoutViews.value
+  );
+
+  /** The view in a layout slot, or null if the slot names no live view. */
+  const getViewForSlot = (slotIndex: number) =>
+    viewByID[layoutSlots.value[slotIndex]] ?? null;
+
+  /**
+   * The view a rendered slot shows. With a pane maximized the rendered layout
+   * is that pane alone, so every slot of it is that view; otherwise the slot
+   * index is the layout's own.
+   */
+  const getVisibleViewForSlot = (slotIndex: number) =>
+    maximizedView.value ?? getViewForSlot(slotIndex);
 
   const viewIDs = computed(() => Object.keys(viewByID));
 
@@ -270,15 +290,14 @@ export const useViewStore = defineStore('view', () => {
     namedLayouts.value = parseNamedLayouts(layouts);
   }
 
-  function switchToNamedLayout(name: string) {
-    const namedLayout = namedLayouts.value[name];
-    if (!namedLayout) {
-      throw new Error(`Named layout "${name}" not found`);
-    }
-    applyLayoutChange(namedLayout.layout, {
-      layoutName: name,
+  function applyParsedLayout(
+    parsed: { layout: Layout; views: ViewInfoInit[] },
+    layoutName: Maybe<string>
+  ) {
+    applyLayoutChange(parsed.layout, {
+      layoutName,
       updateSlots: () => {
-        namedLayout.views.forEach((viewInit, index) => {
+        parsed.views.forEach((viewInit, index) => {
           if (index < layoutSlots.value.length) {
             const existingViewId = layoutSlots.value[index];
             const existingView = viewByID[existingViewId];
@@ -298,6 +317,23 @@ export const useViewStore = defineStore('view', () => {
         });
       },
     });
+  }
+
+  function switchToNamedLayout(name: string) {
+    const namedLayout = namedLayouts.value[name];
+    if (!namedLayout) {
+      throw new Error(`Named layout "${name}" not found`);
+    }
+    applyParsedLayout(namedLayout, name);
+  }
+
+  /**
+   * Applies a layout described by config, including each slot's view type and
+   * orientation. Used by hanging protocols, which carry their own layout
+   * rather than referencing a named one.
+   */
+  function setLayoutFromConfig(config: LayoutConfig, name?: Maybe<string>) {
+    applyParsedLayout(parseLayoutConfig(config), name ?? null);
   }
 
   function setDataForView(viewID: string, dataID: Maybe<string>) {
@@ -422,6 +458,8 @@ export const useViewStore = defineStore('view', () => {
       return layout.value;
     }),
     visibleViews,
+    layout: computed<Layout>(() => layout.value),
+    layoutViews,
     viewIDs,
     activeView,
     viewByID,
@@ -430,11 +468,14 @@ export const useViewStore = defineStore('view', () => {
     namedLayouts,
     currentLayoutName,
     getView,
+    getViewForSlot,
+    getVisibleViewForSlot,
     getAllViews,
     getViewsForData,
     replaceView,
     setLayout,
     setLayoutFromGrid,
+    setLayoutFromConfig,
     setNamedLayoutsFromConfig,
     switchToNamedLayout,
     setActiveView,

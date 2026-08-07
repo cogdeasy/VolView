@@ -82,6 +82,7 @@
           <cine-viewer-overlay
             :view-id="viewId"
             :image-id="currentImageID"
+            :show-labels="showViewLabels"
           ></cine-viewer-overlay>
           <vtk-base-slice-representation
             ref="baseSliceRep"
@@ -90,21 +91,23 @@
             :axis="VIEW_AXIS"
             :frame="currentFrame"
           ></vtk-base-slice-representation>
-          <polygon-tool
-            :view-id="viewId"
-            :image-id="currentImageID"
-            :view-direction="VIEW_DIRECTION"
-          />
-          <ruler-tool
-            :view-id="viewId"
-            :image-id="currentImageID"
-            :view-direction="VIEW_DIRECTION"
-          />
-          <rectangle-tool
-            :view-id="viewId"
-            :image-id="currentImageID"
-            :view-direction="VIEW_DIRECTION"
-          />
+          <template v-if="showAnnotations">
+            <polygon-tool
+              :view-id="viewId"
+              :image-id="currentImageID"
+              :view-direction="VIEW_DIRECTION"
+            />
+            <ruler-tool
+              :view-id="viewId"
+              :image-id="currentImageID"
+              :view-direction="VIEW_DIRECTION"
+            />
+            <rectangle-tool
+              :view-id="viewId"
+              :image-id="currentImageID"
+              :view-direction="VIEW_DIRECTION"
+            />
+          </template>
           <select-tool />
           <svg class="overlay-no-events">
             <bounding-rectangle :points="selectionPoints" />
@@ -145,6 +148,7 @@ import { useResetViewsEvents } from '@/src/components/tools/ResetViews.vue';
 import { onVTKEvent } from '@/src/composables/onVTKEvent';
 import { get2DViewingVectors } from '@/src/utils/getViewingVectors';
 import type { LPSAxis } from '@/src/types/lps';
+import { useHangingProtocolStore } from '@/src/store/hanging-protocols';
 
 type Props = {
   viewId: string;
@@ -173,7 +177,20 @@ useResetViewsEvents().onClick(resetCamera);
 useWebGLWatchdog(vtkView);
 useViewAnimationListener(vtkView, viewId, '2D');
 
+const hangingProtocolStore = useHangingProtocolStore();
+const showViewLabels = computed(() => hangingProtocolStore.overlays.viewLabels);
+
 const { currentTool } = storeToRefs(useToolStore());
+
+const ANNOTATION_TOOLS = [Tools.Ruler, Tools.Rectangle, Tools.Polygon];
+// As in the slice views: hiding annotations must not turn reaching for a
+// measurement tool into a silent no-op, since these components are what
+// register the placing widget.
+const showAnnotations = computed(
+  () =>
+    hangingProtocolStore.overlays.annotations ||
+    ANNOTATION_TOOLS.includes(currentTool.value)
+);
 
 const { frame: currentFrame, frameRange } = useCineFrame(
   viewId,
@@ -186,6 +203,9 @@ onVTKEvent(currentImageData, 'onModified', () => {
 
 const selectionStore = useToolSelectionStore();
 const selectionPoints = computed(() => {
+  // Nothing is drawn while annotations are hidden, so outlining a selection
+  // would frame empty pixel data.
+  if (!showAnnotations.value) return [];
   return selectionStore.selection
     .map((sel) => {
       const store = useAnnotationToolStore(sel.type);

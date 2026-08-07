@@ -227,6 +227,51 @@ export const parseLayoutConfig = (
   return parseNestedLayout(layoutDef);
 };
 
+const viewInfoInitToViewSpec = (view: ViewInfoInit): ViewSpec => {
+  if (view.type === '2D') {
+    return {
+      type: '2D',
+      name: view.name,
+      orientation: view.options.orientation,
+    };
+  }
+  if (view.type === '3D') {
+    return {
+      type: '3D',
+      name: view.name,
+      viewDirection: view.options.viewDirection,
+      viewUp: view.options.viewUp,
+    };
+  }
+  return { type: 'Oblique', name: view.name };
+};
+
+/**
+ * Inverse of {@link parseLayoutConfig}: turns a live layout tree and the views
+ * occupying its slots back into a serializable config, so a layout the reader
+ * arranged by hand can be stored (e.g. in a hanging protocol).
+ */
+export const layoutToConfig = (
+  layout: Layout,
+  viewBySlot: (slotIndex: number) => ViewInfoInit | undefined
+): LayoutConfig => {
+  const convertItem = (item: LayoutItem): LayoutConfigItem => {
+    if (item.type === 'slot') {
+      const view = viewBySlot(item.slotIndex);
+      return view ? viewInfoInitToViewSpec(view) : 'axial';
+    }
+    return {
+      direction: item.direction,
+      items: item.items.map(convertItem),
+    };
+  };
+
+  return {
+    direction: layout.direction,
+    items: layout.items.map(convertItem),
+  };
+};
+
 export const parseNamedLayouts = (
   layouts: Record<string, LayoutConfig>
 ): Record<string, { layout: Layout; views: ViewInfoInit[] }> => {

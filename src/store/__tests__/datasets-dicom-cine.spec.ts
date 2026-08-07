@@ -139,6 +139,7 @@ function cineHeader(overrides: Partial<CineHeader> = {}): CineHeader {
       SeriesInstanceUID: 'series-uid',
       SeriesNumber: '7',
       SeriesDescription: 'Unsupported native cine',
+      BodyPartExamined: 'HEART',
       Modality: 'US',
     },
     regions: [],

@@ -89,4 +89,18 @@ describe('View store', () => {
     expect(store.activeView).toBe('view-1');
     expect(store.viewByID['view-1'].dataID).toBe('loaded-image');
   });
+
+  it('keeps the whole layout available while a view is maximized', () => {
+    const store = useViewStore();
+    const laidOut = store.visibleViews.map((view) => view.id);
+    const fullLayout = store.layout;
+
+    store.setActiveView(laidOut[0]);
+    store.toggleActiveViewMaximized();
+
+    expect(store.visibleViews.map((view) => view.id)).toEqual([laidOut[0]]);
+    expect(store.visibleLayout).not.toEqual(fullLayout);
+    expect(store.layoutViews.map((view) => view.id)).toEqual(laidOut);
+    expect(store.layout).toEqual(fullLayout);
+  });
 });

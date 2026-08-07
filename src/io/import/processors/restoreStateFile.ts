@@ -23,6 +23,7 @@ import { useViewStore } from '@/src/store/views';
 import { useViewConfigStore } from '@/src/store/view-configs';
 import { migrateManifest } from '@/src/io/state-file/migrations';
 import { useMessageStore } from '@/src/store/messages';
+import { useHangingProtocolStore } from '@/src/store/hanging-protocols';
 
 type LeafSource =
   | { type: 'uri'; uri: string; name: string; mime?: string }
@@ -240,6 +241,13 @@ export async function completeStateFileRestore(
   const viewStore = useViewStore();
   const byId = dataSourcesById(manifest);
   const datasets = manifestDatasets(manifest);
+  // The manifest carries its own layout and view configs; hanging protocols
+  // must not overwrite them when the restored images reach the views. The mark
+  // therefore has to be in place before the views are bound below, which is
+  // what makes the auto-apply watcher see it on its first run for these images.
+  useHangingProtocolStore().noteRestoredPresentation(
+    Object.values(stateIDToStoreID)
+  );
   const resolvedDatasets = datasets.filter((ds) => ds.id in stateIDToStoreID);
   const unresolvedDatasets = datasets.filter(
     (ds) => !(ds.id in stateIDToStoreID)

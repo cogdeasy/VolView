@@ -54,6 +54,7 @@ import ServerModule from './ServerModule.vue';
 import ProbeView from './ProbeView.vue';
 import { useToolStore } from '../store/tools';
 import { Tools } from '../store/tools/types';
+import { useHangingProtocolStore } from '../store/hanging-protocols';
 
 type Module = {
   name: string;
@@ -107,6 +108,27 @@ export default defineComponent({
           selectedModule.value = 'Annotations';
       }
     );
+
+    // An applied hanging protocol decides which module the reader lands on.
+    const hangingProtocolStore = useHangingProtocolStore();
+    // Keyed on the request counter, not the module: two studies hung by the
+    // same protocol must both bring the reader back to that panel. Immediate,
+    // so a panel mounted after the study was hung — the drawer starts closed
+    // on a small screen — still lands where the protocol asked.
+    watch(
+      () => hangingProtocolStore.focusRequest,
+      () => {
+        const module = hangingProtocolStore.focusedModule;
+        if (module) selectedModule.value = module;
+      },
+      { immediate: true }
+    );
+
+    // "Save current layout as protocol" has to record the panel the reader is
+    // on, and this ref is the only place that knows it.
+    watch(selectedModule, (name) => hangingProtocolStore.noteOpenModule(name), {
+      immediate: true,
+    });
 
     const serverStore = useServerStore();
 

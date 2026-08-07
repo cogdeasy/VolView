@@ -49,11 +49,13 @@
                 Reset Camera
               </v-tooltip>
             </v-btn>
-            <span class="ml-3">{{ currentImageMetadata.name }}</span>
+            <span v-if="showViewLabels" class="ml-3">
+              {{ currentImageMetadata.name }}
+            </span>
           </div>
         </template>
         <template #top-right>
-          <div class="annotation-cell">
+          <div v-if="showViewLabels" class="annotation-cell">
             <span>{{ presetName }}</span>
           </div>
         </template>
@@ -84,6 +86,7 @@ import { useResetViewsEvents } from '@/src/components/tools/ResetViews.vue';
 import { onVTKEvent } from '@/src/composables/onVTKEvent';
 import { useViewStore } from '@/src/store/views';
 import ViewTypeSwitcher from '@/src/components/ViewTypeSwitcher.vue';
+import { useHangingProtocolStore } from '@/src/store/hanging-protocols';
 
 interface Props {
   viewId: string;
@@ -99,6 +102,10 @@ const vtkView = ref<VtkViewApi>();
 const props = defineProps<Props>();
 
 const { viewId } = toRefs(props);
+
+// Corner text only; the camera and view-type controls always show.
+const hangingProtocolStore = useHangingProtocolStore();
+const showViewLabels = computed(() => hangingProtocolStore.overlays.viewLabels);
 
 const viewStore = useViewStore();
 const viewInfo = computed(() => viewStore.getView(viewId.value)!);

@@ -3,7 +3,7 @@
     <div v-for="(item, i) in items" :key="i" class="d-flex flex-equal">
       <layout-grid v-if="item.type === 'layout'" :layout="item as Layout" />
       <LayoutGridItem
-        v-else
+        v-else-if="item.viewId"
         class="layout-item"
         :view-id="item.viewId"
         @pointerdown.capture="onFocusView(item.viewId)"
@@ -55,10 +55,12 @@ export default defineComponent({
     const items = computed(() => {
       return layout.value.items.map((item) => {
         if (item.type === 'slot') {
-          const viewInfo = viewStore.visibleViews[item.slotIndex];
+          // By slot, not by position in the visible view list: a slot whose
+          // view has gone away must leave a gap, not shift its neighbours.
+          const viewInfo = viewStore.getVisibleViewForSlot(item.slotIndex);
           return {
             ...item,
-            viewId: viewInfo.id,
+            viewId: viewInfo?.id,
           };
         }
         return item;

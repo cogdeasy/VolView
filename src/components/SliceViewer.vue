@@ -89,6 +89,7 @@
           <slice-viewer-overlay
             :view-id="viewId"
             :image-id="currentImageID"
+            :show-labels="showViewLabels"
           ></slice-viewer-overlay>
           <vtk-base-slice-representation
             ref="baseSliceRep"
@@ -126,21 +127,23 @@
             :image-id="currentImageID"
             :view-direction="viewDirection"
           />
-          <polygon-tool
-            :view-id="viewId"
-            :image-id="currentImageID"
-            :view-direction="viewDirection"
-          />
-          <ruler-tool
-            :view-id="viewId"
-            :image-id="currentImageID"
-            :view-direction="viewDirection"
-          />
-          <rectangle-tool
-            :view-id="viewId"
-            :image-id="currentImageID"
-            :view-direction="viewDirection"
-          />
+          <template v-if="showAnnotations">
+            <polygon-tool
+              :view-id="viewId"
+              :image-id="currentImageID"
+              :view-direction="viewDirection"
+            />
+            <ruler-tool
+              :view-id="viewId"
+              :image-id="currentImageID"
+              :view-direction="viewDirection"
+            />
+            <rectangle-tool
+              :view-id="viewId"
+              :image-id="currentImageID"
+              :view-direction="viewDirection"
+            />
+          </template>
           <select-tool />
           <svg class="overlay-no-events">
             <bounding-rectangle :points="selectionPoints" />
@@ -194,6 +197,7 @@ import vtkMouseCameraTrackballZoomToMouseManipulator from '@kitware/vtk.js/Inter
 import { useResetViewsEvents } from '@/src/components/tools/ResetViews.vue';
 import { onVTKEvent } from '@/src/composables/onVTKEvent';
 import { useViewStore } from '@/src/store/views';
+import { useHangingProtocolStore } from '@/src/store/hanging-protocols';
 import { ViewInfo2D } from '@/src/types/views';
 import { get2DViewingVectors } from '@/src/utils/getViewingVectors';
 
@@ -211,6 +215,10 @@ const { viewId } = toRefs(props);
 
 const viewStore = useViewStore();
 const viewInfo = computed(() => viewStore.getView(viewId.value) as ViewInfo2D);
+
+// Chrome visibility is part of the applied hanging protocol.
+const hangingProtocolStore = useHangingProtocolStore();
+const showViewLabels = computed(() => hangingProtocolStore.overlays.viewLabels);
 
 // base image
 const {
@@ -240,6 +248,16 @@ useViewAnimationListener(vtkView, viewId, '2D');
 // active tool
 const { currentTool } = storeToRefs(useToolStore());
 
+const ANNOTATION_TOOLS = [Tools.Ruler, Tools.Rectangle, Tools.Polygon];
+// The tool components are what register a placing widget, so a protocol that
+// hides annotations must not survive the reader reaching for a measurement:
+// picking one brings them back rather than becoming a silent no-op.
+const showAnnotations = computed(
+  () =>
+    hangingProtocolStore.overlays.annotations ||
+    ANNOTATION_TOOLS.includes(currentTool.value)
+);
+
 const { slice: currentSlice, range: sliceRange } = useSliceConfig(
   viewId,
   currentImageID
@@ -264,6 +282,9 @@ const segmentations = computed(() => {
 
 const selectionStore = useToolSelectionStore();
 const selectionPoints = computed(() => {
+  // Nothing is drawn while annotations are hidden, so outlining a selection
+  // would frame empty pixel data.
+  if (!showAnnotations.value) return [];
   return selectionStore.selection
     .map((sel) => {
       const store = useAnnotationToolStore(sel.type);

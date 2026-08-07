@@ -14,9 +14,11 @@ import { computed } from 'vue';
 type Props = {
   viewId: string;
   imageId: Maybe<string>;
+  /** Corner text only; the info button and type switcher always show. */
+  showLabels?: boolean;
 };
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), { showLabels: true });
 const { viewId, imageId } = toRefs(props);
 
 const view = inject(VtkViewContext);
@@ -50,22 +52,22 @@ const isLockedOrientationView = computed(() =>
 <template>
   <view-overlay-grid class="overlay-no-events view-annotations">
     <template v-slot:top-left>
-      <div class="annotation-cell">
+      <div v-if="showLabels" class="annotation-cell">
         <span>{{ metadata.name }}</span>
       </div>
     </template>
     <template v-slot:top-center>
-      <div class="annotation-cell">
+      <div v-if="showLabels" class="annotation-cell">
         <span>{{ topLabel }}</span>
       </div>
     </template>
     <template v-slot:middle-left>
-      <div class="annotation-cell">
+      <div v-if="showLabels" class="annotation-cell">
         <span>{{ leftLabel }}</span>
       </div>
     </template>
     <template v-slot:bottom-left>
-      <div class="annotation-cell">
+      <div v-if="showLabels" class="annotation-cell">
         <div v-if="sliceConfig">
           <span class="slice-label">
             Slice: {{ slice + 1 }}/{{ sliceRange[1] + 1 }}

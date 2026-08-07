@@ -38,6 +38,7 @@ function cineHeader(overrides: Partial<CineHeader> = {}): CineHeader {
       SeriesInstanceUID: 'series-uid',
       SeriesNumber: '1',
       SeriesDescription: 'Cine',
+      BodyPartExamined: 'HEART',
       Modality: 'US',
     },
     regions: [],

@@ -16,7 +16,8 @@
         <v-main id="content-main">
           <div class="fill-height d-flex flex-row flex-grow-1">
             <controls-strip :has-data="hasData"></controls-strip>
-            <div class="d-flex flex-column flex-grow-1">
+            <div class="d-flex flex-column flex-grow-1 position-relative">
+              <hanging-protocol-indicator v-if="hasData" />
               <VtkRenderWindowParent>
                 <layout-grid v-show="hasData" :layout="layout" />
               </VtkRenderWindowParent>
@@ -87,6 +88,8 @@ import {
 import { defaultImageMetadata } from '@/src/core/progressiveImage';
 import VtkRenderWindowParent from '@/src/components/vtk/VtkRenderWindowParent.vue';
 import { useSyncWindowing } from '@/src/composables/useSyncWindowing';
+import { useHangingProtocolAutoApply } from '@/src/composables/useHangingProtocols';
+import HangingProtocolIndicator from '@/src/components/HangingProtocolIndicator.vue';
 import { readLaunchParams } from '@/src/utils/urlParams';
 import { Brand } from '@/src/branding';
 
@@ -103,6 +106,7 @@ export default defineComponent({
     WelcomePage,
     AppBar,
     VtkRenderWindowParent,
+    HangingProtocolIndicator,
   },
 
   setup() {
@@ -115,6 +119,10 @@ export default defineComponent({
     // --- sync handling --- //
 
     useSyncWindowing();
+
+    // --- hanging protocols --- //
+
+    useHangingProtocolAutoApply();
 
     // --- file handling --- //
 
