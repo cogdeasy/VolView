@@ -9,6 +9,7 @@ import { useViewStore } from '@/src/store/views';
 import {
   FindingRecord,
   FindingTypeRecord,
+  KEY_IMAGE_DIR,
   Manifest,
   ManifestSchema,
   ParentToLayers,
@@ -63,7 +64,6 @@ const coreManifestSchema = ManifestSchema.pick({
  */
 function pruneFindings(
   raw: unknown,
-  zip: JSZip,
   datasetIds: Set<string>,
   omitted: string[]
 ): FindingsState | undefined {
@@ -94,7 +94,6 @@ function pruneFindings(
           ? entry.title
           : `findings[${index}]`;
       omitted.push(`${name}: ${reason}`);
-      removeKeyImages({ findings: [entry] }, zip);
       return [];
     }
   );
@@ -118,17 +117,28 @@ function pruneFindings(
   return { impression, types, findings };
 }
 
-/** Deletes the key-image members belonging to findings being dropped. */
-function removeKeyImages(findings: unknown, zip: JSZip) {
-  if (!isRecord(findings) || !Array.isArray(findings.findings)) return;
-  findings.findings.forEach((finding) => {
-    if (
-      isRecord(finding) &&
-      isRecord(finding.keyImage) &&
-      typeof finding.keyImage.path === 'string'
+/**
+ * Key-image members no surviving finding points at. The record-by-record
+ * prune above removes the ones it drops, but a findings root discarded whole
+ * names nothing, and its images are just as dead.
+ */
+function dropUnreferencedKeyImages(
+  kept: FindingsState | undefined,
+  zip: JSZip
+) {
+  const referenced = new Set(
+    (kept?.findings ?? []).flatMap((finding) =>
+      finding.keyImage ? [finding.keyImage.path] : []
     )
-      zip.remove(finding.keyImage.path);
-  });
+  );
+  zip
+    .filter(
+      (path, file) =>
+        !file.dir &&
+        path.startsWith(`${KEY_IMAGE_DIR}/`) &&
+        !referenced.has(path)
+    )
+    .forEach((file) => zip.remove(file.name));
 }
 
 function validateCoreGraph(core: Manifest, zip: JSZip) {
@@ -329,7 +339,8 @@ export function normalizeManifest(manifest: Manifest, zip: JSZip) {
   const findings =
     candidate.findings === undefined
       ? undefined
-      : pruneFindings(candidate.findings, zip, datasetIds, omitted);
+      : pruneFindings(candidate.findings, datasetIds, omitted);
+  dropUnreferencedKeyImages(findings, zip);
 
   const optionalRoots = [
     'tools',

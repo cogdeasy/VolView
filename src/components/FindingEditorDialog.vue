@@ -160,8 +160,12 @@ const attachableMeasurements = computed(() => {
         (tool) => tool.imageID === currentImageID.value && !owned.has(tool.id)
       )
       .map((tool) => ({
-        title: `${toolType} — ${tool.labelName ?? ''} (slice ${
-          tool.slice + 1
+        // A cine annotation's slice index means nothing, so it is named by the
+        // frame it was drawn on instead.
+        title: `${toolType} — ${tool.labelName ?? ''} (${
+          tool.frame == null
+            ? `slice ${tool.slice + 1}`
+            : `frame ${tool.frame + 1}`
         })`,
         // Keyed by tool id rather than by the measurement pair: Vuetify matches
         // an object item value by reference, and this list is rebuilt whenever

@@ -15,8 +15,14 @@ const findingsStore = useFindingsStore();
 const uiStore = useFindingsUIStore();
 const { reportOpen } = storeToRefs(uiStore);
 const { impression } = storeToRefs(findingsStore);
-const { report, buildReport } = useReportModel();
+const { report, buildReport, findings } = useReportModel();
 const theme = useTheme();
+
+// The report covers the selected series, so findings recorded on another one
+// are silently absent. Saying how many keeps that from being a surprise.
+const outOfScopeCount = computed(
+  () => findingsStore.findings.length - findings.value.length
+);
 
 /** How long the hidden print frame outlives the print() call. */
 const PRINT_FRAME_LIFETIME_MS = 60000;
@@ -195,6 +201,16 @@ onBeforeUnmount(disposePrintFrame);
           hide-details
           data-testid="impression-field"
         />
+        <div
+          v-if="outOfScopeCount > 0"
+          class="text-caption text-medium-emphasis"
+          data-testid="out-of-scope-notice"
+        >
+          <v-icon size="small" class="mr-1">mdi-information-outline</v-icon>
+          {{ outOfScopeCount }}
+          {{ outOfScopeCount === 1 ? 'finding' : 'findings' }} on other series
+          {{ outOfScopeCount === 1 ? 'is' : 'are' }} not in this report.
+        </div>
         <iframe
           class="report-preview flex-grow-1"
           title="Report preview"

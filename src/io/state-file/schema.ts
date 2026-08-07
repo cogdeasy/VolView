@@ -465,6 +465,9 @@ const FindingCategoryScale = z.enum([
   'none',
 ] as const satisfies readonly FindingCategoryScale[]);
 
+/** Archive directory holding the findings' key images. */
+export const KEY_IMAGE_DIR = 'findings';
+
 export const FindingTypeRecord = z.object({
   id: z.string(),
   label: z.string(),

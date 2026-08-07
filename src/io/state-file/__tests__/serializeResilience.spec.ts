@@ -156,6 +156,23 @@ describe('state-file serialization resilience', () => {
     expect(normalized.omitted).toContain('findings[0]: invalid finding record');
   });
 
+  it('takes the key images with a findings root that is not a record', () => {
+    const zip = new JSZip();
+    zip.file('findings/finding-1.png', 'bytes');
+    const manifest = {
+      version: MANIFEST_VERSION,
+      datasets: [{ id: 'dataset-1', dataSourceId: 1 }],
+      dataSources: [{ id: 1, type: 'uri', uri: '/dataset-1' }],
+      findings: 'not a record',
+    } as unknown as Manifest;
+
+    const normalized = normalizeManifest(manifest, zip);
+
+    expect(normalized.manifest).not.toHaveProperty('findings');
+    expect(zip.file('findings/finding-1.png')).toBeNull();
+    expect(normalized.omitted).toContain('findings: invalid optional state');
+  });
+
   it('keeps the other findings when one record is malformed', () => {
     const zip = new JSZip();
     zip.file('findings/finding-1.png', 'bytes');

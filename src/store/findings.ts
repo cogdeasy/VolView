@@ -10,6 +10,7 @@ import { onImageDeleted } from '@/src/composables/onImageDeleted';
 import { declareManifestRefs } from '@/src/core/manifestRefs';
 import { applyLocator } from '@/src/core/annotations/locator';
 import { isRecord, removeFromArray } from '@/src/utils';
+import { KEY_IMAGE_DIR } from '@/src/io/state-file/schema';
 import type { Manifest, StateFile } from '@/src/io/state-file/schema';
 import type { FileEntry } from '@/src/io/types';
 import type { ToolID } from '@/src/types/annotation-tool';
@@ -25,8 +26,6 @@ import {
   centroid,
   lateralityFromPoints,
 } from '@/src/core/findings/measurements';
-
-export const KEY_IMAGE_DIR = 'findings';
 
 const keyImagePath = (id: FindingID) => `${KEY_IMAGE_DIR}/${id}.png`;
 
@@ -199,7 +198,12 @@ export const useFindingsStore = defineStore('findings', () => {
       title: tool.labelName || `${toolType} finding`,
       measurements: [{ toolType, toolID }],
       slice: tool.slice,
-      frameOfReference: tool.frameOfReference,
+      // Copied, not shared: a finding records the plane as it was measured on,
+      // and must not follow a later edit of the annotation's own plane.
+      frameOfReference: {
+        planeOrigin: [...tool.frameOfReference.planeOrigin],
+        planeNormal: [...tool.frameOfReference.planeNormal],
+      },
       ...(tool.frame != null ? { frame: tool.frame } : {}),
       laterality: lateralityFromPoints(points),
     });
