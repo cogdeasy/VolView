@@ -1,5 +1,8 @@
 import { computed, watch } from 'vue';
-import { useCurrentImage } from '@/src/composables/useCurrentImage';
+import {
+  getIsImageLoading,
+  useCurrentImage,
+} from '@/src/composables/useCurrentImage';
 import { onImageDeleted } from '@/src/composables/onImageDeleted';
 import { useHangingProtocolStore } from '@/src/store/hanging-protocols';
 
@@ -94,7 +97,9 @@ export function useHangingProtocolAutoApply() {
     (manual) => {
       if (!manual) return;
       const { imageID } = manual;
-      if (isImageLoading.value && imageID === currentImageID.value) {
+      // Whether the deferred phase can run turns on whether this image has its
+      // pixel data, not on whether it happens to be the active one.
+      if (getIsImageLoading(imageID)) {
         // The load-finished watcher below will pick it up.
         finalized.delete(imageID);
         return;

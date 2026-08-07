@@ -155,7 +155,7 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
    * reading the globally applied one, keeps those late phases writing this
    * study's settings even if the reader has moved on to another study.
    */
-  const hungImages = ref(new Map<string, string>());
+  const hungImages = ref(new Map<string, AppliedProtocolInfo>());
   /**
    * The last study the reader hung by hand, with a counter so that hanging the
    * same study twice is still two events. Watched by the auto-apply composable,
@@ -208,9 +208,19 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
   // --- applying --- //
 
   interface ApplyOptions {
-    /** Leave alone any window the reader has already adjusted by hand. */
-    keepReaderWindow?: boolean;
+    /** Leave alone anything the reader has already adjusted by hand. */
+    keepReaderEdits?: boolean;
   }
+
+  /**
+   * What the protocol itself last wrote, per view and image. The windowing
+   * store records who wrote a config; the slice and coloring stores do not, so
+   * the protocol remembers its own writes and treats anything else it finds as
+   * the reader's.
+   */
+  const protocolSlices = new Map<string, number>();
+  const protocolPresets = new Map<string, string>();
+  const writeKey = (viewID: string, imageID: string) => `${viewID}::${imageID}`;
 
   /**
    * Slice and oblique views window; a volume view has no windowing config, and
@@ -236,7 +246,7 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
       // comes up in the deferred phases: a study can stream for a minute, and
       // a window adjusted while it does must survive the data arriving.
       if (
-        options?.keepReaderWindow &&
+        options?.keepReaderEdits &&
         windowingStore.getConfig(viewID, imageID)?.userTriggered
       ) {
         return;
@@ -268,7 +278,8 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
   function applyVolumeColoring(
     protocol: HangingProtocol,
     viewIDs: string[],
-    imageID: string
+    imageID: string,
+    options?: ApplyOptions
   ) {
     if (!protocol.volume.preset) return;
     // The coloring store needs the image data to compute a mapping range.
@@ -280,7 +291,16 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
 
     const coloringStore = useVolumeColoringStore();
     viewIDs.forEach((viewID) => {
+      const key = writeKey(viewID, imageID);
+      // A preset the reader picked after the protocol set one outranks it.
+      if (options?.keepReaderEdits) {
+        const written = protocolPresets.get(key);
+        const current = coloringStore.getConfig(viewID, imageID)
+          ?.transferFunction.preset;
+        if (written !== undefined && current !== written) return;
+      }
       coloringStore.setColorPreset(viewID, imageID, protocol.volume.preset);
+      protocolPresets.set(key, protocol.volume.preset);
       const config = coloringStore.getConfig(viewID, imageID);
       // Shift only applies to point-based opacity functions, which is what the
       // medical presets use.
@@ -295,7 +315,8 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
   function applySlicePolicy(
     protocol: HangingProtocol,
     viewIDs: string[],
-    imageID: string
+    imageID: string,
+    options?: ApplyOptions
   ) {
     if (protocol.slicePolicy === 'preserve') return;
     // Without the pixel data the slice bounds are the placeholder 0..1, so a
@@ -305,12 +326,31 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     if (!getImageData(imageID)) return;
     const sliceStore = useViewSliceStore();
     viewIDs.forEach((viewID) => {
+      const key = writeKey(viewID, imageID);
+      // A slice the reader scrolled to during a long load outranks the policy.
+      // Nothing else writes a slice config unprompted, so a stored slice that
+      // is not the one the protocol left there is theirs.
+      if (options?.keepReaderEdits) {
+        const stored = sliceStore.configs[viewID]?.[imageID];
+        if (stored && stored.slice !== protocolSlices.get(key)) return;
+      }
       if (protocol.slicePolicy === 'middle') {
         sliceStore.resetSlice(viewID, imageID);
-        return;
+      } else {
+        const config = sliceStore.getConfig(viewID, imageID);
+        sliceStore.updateConfig(viewID, imageID, { slice: config.min });
       }
-      const config = sliceStore.getConfig(viewID, imageID);
-      sliceStore.updateConfig(viewID, imageID, { slice: config.min });
+      protocolSlices.set(key, sliceStore.getConfig(viewID, imageID).slice);
+    });
+  }
+
+  /** Forgets the protocol's own writes for an image that has gone away. */
+  function forgetWrites(imageID: string) {
+    const suffix = `::${imageID}`;
+    [protocolSlices, protocolPresets].forEach((record) => {
+      [...record.keys()]
+        .filter((key) => key.endsWith(suffix))
+        .forEach((key) => record.delete(key));
     });
   }
 
@@ -334,12 +374,14 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     applyVolumeColoring(
       protocol,
       views.filter((view) => view.type === '3D').map((view) => view.id),
-      imageID
+      imageID,
+      options
     );
     applySlicePolicy(
       protocol,
       views.filter((view) => view.type === '2D').map((view) => view.id),
-      imageID
+      imageID,
+      options
     );
   }
 
@@ -394,6 +436,10 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
   const isMatchable = (imageID: Maybe<string>) =>
     !!imageID && isDicomImage(imageID);
 
+  /** The protocol that hung this image in this tab, if one did. */
+  const hungProtocolId = (imageID: Maybe<string>) =>
+    (imageID && hungImages.value.get(imageID)?.protocolId) || null;
+
   /**
    * Re-runs the parts of this image's protocol that need pixel data: the window
    * (an auto window needs the histogram, and a slice view that mounts before
@@ -404,10 +450,10 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
    * whose protocol has since been deleted — is left as it is.
    */
   function applyLoadedImageSettings(imageID: Maybe<string>) {
-    const protocol = getProtocol(imageID && hungImages.value.get(imageID));
+    const protocol = getProtocol(hungProtocolId(imageID));
     if (!protocol || !imageID) return;
     applyToViews(protocol, viewsShowing(imageID), imageID, {
-      keepReaderWindow: true,
+      keepReaderEdits: true,
     });
   }
 
@@ -416,13 +462,13 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
    * has already been finalized.
    */
   function applyAppliedWindowLevel(imageID: Maybe<string>) {
-    const protocol = getProtocol(imageID && hungImages.value.get(imageID));
+    const protocol = getProtocol(hungProtocolId(imageID));
     if (!protocol || !imageID) return;
     applyWindowLevel(
       protocol,
       windowedViewIDs(viewsShowing(imageID)),
       imageID,
-      { keepReaderWindow: true }
+      { keepReaderEdits: true }
     );
   }
 
@@ -511,14 +557,15 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     }
 
     applyProtocol(selection.protocol, imageID);
-    if (imageID) hungImages.value.set(imageID, selection.protocol.id);
-    applied.value = {
+    const report: AppliedProtocolInfo = {
       protocolId: selection.protocol.id,
       reason: selection.reason,
       criteria: selection.criteria,
       explanation: explainSelection(selection),
       studyInstanceUID: studyUID,
     };
+    if (imageID) hungImages.value.set(imageID, report);
+    applied.value = report;
     indicatorDismissed.value = false;
     return selection.protocol;
   }
@@ -536,6 +583,19 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
       resetPresentationChrome();
       return;
     }
+    // What actually hung this study outranks what the rules would pick now:
+    // the reader may have hand-picked a protocol selection would not choose,
+    // or edited the rules since, and the pill and the chrome have to agree
+    // with the layout and window on screen.
+    const recorded = imageID ? hungImages.value.get(imageID) : null;
+    const hungProtocol = getProtocol(recorded?.protocolId);
+    if (recorded && hungProtocol) {
+      setPresentationChrome(hungProtocol);
+      applied.value = recorded;
+      indicatorDismissed.value = false;
+      return;
+    }
+
     const studyUID = getStudyUID(imageID);
     const selection = selectProtocol(
       protocols.value,
@@ -579,16 +639,7 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     }
 
     applyProtocol(protocol, imageID);
-    if (imageID) {
-      hungImages.value.set(imageID, protocolId);
-      // A study picked mid-load still owes its volume preset, slice position
-      // and window; announcing the apply is what gets those phases scheduled.
-      manualApply.value = {
-        imageID,
-        tick: (manualApply.value?.tick ?? 0) + 1,
-      };
-    }
-    applied.value = {
+    const report: AppliedProtocolInfo = {
       protocolId,
       reason: 'override',
       criteria: [],
@@ -597,6 +648,16 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
       }.`,
       studyInstanceUID: studyUID,
     };
+    if (imageID) {
+      hungImages.value.set(imageID, report);
+      // A study picked mid-load still owes its volume preset, slice position
+      // and window; announcing the apply is what gets those phases scheduled.
+      manualApply.value = {
+        imageID,
+        tick: (manualApply.value?.tick ?? 0) + 1,
+      };
+    }
+    applied.value = report;
     indicatorDismissed.value = false;
   }
 
@@ -825,6 +886,7 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     deletedIDs.forEach((id) => {
       restoredImages.value.delete(id);
       hungImages.value.delete(id);
+      forgetWrites(id);
     });
   });
 

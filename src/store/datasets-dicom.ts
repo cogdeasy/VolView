@@ -270,6 +270,7 @@ export const useDICOMStore = defineStore('dicom', {
         SeriesInstanceUID: series.SeriesInstanceUID,
         SeriesNumber: series.SeriesNumber,
         SeriesDescription: series.SeriesDescription,
+        BodyPartExamined: series.BodyPartExamined,
         WindowLevel: '',
         WindowWidth: '',
         kind: 'cine',

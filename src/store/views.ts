@@ -170,6 +170,14 @@ export const useViewStore = defineStore('view', () => {
   const getViewForSlot = (slotIndex: number) =>
     viewByID[layoutSlots.value[slotIndex]] ?? null;
 
+  /**
+   * The view a rendered slot shows. With a pane maximized the rendered layout
+   * is that pane alone, so every slot of it is that view; otherwise the slot
+   * index is the layout's own.
+   */
+  const getVisibleViewForSlot = (slotIndex: number) =>
+    maximizedView.value ?? getViewForSlot(slotIndex);
+
   const viewIDs = computed(() => Object.keys(viewByID));
 
   function getView(id: Maybe<string>) {
@@ -461,6 +469,7 @@ export const useViewStore = defineStore('view', () => {
     currentLayoutName,
     getView,
     getViewForSlot,
+    getVisibleViewForSlot,
     getAllViews,
     getViewsForData,
     replaceView,

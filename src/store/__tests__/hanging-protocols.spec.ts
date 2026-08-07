@@ -6,6 +6,7 @@ import {
   rememberOverride,
   useHangingProtocolStore,
 } from '@/src/store/hanging-protocols';
+import { useDICOMStore } from '@/src/store/datasets-dicom';
 import { BUILT_IN_PROTOCOLS } from '@/src/core/hanging-protocols/seeds';
 
 describe('stored protocol list', () => {
@@ -92,7 +93,9 @@ describe('hanging a study by hand', () => {
 
     store.applyManually(BUILT_IN_PROTOCOLS[0].id, 'image-1');
 
-    expect(store.hungImages.get('image-1')).toBe(BUILT_IN_PROTOCOLS[0].id);
+    expect(store.hungImages.get('image-1')?.protocolId).toBe(
+      BUILT_IN_PROTOCOLS[0].id
+    );
     expect(store.manualApply).toEqual({ imageID: 'image-1', tick: 1 });
 
     store.applyManually(BUILT_IN_PROTOCOLS[1].id, 'image-1');
@@ -100,7 +103,29 @@ describe('hanging a study by hand', () => {
     // A second hand-pick of the same study is its own event, and the later
     // phases follow the protocol that hung it last.
     expect(store.manualApply?.tick).toBe(2);
-    expect(store.hungImages.get('image-1')).toBe(BUILT_IN_PROTOCOLS[1].id);
+    expect(store.hungImages.get('image-1')?.protocolId).toBe(
+      BUILT_IN_PROTOCOLS[1].id
+    );
+  });
+
+  it('keeps naming the protocol that hung the study when it is revisited', () => {
+    const dicomStore = useDICOMStore();
+    dicomStore.volumeInfo['image-1'] = {
+      Modality: 'CT',
+      BodyPartExamined: 'HEAD',
+    } as (typeof dicomStore.volumeInfo)['image-1'];
+    const store = useHangingProtocolStore();
+    // A protocol selection would never pick: disabled protocols are skipped,
+    // and a hand-pick of one is deliberately not remembered as an override.
+    const picked = BUILT_IN_PROTOCOLS[1];
+    store.updateProtocol(picked.id, { enabled: false });
+
+    store.applyManually(picked.id, 'image-1');
+    store.reportForImage('image-1');
+
+    expect(store.applied?.protocolId).toBe(picked.id);
+    expect(store.overlays).toEqual(picked.overlays);
+    expect(store.focusedModule).toBe(picked.focusedModule);
   });
 });
 

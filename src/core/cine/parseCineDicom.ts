@@ -19,6 +19,7 @@ const TAG_MODALITY = 'x00080060';
 const TAG_SERIES_INSTANCE_UID = 'x0020000e';
 const TAG_SERIES_NUMBER = 'x00200011';
 const TAG_SERIES_DESCRIPTION = 'x0008103e';
+const TAG_BODY_PART_EXAMINED = 'x00180015';
 const TAG_NUMBER_OF_FRAMES = 'x00280008';
 const TAG_ROWS = 'x00280010';
 const TAG_COLUMNS = 'x00280011';
@@ -68,6 +69,7 @@ type CineSeriesInfo = {
   SeriesInstanceUID: string;
   SeriesNumber: string;
   SeriesDescription: string;
+  BodyPartExamined: string;
   Modality: string;
 };
 
@@ -259,6 +261,7 @@ export function parseCineDicom(
       SeriesInstanceUID: str(ds, TAG_SERIES_INSTANCE_UID),
       SeriesNumber: str(ds, TAG_SERIES_NUMBER),
       SeriesDescription: str(ds, TAG_SERIES_DESCRIPTION),
+      BodyPartExamined: str(ds, TAG_BODY_PART_EXAMINED),
       Modality: str(ds, TAG_MODALITY),
     },
     regions,
