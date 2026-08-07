@@ -125,6 +125,10 @@ function printReport() {
   };
   frame.onload = () => {
     const frameWindow = frame.contentWindow;
+    // The document inlines every key image, so it goes as soon as the dialog
+    // is done with it; the timer is only the backstop for a browser that
+    // never fires afterprint.
+    frameWindow?.addEventListener('afterprint', disposeIfCurrent);
     frameWindow?.focus();
     frameWindow?.print();
     if (printFrame === frame) printing.value = false;

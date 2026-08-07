@@ -243,6 +243,25 @@ describe('state-file serialization resilience', () => {
     );
   });
 
+  it('says so when the findings list itself is malformed', () => {
+    const manifest = {
+      version: MANIFEST_VERSION,
+      datasets: [{ id: 'dataset-1', dataSourceId: 1 }],
+      dataSources: [{ id: 1, type: 'uri', uri: '/dataset-1' }],
+      findings: {
+        impression: 'Normal study.',
+        types: 'not a list',
+        findings: 'not a list',
+      },
+    } as unknown as Manifest;
+
+    const normalized = normalizeManifest(manifest, new JSZip());
+
+    expect(normalized.manifest.findings?.impression).toBe('Normal study.');
+    expect(normalized.omitted).toContain('findings list: invalid state');
+    expect(normalized.omitted).toContain('finding types: invalid state');
+  });
+
   it('omits the complete view layout when viewByID is invalid', () => {
     const manifest = {
       ...manifestWithSelection('dataset-1'),

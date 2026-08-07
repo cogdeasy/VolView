@@ -207,7 +207,7 @@ const sourceLocation = computed(() => {
       finding.value.frameOfReference,
       currentImageMetadata.value,
       { allowOutOfBoundsSlice: true }
-    )?.axis ?? 'Unknown';
+    )?.axis ?? 'Oblique';
   return `${axis} · slice ${finding.value.slice + 1}`;
 });
 

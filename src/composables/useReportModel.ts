@@ -7,7 +7,10 @@ import { worldPointToIndex } from '@/src/utils/imageSpace';
 import { frameOfReferenceToImageSliceAndAxis } from '@/src/utils/frameOfReference';
 import { summarizeFindingMeasurements } from '@/src/core/findings/summarize';
 import { centroid } from '@/src/core/findings/measurements';
-import { LATERALITY_LABELS } from '@/src/core/findings/taxonomy';
+import {
+  CATEGORY_SCALE_LABELS,
+  LATERALITY_LABELS,
+} from '@/src/core/findings/taxonomy';
 import type {
   Report,
   ReportFinding,
@@ -95,7 +98,7 @@ export function useReportModel() {
         finding.laterality === 'unknown'
           ? ''
           : LATERALITY_LABELS[finding.laterality],
-      categoryLabel: type?.categoryScale === 'birads' ? 'BI-RADS' : 'Severity',
+      categoryLabel: CATEGORY_SCALE_LABELS[type?.categoryScale ?? 'none'],
       category: finding.category,
       description: finding.description,
       location,

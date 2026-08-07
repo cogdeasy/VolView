@@ -35,7 +35,9 @@ export function useKeyImageCapture() {
     return getRegisteredViews()
       .map(({ id, name }) => ({
         id,
-        name: viewStore.getView(id)?.name ?? name ?? '',
+        // An unnamed view is unpickable, so a blank store name defers to the
+        // name the view registered itself under.
+        name: viewStore.getView(id)?.name || name || '',
       }))
       .filter((candidate) => !!candidate.name)
       .sort((a, b) => rank(a.id) - rank(b.id));

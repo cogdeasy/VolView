@@ -72,6 +72,11 @@ function pruneFindings(
     return undefined;
   }
 
+  if (raw.findings !== undefined && !Array.isArray(raw.findings))
+    omitted.push('findings list: invalid state');
+  if (raw.types !== undefined && !Array.isArray(raw.types))
+    omitted.push('finding types: invalid state');
+
   const findings = (Array.isArray(raw.findings) ? raw.findings : []).flatMap(
     (entry, index) => {
       const parsed = FindingRecord.safeParse(entry);

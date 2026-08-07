@@ -162,6 +162,13 @@ describe('measurement math', () => {
     expect(height).toBeCloseTo(4);
     expect(area).toBeCloseTo(28);
 
+    // The extents are reported longest first, not axis by axis, so which of
+    // the two in-plane axes comes first cannot change the answer.
+    const [firstAxis, secondAxis] = inPlaneImageAxes(orientation, normal);
+    expect(
+      rectangleDimensions(corner, opposite, normal, [secondAxis, firstAxis])
+    ).toEqual({ width, height, area });
+
     // Patient axes alone read the rotated rectangle's bounding box instead.
     expect(rectangleDimensions(corner, opposite, normal).area).toBeGreaterThan(
       area
