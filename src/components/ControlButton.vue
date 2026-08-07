@@ -77,6 +77,9 @@ export default {
   max-width: var(--pv-density-tool-button-size);
 }
 
+/* Deliberately not `!important`: a nested icon that asks for an explicit
+   `size` (the menu chevron) sets an inline font-size, and that has to keep
+   winning over the density default. */
 .pv-control-button--density :deep(.v-icon) {
   font-size: var(--pv-density-tool-icon-size);
 }
