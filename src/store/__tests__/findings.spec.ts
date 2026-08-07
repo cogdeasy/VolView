@@ -2,7 +2,10 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 import JSZip from 'jszip';
 
+import vtkImageData from '@kitware/vtk.js/Common/DataModel/ImageData';
+
 import { useFindingsStore } from '@/src/store/findings';
+import { useImageCacheStore } from '@/src/store/image-cache';
 import { useFindingsUIStore } from '@/src/store/findings-ui';
 import { useRulerStore } from '@/src/store/tools/rulers';
 import { AnnotationToolType } from '@/src/store/tools/types';
@@ -20,6 +23,9 @@ import type { ToolID } from '@/src/types/annotation-tool';
 
 const KEY_IMAGE_DATA_URL =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+
+const seatImage = (id: string) =>
+  useImageCacheStore().addVTKImageData(vtkImageData.newInstance(), id, { id });
 
 const addRuler = (imageID: string, labelName = 'Lesion') => {
   const store = useRulerStore();
@@ -183,6 +189,32 @@ describe('findings store', () => {
 
     store.removeFinding(kept);
     expect(ui.editingFindingID).toBeNull();
+  });
+
+  it('clears the impression with the last finding of a closed study', () => {
+    seatImage('image-1');
+    const store = useFindingsStore();
+    store.promoteMeasurement(AnnotationToolType.Ruler, addRuler('image-1'));
+    store.impression = 'Mildly dilated left ventricle.';
+
+    useImageCacheStore().removeImage('image-1');
+
+    expect(store.findings).toEqual([]);
+    expect(store.impression).toBe('');
+  });
+
+  it('keeps the impression while any finding still stands', () => {
+    seatImage('image-1');
+    seatImage('image-2');
+    const store = useFindingsStore();
+    store.promoteMeasurement(AnnotationToolType.Ruler, addRuler('image-1'));
+    store.promoteMeasurement(AnnotationToolType.Ruler, addRuler('image-2'));
+    store.impression = 'Mildly dilated left ventricle.';
+
+    useImageCacheStore().removeImage('image-1');
+
+    expect(store.findings).toHaveLength(1);
+    expect(store.impression).toBe('Mildly dilated left ventricle.');
   });
 
   it('reorders a finding past a sibling, skipping other images', () => {

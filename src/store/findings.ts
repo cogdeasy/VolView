@@ -288,9 +288,15 @@ export const useFindingsStore = defineStore('findings', () => {
   // the same delete cascade — an orphaned imageID must never reach a save.
   onImageDeleted((deletedIDs) => {
     const deleted = new Set(deletedIDs);
-    findingIDs.value
-      .filter((id) => deleted.has(findingByID.value[id].imageID))
-      .forEach((id) => removeFinding(id));
+    const doomed = findingIDs.value.filter((id) =>
+      deleted.has(findingByID.value[id].imageID)
+    );
+    doomed.forEach((id) => removeFinding(id));
+    // The impression describes the findings it was written beside. Once the
+    // last of them is gone with its images, keeping the text would carry one
+    // study's summary into the next study's report.
+    if (doomed.length > 0 && findingIDs.value.length === 0)
+      impression.value = '';
   });
 
   // --- serialization --- //
