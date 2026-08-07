@@ -2,7 +2,7 @@
 withDefaults(
   defineProps<{
     /** Height of the wordmark in pixels; the width follows the aspect ratio. */
-    size?: number | string;
+    size?: number;
   }>(),
   { size: 20 }
 );
@@ -13,7 +13,7 @@ withDefaults(
     xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 1280 235"
     :height="size"
-    :width="(Number(size) * 1280) / 235"
+    :width="(size * 1280) / 235"
     role="img"
     aria-label="Philips"
     fill="currentColor"

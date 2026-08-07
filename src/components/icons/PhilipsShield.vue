@@ -2,7 +2,7 @@
 withDefaults(
   defineProps<{
     /** Height of the shield in pixels; the width follows the aspect ratio. */
-    size?: number | string;
+    size?: number;
   }>(),
   { size: 28 }
 );
@@ -13,7 +13,7 @@ withDefaults(
     xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 1528 1942"
     :height="size"
-    :width="(Number(size) * 1528) / 1942"
+    :width="(size * 1528) / 1942"
     role="img"
     aria-label="Philips"
     fill="currentColor"
