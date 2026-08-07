@@ -71,7 +71,9 @@ export function useComparisonSync() {
     // That is a reader's choice about this side of the pair, so the role
     // follows it rather than snapping back. What a slot happened to show
     // before the pair claimed it is not such a choice: entering comparison
-    // must not adopt whatever slot two happened to hold.
+    // must not adopt whatever slot two happened to hold. Nor may a drop put a
+    // study in a role the pickers refuse to offer: a cine has no slices to
+    // align and its slot renders a player rather than a pane.
     const adopted = panes.find((pane) => {
       const shown = shownIn.get(pane.viewID);
       return (
@@ -79,7 +81,7 @@ export function useComparisonSync() {
         shown !== pane.imageID &&
         boundByPair.has(pane.viewID) &&
         shown !== boundByPair.get(pane.viewID) &&
-        comparison.candidates.some((study) => study.imageID === shown)
+        comparison.comparableCandidates.some((study) => study.imageID === shown)
       );
     });
 
@@ -278,6 +280,10 @@ export function useComparisonSync() {
     (panes) => {
       pruneToPanes(echoes, panes);
       if (!comparison.active || !comparison.links.slice) {
+        // Nothing is being written while the link is off, so a marker left
+        // over from before it was switched off can only ever be spent on a
+        // scroll the reader made, swallowing it.
+        echoes.clear();
         previousSlices = snapshot(panes);
         return;
       }
@@ -529,6 +535,7 @@ export function useComparisonSync() {
     (cameras) => {
       pruneToPanes(cameraEchoes, cameras);
       if (!comparison.active || !comparison.links.camera) {
+        cameraEchoes.clear();
         previousCameras = cameraSnapshot(cameras);
         return;
       }

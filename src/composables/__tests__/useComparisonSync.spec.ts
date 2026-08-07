@@ -6,6 +6,7 @@ import vtkDataArray from '@kitware/vtk.js/Common/Core/DataArray';
 
 import { useComparisonSync } from '@/src/composables/useComparisonSync';
 import { useComparisonStore } from '@/src/store/comparison';
+import { useDICOMStore } from '@/src/store/datasets-dicom';
 import { useImageStore } from '@/src/store/datasets-images';
 import { useImageCacheStore } from '@/src/store/image-cache';
 import { useViewStore } from '@/src/store/views';
@@ -32,6 +33,22 @@ const imageOf = (slices: number) => {
 
 const seatImage = (id: string, slices: number) =>
   useImageStore().addVTKImageData(id, imageOf(slices), { id });
+
+/** A loaded cine series: a candidate the comparison pickers refuse. */
+const seatCine = (id: string) => {
+  const dicomStore = useDICOMStore();
+  dicomStore.volumeInfo[id] = {
+    NumberOfSlices: 30,
+    VolumeID: id,
+    Modality: 'MR',
+    SeriesInstanceUID: id,
+    SeriesNumber: '1',
+    SeriesDescription: id,
+    WindowLevel: '',
+    WindowWidth: '',
+    kind: 'cine',
+  };
+};
 
 describe('useComparisonSync — slice ranges', () => {
   let scope: EffectScope;
@@ -146,6 +163,29 @@ describe('useComparisonSync — pane bindings', () => {
     expect(comparison.priorImageID).toBe('current');
     expect(viewStore.getView(currentViewID)?.dataID).toBe('prior');
     expect(viewStore.getView(priorViewID)?.dataID).toBe('current');
+  });
+
+  it('refuses a cine dropped on a pane, as the study pickers do', async () => {
+    const viewStore = useViewStore();
+    const comparison = useComparisonStore();
+    seatImage('current', 8);
+    seatImage('prior', 8);
+    seatCine('cine');
+    viewStore.setNamedLayoutsFromConfig(ComparisonLayouts);
+    viewStore.switchToNamedLayout(ComparisonLayoutNames.pair);
+    comparison.setCurrentImageID('current');
+    comparison.setPriorImageID('prior');
+    scope.run(() => useComparisonSync());
+    const priorViewID = viewStore.visibleViews.find(
+      (view) => view?.name === ComparisonViewNames.priorAxial
+    )!.id;
+    await nextTick();
+
+    viewStore.setDataForView(priorViewID, 'cine');
+    await nextTick();
+
+    expect(comparison.priorImageID).toBe('prior');
+    expect(viewStore.getView(priorViewID)?.dataID).toBe('prior');
   });
 });
 

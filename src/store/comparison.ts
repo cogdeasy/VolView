@@ -129,6 +129,16 @@ export const useComparisonStore = defineStore('comparison', () => {
     });
   });
 
+  /**
+   * The candidates a role may actually be filled with. A cine series has no
+   * slices to align and renders a player rather than a slice view, so the
+   * pickers offer it disabled — every other way of choosing a study reads this
+   * list, so none of them can quietly disagree with the pickers.
+   */
+  const comparableCandidates = computed(() =>
+    candidates.value.filter((study) => !study.isCine)
+  );
+
   // Comparison mode follows the panes on screen rather than the remembered
   // layout name: loading a saved session restores the named views without
   // restoring `currentLayoutName`, so the name outlives what is displayed.
@@ -335,7 +345,7 @@ export const useComparisonStore = defineStore('comparison', () => {
       // is dropped before the prior is set aside, so a cine series lying
       // around cannot stand in for the studies the reader could actually
       // fall back on.
-      const usable = available.filter((study) => !study.isCine);
+      const usable = comparableCandidates.value;
       const pool = usable.filter(
         (study) => study.imageID !== priorImageID.value
       );
@@ -422,6 +432,7 @@ export const useComparisonStore = defineStore('comparison', () => {
     sliceOffsetByPair,
     patientMismatch,
     candidates,
+    comparableCandidates,
     isComparisonLayout,
     active,
     current,
