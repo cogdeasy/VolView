@@ -38,31 +38,31 @@ const unhealthy = computed(
 const unrecoverable = computed(() => health.status === 'unrecoverable');
 
 /**
- * Recovery can succeed in a few hundred milliseconds, and a warning that
- * flickers past is worse than no warning at all: the reader is left unsure
- * whether the pixels they just looked at were trustworthy. Once shown, the
- * overlay stays up long enough to be read, ending on an explicit all-clear.
+ * A failure that flickers past is worse than no warning at all: the reader is
+ * left unsure whether the pixels they just looked at were trustworthy. However
+ * long the failure itself lasted, the overlay ends on an explicit all-clear
+ * that stays up long enough to be read.
  */
-const MIN_VISIBLE_MS = 2500;
+const ALL_CLEAR_MS = 2500;
 const visible = ref(false);
-let shownAt = 0;
 let hideTimer: ReturnType<typeof setTimeout> | undefined;
 
 watch(
   unhealthy,
-  (bad) => {
+  (bad, wasBad) => {
     clearTimeout(hideTimer);
     if (bad) {
-      shownAt = Date.now();
       visible.value = true;
       return;
     }
-    hideTimer = setTimeout(
-      () => {
-        visible.value = false;
-      },
-      Math.max(0, MIN_VISIBLE_MS - (Date.now() - shownAt))
-    );
+    // Nothing to clear if this view was never in trouble.
+    if (!wasBad) {
+      visible.value = false;
+      return;
+    }
+    hideTimer = setTimeout(() => {
+      visible.value = false;
+    }, ALL_CLEAR_MS);
   },
   { immediate: true }
 );
