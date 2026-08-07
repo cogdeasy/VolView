@@ -42,13 +42,15 @@ export async function loadSampleData(
   }
 
   const selection = convertSuccessResultToDataSelection(loadResult);
+  // An import that produced nothing openable leaves the views alone, rather
+  // than unbinding the study the reader already had up.
   if (selection) {
     useVolumeColoringStore().setDefaults(selection, {
       transferFunction: {
         preset: sample.defaults?.colorPreset,
       },
     });
+    useViewStore().setDataForAllViews(selection);
   }
-  useViewStore().setDataForAllViews(selection);
   return selection;
 }

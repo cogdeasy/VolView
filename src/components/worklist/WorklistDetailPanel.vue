@@ -22,11 +22,11 @@ const thumbnails = reactive<Record<string, string>>({});
 /** Series whose pixel data cannot be rendered; they keep the modality tile. */
 const unrenderable = new Set<string>();
 
-// Also keyed on the size of the image cache, so a series registered after the
+// Also keyed on the image cache's contents, so a series registered after the
 // panel opened is picked up; getThumbnail() itself waits for the pixel data,
 // so one fire per registration is enough.
 watch(
-  [selectedStudy, () => imageCacheStore.imageIds.length],
+  [selectedStudy, () => imageCacheStore.imageIds.join(',')],
   ([study]) => {
     if (!study) return;
     study.series.forEach(async (series) => {
