@@ -14,7 +14,13 @@ const WORLD_COMPONENT: Record<LPSAxis, number> = {
   Axial: 2,
 };
 
-/** Direction cosines are considered equal below this dot-product deviation. */
+/**
+ * Two direction-cosine matrices are the same orientation when every entry
+ * agrees within this much. Bounding the entries rather than the angle between
+ * the axes is the stricter test, and the strict one is what is wanted: a pair
+ * that fails it is mapped by index and told so, which is a smaller mistake
+ * than asserting patient-position alignment across a frame that has moved.
+ */
 const ORIENTATION_TOLERANCE = 1e-2;
 
 /**
