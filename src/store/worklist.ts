@@ -177,39 +177,57 @@ export const useWorklistStore = defineStore('worklist', () => {
     return !!marker && isImportLoaded(marker);
   }
 
+  /** Whether a real DICOM row now stands in the list for what a sample loaded. */
+  function isSampleReplacedByStudy(sampleName: string): boolean {
+    const marker = importedSamples[sampleName];
+    return !!marker && marker in dicomStore.studyInfo;
+  }
+
+  /**
+   * The image a sample loaded, when it did not land in the DICOM hierarchy.
+   * Plain-image samples (.mha and friends) grow no `loaded:` row of their own,
+   * so their sample row stays and becomes the handle on the loaded data.
+   */
+  function loadedSampleImage(sampleName: string): string {
+    const marker = importedSamples[sampleName];
+    if (!marker || isSampleReplacedByStudy(sampleName)) return '';
+    return imageStore.idList.includes(marker) ? marker : '';
+  }
+
   /** Rows for downloadable sample datasets: real pixels, invented patients. */
   const sampleStudies = computed<WorklistStudy[]>(() => {
     if (dataBrowserStore.hideSampleData) return [];
-    // A sample is only struck off while the data it produced is still loaded;
-    // closing that data puts the sample row back.
-    return SAMPLE_DATA.filter((sample) => !isSampleLoaded(sample.name)).flatMap(
-      (sample) => {
-        const meta = SAMPLE_WORKLIST_METADATA[sample.name];
-        if (!meta) return [];
-        const key = `sample:${sample.name}`;
-        // The dataset's own artwork stands in for the first series' thumbnail;
-        // the rest have none until the study is downloaded.
-        const series = meta.series.map((entry, index) => ({
-          ...entry,
-          key: `${key}:${index}`,
-          ...(index === 0 ? { thumbnail: sample.image } : {}),
-        }));
-        return [
-          {
-            ...meta,
-            key,
-            origin: 'sample' as const,
-            studyDate: daysAgoToDicomDate(meta.daysAgo),
-            studyTime: meta.time,
-            readStatus: readStatusOverrides[key] ?? meta.readStatus,
-            volumeKeys: [],
-            sample,
-            series,
-            ...seriesTotals(series),
-          },
-        ];
-      }
-    );
+    // A sample is struck off once a real study row stands in for it; closing
+    // that study puts the sample row back.
+    return SAMPLE_DATA.filter(
+      (sample) => !isSampleReplacedByStudy(sample.name)
+    ).flatMap((sample) => {
+      const meta = SAMPLE_WORKLIST_METADATA[sample.name];
+      if (!meta) return [];
+      const key = `sample:${sample.name}`;
+      // The dataset's own artwork stands in for the first series' thumbnail;
+      // the rest have none until the study is downloaded.
+      const series = meta.series.map((entry, index) => ({
+        ...entry,
+        key: `${key}:${index}`,
+        ...(index === 0 ? { thumbnail: sample.image } : {}),
+      }));
+      const loadedImage = loadedSampleImage(sample.name);
+      return [
+        {
+          ...meta,
+          key,
+          origin: 'sample' as const,
+          studyDate: daysAgoToDicomDate(meta.daysAgo),
+          studyTime: meta.time,
+          readStatus: readStatusOverrides[key] ?? meta.readStatus,
+          volumeKeys: loadedImage ? [loadedImage] : [],
+          sample,
+          series,
+          ...seriesTotals(series),
+        },
+      ];
+    });
   });
 
   /**
@@ -374,14 +392,17 @@ export const useWorklistStore = defineStore('worklist', () => {
   async function openStudy(study: WorklistStudy) {
     if (openingKey.value) return;
 
-    if (study.origin === 'loaded') {
-      const [firstVolume] = study.volumeKeys;
-      if (!firstVolume) return;
+    // Pixels already in memory open instantly, whether they belong to a DICOM
+    // study or to a sample that downloaded into the image store.
+    const [firstVolume] = study.volumeKeys;
+    if (firstVolume) {
       viewStore.setDataForAllViews(firstVolume);
       markOpened(study.key, study.readStatus);
       hide();
       return;
     }
+
+    if (study.origin === 'loaded') return;
 
     if (study.sample) {
       await openSample(study, study.sample);

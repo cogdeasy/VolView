@@ -6,6 +6,7 @@ import { SAMPLE_DATA } from '@/src/config';
 import { useDataBrowserStore } from '@/src/store/data-browser';
 import { useDICOMStore } from '@/src/store/datasets-dicom';
 import { useImageStore } from '@/src/store/datasets-images';
+import { useViewStore } from '@/src/store/views';
 import { useWorklistStore } from '@/src/store/worklist';
 
 vi.mock('@/src/actions/loadSampleData', () => ({
@@ -219,26 +220,31 @@ describe('Worklist store', () => {
     ).toBe('read');
   });
 
-  it('hides a sample that imported as a plain image, and restores it', async () => {
+  it('keeps the row of a sample that imported as a plain image', async () => {
     const worklist = useWorklistStore();
     const imageStore = useImageStore();
+    const setDataForAllViews = vi.spyOn(useViewStore(), 'setDataForAllViews');
     useDataBrowserStore().hideSampleData = false;
     const sample = worklist.studies.find((entry) => entry.origin === 'sample')!;
 
-    // Non-DICOM samples import into the image store, not the DICOM hierarchy.
+    // Non-DICOM samples import into the image store, not the DICOM hierarchy,
+    // so no loaded row appears and the sample row has to represent the study.
     vi.mocked(loadSampleData).mockResolvedValueOnce('image-1');
     imageStore.idList.push('image-1');
+    worklist.select(sample.key);
     await worklist.openStudy(sample);
     await nextTick();
-    expect(worklist.studies.some((entry) => entry.key === sample.key)).toBe(
-      false
-    );
 
-    imageStore.idList.splice(0, imageStore.idList.length);
-    await nextTick();
-    expect(worklist.studies.some((entry) => entry.key === sample.key)).toBe(
-      true
-    );
+    const loaded = worklist.studies.find((entry) => entry.key === sample.key);
+    expect(loaded?.readStatus).toBe('in-progress');
+    expect(loaded?.volumeKeys).toEqual(['image-1']);
+    expect(worklist.selectedStudy?.key).toBe(sample.key);
+
+    // Re-opening it shows the data already in memory instead of downloading.
+    vi.mocked(loadSampleData).mockClear();
+    await worklist.openStudy(loaded!);
+    expect(loadSampleData).not.toHaveBeenCalled();
+    expect(setDataForAllViews).toHaveBeenLastCalledWith('image-1');
   });
 
   it('counts what the preview can actually show', () => {
