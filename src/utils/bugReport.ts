@@ -3,8 +3,10 @@
 import { useDatasetStore } from '@/src/store/datasets';
 import { useDICOMStore } from '@/src/store/datasets-dicom';
 import { useImageCacheStore } from '@/src/store/image-cache';
+import { useRendererHealthStore } from '@/src/store/renderer-health';
 import { useSegmentGroupStore } from '@/src/store/segmentGroups';
 import { COMPOUND_EXTENSIONS } from '@/src/utils/path';
+import { formatBytes } from '@/src/utils/webglInfo';
 import { Brand } from '@/src/branding';
 
 const MAX_ERROR_LENGTH = 4000;
@@ -68,6 +70,35 @@ const collectDatasetInfo = (): string[] => {
   });
 };
 
+const collectRendererInfo = (): string[] => {
+  const health = useRendererHealthStore();
+  const info = health.webglInfo;
+
+  const acceleration = info
+    ? `${info.softwareRendering ? 'software' : 'hardware'}, ${
+        info.webgl2 ? 'WebGL 2' : 'WebGL 1'
+      }`
+    : 'unknown';
+
+  return [
+    `  Status: ${health.status}${
+      health.failureReason ? ` (${health.failureReason})` : ''
+    }`,
+    `  Renderer: ${info?.renderer ?? 'unknown'} [${acceleration}]`,
+    `  Vendor: ${info?.vendor ?? 'unknown'}`,
+    `  Max texture size: ${info?.maxTextureSize ?? 'unknown'}`,
+    `  Texture memory in use: ${formatBytes(health.approxTextureBytes)}`,
+    `  Frames rendered: ${health.framesRendered}`,
+    `  Context losses: ${health.contextLostCount} (restored: ${health.contextRestoredCount})`,
+    `  Recovery attempts: ${health.recoveryAttempts}`,
+    `  Unhealthy views: ${
+      health.unhealthyViewIds.length
+        ? health.unhealthyViewIds.join(', ')
+        : 'none'
+    }`,
+  ];
+};
+
 export const generateBugReport = (error?: Error): string => {
   const versions = __VERSIONS__;
   const sha = __GIT_SHORT_SHA__;
@@ -87,6 +118,10 @@ export const generateBugReport = (error?: Error): string => {
   lines.push('', `Datasets: ${datasets.length}`);
   lines.push(...datasets);
   lines.push(`Save format: ${segmentGroupStore.saveFormat}`);
+
+  lines.push('', 'Renderer:');
+  lines.push(...collectRendererInfo());
+  lines.push('');
 
   lines.push('--- End Report ---');
 

@@ -16,10 +16,41 @@ export const LegacyThemes = new Map([
 ]);
 
 export const Messages = {
-  WebGLLost: {
-    title: 'Viewer Error',
+  RendererUnavailable: {
+    title: 'Rendering unavailable',
     details:
-      'Lost the WebGL context! Please reload the webpage. If the problem persists, you may need to restart your web browser.',
+      'Image display has stopped in one or more views. Do not interpret ' +
+      'affected views. Use the controls on the affected view to restore ' +
+      'rendering or reload the application.',
+  },
+  RendererRecovered: {
+    title: 'Rendering restored',
+    details:
+      'Image display has been restored. Camera, slice and window/level ' +
+      'settings were preserved.',
+  },
+  RendererUnrecoverable: {
+    title: 'Rendering could not be restored',
+    details:
+      'Image display could not be restored in place. Reload the application ' +
+      'to continue. Do not interpret the affected views.',
+  },
+} as const;
+
+/** Copy shown on top of a view whose renderer cannot be trusted. */
+export const RendererOverlayText = {
+  title: 'Rendering unavailable',
+  body: 'Image display has stopped. Do not interpret this view.',
+  restoring: 'Restoring rendering\u2026',
+  restoreAction: 'Restore rendering',
+  reloadAction: 'Reload application',
+  restoredTitle: 'Rendering restored',
+  restoredBody: 'This view is displaying live image data again.',
+  reasons: {
+    'context-lost': 'The graphics context was lost.',
+    'blank-frame':
+      'The view stopped producing image pixels while image data was loaded.',
+    stalled: 'The renderer stopped producing frames.',
   },
 } as const;
 

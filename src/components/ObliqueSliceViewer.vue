@@ -62,6 +62,10 @@
             :view-id="viewId"
             :view-direction="viewDirection"
           ></reslice-cursor-tool>
+          <renderer-health-overlay
+            :view-id="viewId"
+            :image-id="currentImageID"
+          />
           <slot></slot>
         </vtk-slice-view>
       </div>
@@ -78,7 +82,7 @@ import VtkSliceView from '@/src/components/vtk/VtkSliceView.vue';
 import { onVTKEvent } from '@/src/composables/onVTKEvent';
 import { useCurrentImage } from '@/src/composables/useCurrentImage';
 import { useViewAnimationListener } from '@/src/composables/useViewAnimationListener';
-import { useWebGLWatchdog } from '@/src/composables/useWebGLWatchdog';
+import RendererHealthOverlay from '@/src/components/RendererHealthOverlay.vue';
 import { OBLIQUE_OUTLINE_COLORS } from '@/src/constants';
 import { vtkFieldRef } from '@/src/core/vtk/vtkFieldRef';
 import useResliceCursorStore, {
@@ -117,7 +121,6 @@ const props = defineProps<Props>();
 const { viewId, outlineType, viewDirection, viewUp } = toRefs(props);
 const viewAxis = computed(() => getLPSAxisFromDir(viewDirection.value));
 
-useWebGLWatchdog(vtkView);
 useViewAnimationListener(vtkView, viewId, 'Oblique');
 
 // active tool

@@ -150,6 +150,11 @@
             :layer-reps="layerSliceReps"
             :segment-groups-reps="segSliceReps"
           ></scalar-probe>
+          <renderer-health-overlay
+            :view-id="viewId"
+            :image-id="currentImageID"
+            :axis="viewAxis"
+          />
           <slot></slot>
         </vtk-slice-view>
       </div>
@@ -183,7 +188,7 @@ import SliceViewerOverlay from '@/src/components/SliceViewerOverlay.vue';
 import { useToolSelectionStore } from '@/src/store/tools/toolSelection';
 import { useAnnotationToolStore, useToolStore } from '@/src/store/tools';
 import { doesToolFrameMatchViewAxis } from '@/src/composables/annotationTool';
-import { useWebGLWatchdog } from '@/src/composables/useWebGLWatchdog';
+import RendererHealthOverlay from '@/src/components/RendererHealthOverlay.vue';
 import { useSliceConfig } from '@/src/composables/useSliceConfig';
 import VtkSliceViewWindowManipulator from '@/src/components/vtk/VtkSliceViewWindowManipulator.vue';
 import VtkSliceViewSlicingManipulator from '@/src/components/vtk/VtkSliceViewSlicingManipulator.vue';
@@ -234,7 +239,6 @@ function resetCamera() {
 
 useResetViewsEvents().onClick(resetCamera);
 
-useWebGLWatchdog(vtkView);
 useViewAnimationListener(vtkView, viewId, '2D');
 
 // active tool

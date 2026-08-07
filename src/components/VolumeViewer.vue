@@ -24,6 +24,10 @@
           ></vtk-base-volume-representation>
           <vtk-orientation-marker></vtk-orientation-marker>
           <crop-tool :view-id="viewId" :image-id="currentImageID"></crop-tool>
+          <renderer-health-overlay
+            :view-id="viewId"
+            :image-id="currentImageID"
+          />
           <slot></slot>
         </vtk-volume-view>
       </div>
@@ -76,7 +80,7 @@ import { VtkViewApi } from '@/src/types/vtk-types';
 import VtkBaseVolumeRepresentation from '@/src/components/vtk/VtkBaseVolumeRepresentation.vue';
 import { useViewAnimationListener } from '@/src/composables/useViewAnimationListener';
 import CropTool from '@/src/components/tools/crop/CropTool.vue';
-import { useWebGLWatchdog } from '@/src/composables/useWebGLWatchdog';
+import RendererHealthOverlay from '@/src/components/RendererHealthOverlay.vue';
 import VtkOrientationMarker from '@/src/components/vtk/VtkOrientationMarker.vue';
 import ViewOverlayGrid from '@/src/components/ViewOverlayGrid.vue';
 import useVolumeColoringStore from '@/src/store/view-configs/volume-coloring';
@@ -117,7 +121,6 @@ function resetCamera() {
 
 useResetViewsEvents().onClick(resetCamera);
 
-useWebGLWatchdog(vtkView);
 useViewAnimationListener(vtkView, viewId, viewType);
 
 // base image
