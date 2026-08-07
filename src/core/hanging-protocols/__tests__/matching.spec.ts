@@ -86,6 +86,9 @@ describe('hanging protocol matching', () => {
     expect(checkPattern('((a*))+').safe).toBe(false);
     expect(checkPattern('(a{20})+').safe).toBe(false);
     expect(checkPattern('(a|b)*c').safe).toBe(false);
+    // Wrapping the alternation in another group does not make it cheaper.
+    expect(checkPattern('((a|a))+').safe).toBe(false);
+    expect(checkPattern('(((head|head)x))+').safe).toBe(false);
     expect(checkPattern('(head)\\1+').safe).toBe(false);
     expect(checkPattern('([').safe).toBe(false);
     expect(checkPattern('a'.repeat(300)).safe).toBe(false);

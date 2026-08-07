@@ -181,8 +181,11 @@ export function checkPattern(pattern: string): {
     } else if (char === ')') {
       // The validity check above guarantees the parentheses balance.
       closedGroup = stack.pop() ?? { risky: false, alternation: false };
-      // What was risky inside the group is risky inside its parent too.
+      // What was risky inside the group is risky inside its parent too, and
+      // an alternation stays an alternation however many groups are wrapped
+      // around it: `((a|a))+` backtracks exactly like `(a|a)+`.
       if (closedGroup.risky) top().risky = true;
+      if (closedGroup.alternation) top().alternation = true;
       index += 1;
     } else if (char === '|') {
       top().alternation = true;
