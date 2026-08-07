@@ -177,6 +177,33 @@ describe('useComparisonSync — slice ranges', () => {
     expect(sliceStore.getConfig(priorViewID, 'prior').slice).toBe(6);
     expect(sliceStore.getConfig(currentViewID, 'current').slice).toBe(6);
   });
+
+  it('keeps a scroll made while one pane filled the window', async () => {
+    seatImage('current', 8);
+    seatImage('prior', 8);
+    const { currentViewID, priorViewID } = openPair();
+    const sliceStore = useViewSliceStore();
+    const viewStore = useViewStore();
+    await nextTick();
+
+    // The reader enlarges the older study and scrolls it. Its partner is off
+    // screen, but the pair is the layout's, not the screen's.
+    viewStore.setActiveView(priorViewID);
+    viewStore.toggleActiveViewMaximized();
+    await nextTick();
+    sliceStore.updateConfig(priorViewID, 'prior', { min: 0, max: 7, slice: 6 });
+    await nextTick();
+    await nextTick();
+
+    expect(sliceStore.getConfig(currentViewID, 'current').slice).toBe(6);
+
+    viewStore.toggleActiveViewMaximized();
+    await nextTick();
+    await nextTick();
+
+    expect(sliceStore.getConfig(priorViewID, 'prior').slice).toBe(6);
+    expect(sliceStore.getConfig(currentViewID, 'current').slice).toBe(6);
+  });
 });
 
 describe('useComparisonSync — pane bindings', () => {
@@ -279,6 +306,37 @@ describe('useComparisonSync — pane bindings', () => {
       expect(viewStore.getView(priorViewID)?.dataID).toBe('prior');
     }
   );
+
+  it('keeps the two studies on their own sides across a layout switch', async () => {
+    const viewStore = useViewStore();
+    const comparison = useComparisonStore();
+    seatImage('current', 8);
+    seatImage('prior', 8);
+    viewStore.setNamedLayoutsFromConfig(ComparisonLayouts);
+    viewStore.switchToNamedLayout(ComparisonLayoutNames.pair);
+    comparison.setCurrentImageID('current');
+    comparison.setPriorImageID('prior');
+    scope.run(() => useComparisonSync());
+    await nextTick();
+
+    // Switching layouts replaces the view in a slot, and the replacement is
+    // built holding whatever its slot showed — the other role's study, in the
+    // slot the quad layout gives to the current one. Read as a reader's
+    // choice, that would trade the two studies over on every switch.
+    viewStore.switchToNamedLayout(ComparisonLayoutNames.quad);
+    await nextTick();
+    await nextTick();
+    viewStore.switchToNamedLayout(ComparisonLayoutNames.pair);
+    await nextTick();
+    await nextTick();
+
+    expect(comparison.currentImageID).toBe('current');
+    expect(comparison.priorImageID).toBe('prior');
+    const dataIn = (name: string) =>
+      viewStore.visibleViews.find((view) => view?.name === name)?.dataID;
+    expect(dataIn(ComparisonViewNames.currentAxial)).toBe('current');
+    expect(dataIn(ComparisonViewNames.priorAxial)).toBe('prior');
+  });
 
   it('refuses a cine dropped on a pane, as the study pickers do', async () => {
     const viewStore = useViewStore();

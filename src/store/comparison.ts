@@ -143,7 +143,7 @@ export const useComparisonStore = defineStore('comparison', () => {
   // layout name: loading a saved session restores the named views without
   // restoring `currentLayoutName`, so the name outlives what is displayed.
   const isComparisonLayout = computed(() =>
-    viewStore.visibleViews.some((view) => !!comparisonPaneSpec(view?.name))
+    viewStore.layoutViews.some((view) => !!comparisonPaneSpec(view?.name))
   );
 
   const current = computed(() =>
@@ -161,10 +161,17 @@ export const useComparisonStore = defineStore('comparison', () => {
       currentImageID.value !== priorImageID.value
   );
 
-  /** Layout slots that participate in the comparison, with their study. */
+  /**
+   * Layout slots that participate in the comparison, with their study.
+   *
+   * The layout's own views, not the ones on screen: maximizing a pane hides
+   * its partner but does not dissolve the pair, and a scroll made while one
+   * pane fills the window must still move the study it is being compared
+   * against.
+   */
   const panes = computed<ComparisonPane[]>(() => {
     if (!active.value) return [];
-    return viewStore.visibleViews.flatMap((view) => {
+    return viewStore.layoutViews.flatMap((view) => {
       const spec = comparisonPaneSpec(view?.name);
       if (!view || !spec) return [];
       // The name says which axis the pane is for; the view says which axis it

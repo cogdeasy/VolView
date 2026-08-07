@@ -149,8 +149,10 @@ export const useViewStore = defineStore('view', () => {
     );
   });
 
-  const visibleViews = computed(() => {
-    if (maximizedView.value) return [maximizedView.value];
+  // The views the layout is made of, whether or not one of them is currently
+  // filling the window. Maximizing is a way of looking at a layout, not a
+  // different layout.
+  const layoutViews = computed(() => {
     const views: ViewInfo[] = [];
     iterLayout(layout.value, (item) => {
       const viewId = layoutSlots.value[item.slotIndex];
@@ -158,6 +160,10 @@ export const useViewStore = defineStore('view', () => {
     });
     return views;
   });
+
+  const visibleViews = computed(() =>
+    maximizedView.value ? [maximizedView.value] : layoutViews.value
+  );
 
   const viewIDs = computed(() => Object.keys(viewByID));
 
@@ -273,8 +279,10 @@ export const useViewStore = defineStore('view', () => {
       // Named for what the view shows, not for the axis its comparison name
       // implied: the two agree in every layout the app builds, but a restored
       // manifest can pair them off, and a view left labelled for an axis it
-      // does not render is a caption the rest of the app would believe.
-      view.name = view.type === '2D' ? view.options.orientation : spec.axis;
+      // does not render is a caption the rest of the app would believe — an
+      // anatomical name on a volume no less than the wrong axis on a slice.
+      if (view.type === '2D') view.name = view.options.orientation;
+      else view.name = view.type === '3D' ? 'Volume' : 'Oblique';
     });
   }
 
@@ -447,6 +455,7 @@ export const useViewStore = defineStore('view', () => {
       return layout.value;
     }),
     visibleViews,
+    layoutViews,
     viewIDs,
     activeView,
     viewByID,
