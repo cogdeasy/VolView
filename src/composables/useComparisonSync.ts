@@ -197,11 +197,10 @@ export function useComparisonSync() {
       // would leave the marker unconsumed, and it would later swallow a
       // genuine scroll back onto the same slice. The marker is what the store
       // kept, not what was asked for, since the config clamps to its own
-      // range and an unmatched marker outlives the write.
-      echoes.set(
-        paneKey(target),
-        sliceStore.getConfig(target.viewID, target.imageID).slice
-      );
+      // range — and a write the clamp turned into a no-op moves nothing, so it
+      // leaves no marker to outlive it either.
+      const kept = sliceStore.getConfig(target.viewID, target.imageID).slice;
+      if (kept !== target.slice) echoes.set(paneKey(target), kept);
     });
   }
 

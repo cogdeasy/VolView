@@ -267,8 +267,9 @@ export const useViewStore = defineStore('view', () => {
     // A grid keeps the views that are already in its slots, so the names a
     // named layout gave them go back to plain orientations. Comparison panes
     // are recognised by name, and a hand-built grid is not a comparison.
-    Object.values(viewByID).forEach((view) => {
-      const spec = comparisonPaneSpec(view.name);
+    layoutSlots.value.forEach((viewID) => {
+      const view = viewByID[viewID];
+      const spec = view && comparisonPaneSpec(view.name);
       if (spec) view.name = spec.axis;
     });
     setLayout(generateLayoutFromGrid(gridSize));

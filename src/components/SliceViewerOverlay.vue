@@ -49,26 +49,29 @@ const isLockedOrientationView = computed(() =>
   LOCKED_ORIENTATION_SUFFIXES.some((suffix) => viewId.value.includes(suffix))
 );
 
-// Comparison panes carry their own study banner, so the annotations move down
-// out from under it and drop the now-duplicated series name. Their orientation
-// belongs to the layout: switching one would rename the view and quietly drop
-// the pane out of the pair.
+// A pane's orientation belongs to the comparison layout: switching its view
+// type renames the view, which quietly drops the pane out of the pair — so the
+// switcher goes as soon as the layout does, pair or no pair.
 const comparison = useComparisonStore();
 const viewStore = useViewStore();
 const isComparisonPane = computed(
-  () =>
-    comparison.active &&
-    !!comparisonPaneSpec(viewStore.getView(viewId.value)?.name)
+  () => !!comparisonPaneSpec(viewStore.getView(viewId.value)?.name)
+);
+
+// Only a live pair draws the study banner, which is what the annotations make
+// room for and what makes the series name here a duplicate.
+const hasPaneLabel = computed(
+  () => comparison.active && isComparisonPane.value
 );
 </script>
 
 <template>
   <view-overlay-grid
     class="overlay-no-events view-annotations"
-    :class="{ 'comparison-inset': isComparisonPane }"
+    :class="{ 'comparison-inset': hasPaneLabel }"
   >
     <template v-slot:top-left>
-      <div v-if="!isComparisonPane" class="annotation-cell">
+      <div v-if="!hasPaneLabel" class="annotation-cell">
         <span>{{ metadata.name }}</span>
       </div>
     </template>
