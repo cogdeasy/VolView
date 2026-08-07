@@ -192,6 +192,28 @@ describe('comparison store — pair selection', () => {
     expect(comparison.sliceOffsetFor('Axial')).toBe(0);
   });
 
+  it('nudges the axis on screen, not the one a malformed view is named for', () => {
+    const comparison = useComparisonStore();
+    const viewStore = useViewStore();
+    viewStore.setNamedLayoutsFromConfig(ComparisonLayouts);
+    viewStore.switchToNamedLayout(ComparisonLayoutNames.quad);
+    comparison.setCurrentImageID('img-a');
+    comparison.setPriorImageID('img-b');
+
+    // A restored view named for the coronal pair while rendering sagittal is
+    // no pane at all, so activating it says nothing about which pair the
+    // reader is correcting.
+    const coronal = viewStore.visibleViews.find(
+      (view) => view?.name === ComparisonViewNames.currentCoronal
+    )!;
+    if (coronal.type === '2D') coronal.options.orientation = 'Sagittal';
+    viewStore.setActiveView(coronal.id);
+
+    expect(comparison.nudgeAxis).toBe('Axial');
+    comparison.nudgeSliceOffset(2);
+    expect(comparison.sliceOffsetFor('Coronal')).toBe(0);
+  });
+
   it('claims no alignment when no pane is taking part', () => {
     const comparison = useComparisonStore();
     const viewStore = useViewStore();

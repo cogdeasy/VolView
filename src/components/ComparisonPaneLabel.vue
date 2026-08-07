@@ -85,6 +85,10 @@ const details = computed(() => {
   display: flex;
   align-items: baseline;
   column-gap: 10px;
+  /* The overlay indents its annotations by this same height, so the banner
+     keeps to it rather than growing into them. */
+  height: var(--comparison-banner-height);
+  box-sizing: border-box;
   padding: 3px 10px;
   border-bottom: 2px solid transparent;
   pointer-events: none;

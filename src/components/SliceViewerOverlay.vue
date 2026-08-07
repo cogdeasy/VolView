@@ -118,6 +118,6 @@ const hasPaneLabel = computed(
 <style scoped>
 .comparison-inset {
   box-sizing: border-box;
-  padding-top: 26px;
+  padding-top: var(--comparison-banner-height);
 }
 </style>

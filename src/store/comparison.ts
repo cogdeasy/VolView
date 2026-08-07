@@ -285,8 +285,7 @@ export const useComparisonStore = defineStore('comparison', () => {
    * falling back to the first pair on screen.
    */
   const nudgeAxis = computed<LPSAxis>(() => {
-    const activeName = viewStore.getView(viewStore.activeView)?.name;
-    const activeAxis = comparisonPaneSpec(activeName)?.axis;
+    const activeAxis = paneSpecFor(viewStore.activeView)?.axis;
     if (activeAxis && axesInUse.value.includes(activeAxis)) return activeAxis;
     return axesInUse.value[0] ?? 'Axial';
   });
