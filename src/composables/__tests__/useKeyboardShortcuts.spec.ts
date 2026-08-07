@@ -1,5 +1,31 @@
-import { describe, expect, it } from 'vitest';
-import { shouldIgnoreKeyboardShortcuts } from '../useKeyboardShortcuts';
+import { createPinia, setActivePinia } from 'pinia';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { nextTick } from 'vue';
+
+import { useWorklistStore } from '@/src/store/worklist';
+import {
+  shouldIgnoreKeyboardShortcuts,
+  useKeyboardShortcuts,
+} from '../useKeyboardShortcuts';
+
+const { invoked } = vi.hoisted(() => ({ invoked: [] as string[] }));
+
+vi.mock('../actions', () => ({
+  ACTION_TO_FUNC: new Proxy(
+    {},
+    {
+      get: (_target, action: string) => () => invoked.push(action),
+    }
+  ),
+}));
+
+/** Holds the key down long enough for the shortcut watcher to flush. */
+async function pressKey(key: string) {
+  window.dispatchEvent(new KeyboardEvent('keydown', { key }));
+  await nextTick();
+  window.dispatchEvent(new KeyboardEvent('keyup', { key }));
+  await nextTick();
+}
 
 describe('shouldIgnoreKeyboardShortcuts', () => {
   it('ignores shortcuts while an input is focused', () => {
@@ -21,5 +47,25 @@ describe('shouldIgnoreKeyboardShortcuts', () => {
   it('does not ignore shortcuts for non-editable controls', () => {
     const button = document.createElement('button');
     expect(shouldIgnoreKeyboardShortcuts(button)).toBe(false);
+  });
+});
+
+describe('useKeyboardShortcuts', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    invoked.length = 0;
+  });
+
+  it('does not reach the viewer while the worklist covers it', async () => {
+    const worklist = useWorklistStore();
+    useKeyboardShortcuts();
+    expect(worklist.visible).toBe(true);
+
+    await pressKey('z');
+    expect(invoked).toEqual([]);
+
+    worklist.hide();
+    await pressKey('z');
+    expect(invoked).toEqual(['zoom']);
   });
 });

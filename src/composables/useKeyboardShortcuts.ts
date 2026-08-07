@@ -3,6 +3,7 @@ import { useMagicKeys, whenever } from '@vueuse/core';
 
 import { getEntries } from '../utils';
 import { ACTION_TO_KEY } from '../config';
+import { useWorklistStore } from '../store/worklist';
 import { ACTION_TO_FUNC } from './actions';
 
 export const actionToKey = ref(ACTION_TO_KEY);
@@ -22,6 +23,7 @@ export function shouldIgnoreKeyboardShortcuts(
 
 export function useKeyboardShortcuts() {
   const keys = useMagicKeys();
+  const worklist = useWorklistStore();
   let unwatchFuncs = [] as Array<ReturnType<typeof whenever>>;
 
   watch(
@@ -34,7 +36,9 @@ export function useKeyboardShortcuts() {
         const lastKey = individualKeys[individualKeys.length - 1];
 
         return whenever(keys[key], () => {
-          if (shouldIgnoreKeyboardShortcuts()) {
+          // The worklist covers the viewer, so viewer actions — including
+          // destructive ones — must not reach the study behind it.
+          if (worklist.visible || shouldIgnoreKeyboardShortcuts()) {
             return;
           }
 
