@@ -87,6 +87,7 @@
             :manipulator-config="windowingManipulatorProps"
           ></vtk-slice-view-window-manipulator>
           <slice-viewer-overlay
+            v-if="showViewLabels"
             :view-id="viewId"
             :image-id="currentImageID"
           ></slice-viewer-overlay>
@@ -126,21 +127,23 @@
             :image-id="currentImageID"
             :view-direction="viewDirection"
           />
-          <polygon-tool
-            :view-id="viewId"
-            :image-id="currentImageID"
-            :view-direction="viewDirection"
-          />
-          <ruler-tool
-            :view-id="viewId"
-            :image-id="currentImageID"
-            :view-direction="viewDirection"
-          />
-          <rectangle-tool
-            :view-id="viewId"
-            :image-id="currentImageID"
-            :view-direction="viewDirection"
-          />
+          <template v-if="showAnnotations">
+            <polygon-tool
+              :view-id="viewId"
+              :image-id="currentImageID"
+              :view-direction="viewDirection"
+            />
+            <ruler-tool
+              :view-id="viewId"
+              :image-id="currentImageID"
+              :view-direction="viewDirection"
+            />
+            <rectangle-tool
+              :view-id="viewId"
+              :image-id="currentImageID"
+              :view-direction="viewDirection"
+            />
+          </template>
           <select-tool />
           <svg class="overlay-no-events">
             <bounding-rectangle :points="selectionPoints" />
@@ -194,6 +197,7 @@ import vtkMouseCameraTrackballZoomToMouseManipulator from '@kitware/vtk.js/Inter
 import { useResetViewsEvents } from '@/src/components/tools/ResetViews.vue';
 import { onVTKEvent } from '@/src/composables/onVTKEvent';
 import { useViewStore } from '@/src/store/views';
+import { useHangingProtocolStore } from '@/src/store/hanging-protocols';
 import { ViewInfo2D } from '@/src/types/views';
 import { get2DViewingVectors } from '@/src/utils/getViewingVectors';
 
@@ -211,6 +215,13 @@ const { viewId } = toRefs(props);
 
 const viewStore = useViewStore();
 const viewInfo = computed(() => viewStore.getView(viewId.value) as ViewInfo2D);
+
+// Chrome visibility is part of the applied hanging protocol.
+const hangingProtocolStore = useHangingProtocolStore();
+const showViewLabels = computed(() => hangingProtocolStore.overlays.viewLabels);
+const showAnnotations = computed(
+  () => hangingProtocolStore.overlays.annotations
+);
 
 // base image
 const {

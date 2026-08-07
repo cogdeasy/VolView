@@ -54,6 +54,7 @@ import ServerModule from './ServerModule.vue';
 import ProbeView from './ProbeView.vue';
 import { useToolStore } from '../store/tools';
 import { Tools } from '../store/tools/types';
+import { useHangingProtocolStore } from '../store/hanging-protocols';
 
 type Module = {
   name: string;
@@ -105,6 +106,15 @@ export default defineComponent({
       (newTool) => {
         if (autoSwitchToAnnotationsTools.includes(newTool))
           selectedModule.value = 'Annotations';
+      }
+    );
+
+    // An applied hanging protocol decides which module the reader lands on.
+    const hangingProtocolStore = useHangingProtocolStore();
+    watch(
+      () => hangingProtocolStore.focusedModule,
+      (module) => {
+        if (module) selectedModule.value = module;
       }
     );
 

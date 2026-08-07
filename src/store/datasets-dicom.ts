@@ -45,6 +45,9 @@ export type VolumeInfo = {
   SeriesInstanceUID: string;
   SeriesNumber: string;
   SeriesDescription: string;
+  // Optional: not every archive populates (0018,0015), and saved state that
+  // predates the field will not carry it.
+  BodyPartExamined?: string;
   WindowLevel: string;
   WindowWidth: string;
   // For 'cine', NumberOfSlices is the frame count. Optional for back-compat
@@ -206,6 +209,7 @@ export const useDICOMStore = defineStore('dicom', {
             SeriesInstanceUID: metadata[Tags.SeriesInstanceUID],
             SeriesNumber: metadata[Tags.SeriesNumber],
             SeriesDescription: metadata[Tags.SeriesDescription],
+            BodyPartExamined: metadata[Tags.BodyPartExamined],
             WindowLevel: metadata[Tags.WindowLevel],
             WindowWidth: metadata[Tags.WindowWidth],
             kind: 'volume',

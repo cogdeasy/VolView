@@ -13,6 +13,8 @@ import MessageCenter from '@/src/components/MessageCenter.vue';
 import { MessageType, useMessageStore } from '@/src/store/messages';
 import { ConnectionState, useServerStore } from '@/src/store/server';
 import LayoutSelector from '@/src/components/LayoutSelector.vue';
+import HangingProtocolManager from '@/src/components/HangingProtocolManager.vue';
+import { useHangingProtocolStore } from '@/src/store/hanging-protocols';
 
 interface Props {
   hasData: boolean;
@@ -84,6 +86,8 @@ function useServerConnection() {
 
 const settingsDialog = ref(false);
 const messageDialog = ref(false);
+const hangingProtocolStore = useHangingProtocolStore();
+const { managerOpen: protocolDialog } = storeToRefs(hangingProtocolStore);
 const { icon: connIcon, url: serverUrl } = useServerConnection();
 const { handleSave, saveDialog, isSaving } = useSaveControls();
 const { count: msgCount, badgeColor: msgBadgeColor } = useMessageBubble();
@@ -125,6 +129,13 @@ const { count: msgCount, badgeColor: msgBadgeColor } = useMessageBubble();
         </v-card-text>
       </v-card>
     </v-menu>
+    <control-button
+      size="40"
+      icon="mdi-view-dashboard-variant"
+      name="Hanging protocols"
+      data-testid="open-hanging-protocols"
+      @click="protocolDialog = true"
+    />
     <controls-strip-tools v-if="hasData" />
     <v-spacer />
     <control-button
@@ -169,6 +180,10 @@ const { count: msgCount, badgeColor: msgBadgeColor } = useMessageBubble();
 
   <closeable-dialog v-model="settingsDialog">
     <settings />
+  </closeable-dialog>
+
+  <closeable-dialog v-model="protocolDialog" max-width="1200px">
+    <hanging-protocol-manager />
   </closeable-dialog>
 </template>
 

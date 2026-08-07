@@ -19,6 +19,7 @@ const tags: Tag[] = [
   { name: 'SeriesInstanceUID', tag: '0020|000e' },
   { name: 'SeriesNumber', tag: '0020|0011' },
   { name: 'SeriesDescription', tag: '0008|103e' },
+  { name: 'BodyPartExamined', tag: '0018|0015' },
   { name: 'WindowLevel', tag: '0028|1050' },
   { name: 'WindowWidth', tag: '0028|1051' },
   { name: 'Rows', tag: '0028|0010' },
