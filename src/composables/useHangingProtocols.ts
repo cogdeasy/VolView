@@ -62,11 +62,36 @@ export function useHangingProtocolAutoApply() {
         store.reportForImage(imageID);
         return;
       }
-      hung.add(imageID);
-      hangingFor = imageID;
-      store.applyForImage(imageID);
+      // Only a study a protocol actually hung counts as hung: with automatic
+      // hanging off, or with nothing matching, the views were left alone and
+      // the study must still be hangable later.
+      if (store.applyForImage(imageID)) {
+        hung.add(imageID);
+        hangingFor = imageID;
+      }
     },
     { immediate: true }
+  );
+
+  // Turning automatic hanging on hangs what is already on screen, rather than
+  // leaving the reader with an unhung study and no way to trigger one short of
+  // reloading it.
+  watch(
+    () => store.settings.autoApply,
+    (on) => {
+      const imageID = currentImageID.value;
+      if (!on || !imageID || imageID !== appliedFor || hung.has(imageID))
+        return;
+      if (store.reportRestoredPresentation(imageID)) return;
+      if (!store.applyForImage(imageID)) return;
+      hung.add(imageID);
+      hangingFor = imageID;
+      // The image is already loaded, so the phase that waits on pixel data
+      // will not run again on its own.
+      if (isImageLoading.value) return;
+      finalizedFor = imageID;
+      store.applyLoadedImageSettings(imageID);
+    }
   );
 
   const autoRangesReady = computed(() =>

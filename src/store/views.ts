@@ -149,8 +149,8 @@ export const useViewStore = defineStore('view', () => {
     );
   });
 
-  const visibleViews = computed(() => {
-    if (maximizedView.value) return [maximizedView.value];
+  /** The views of the layout itself, whether or not one is maximized. */
+  const layoutViews = computed(() => {
     const views: ViewInfo[] = [];
     iterLayout(layout.value, (item) => {
       const viewId = layoutSlots.value[item.slotIndex];
@@ -158,6 +158,10 @@ export const useViewStore = defineStore('view', () => {
     });
     return views;
   });
+
+  const visibleViews = computed(() =>
+    maximizedView.value ? [maximizedView.value] : layoutViews.value
+  );
 
   const viewIDs = computed(() => Object.keys(viewByID));
 
@@ -439,6 +443,8 @@ export const useViewStore = defineStore('view', () => {
       return layout.value;
     }),
     visibleViews,
+    layout: computed<Layout>(() => layout.value),
+    layoutViews,
     viewIDs,
     activeView,
     viewByID,

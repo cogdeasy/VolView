@@ -78,7 +78,12 @@ watch(
 /** Set while a click is waiting on the reader to confirm losing their edits. */
 const pendingSelection = ref<string | null>(null);
 
-const select = (id: string) => {
+/**
+ * The only way the selection changes: creating, duplicating, importing and
+ * deleting all open a protocol too, and each of those would re-clone the
+ * draft and drop edits in progress.
+ */
+const select = (id: string | null) => {
   if (id === selectedId.value) return;
   // Switching re-clones the draft, so unsaved edits would go without a word.
   if (dirty.value) {
@@ -119,7 +124,7 @@ const createFromCurrentView = () => {
     currentImageID.value
   );
   store.addProtocol(protocol);
-  selectedId.value = protocol.id;
+  select(protocol.id);
   messageStore.addSuccess(
     'Captured the current view as a new protocol, first in precedence'
   );
@@ -136,13 +141,15 @@ const captureLayoutIntoDraft = () => {
 
 const duplicate = (id: string) => {
   const copy = store.duplicateProtocol(id);
-  if (copy) selectedId.value = copy.id;
+  if (copy) select(copy.id);
 };
 
 const remove = (id: string) => {
   store.removeProtocol(id);
+  // The draft of a deleted protocol has nothing left to be saved against, so
+  // this never has to ask about discarding it.
   if (selectedId.value === id) {
-    selectedId.value = protocols.value[0]?.id ?? null;
+    select(protocols.value[0]?.id ?? null);
   }
 };
 
@@ -168,7 +175,7 @@ const onImportFile = async (event: Event) => {
     messageStore.addSuccess(
       `Imported ${added.length} protocol${added.length === 1 ? '' : 's'}`
     );
-    if (added.length) selectedId.value = added[added.length - 1].id;
+    if (added.length) select(added[added.length - 1].id);
   } catch (err) {
     messageStore.addError(
       err instanceof ProtocolParseError

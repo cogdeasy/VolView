@@ -478,8 +478,9 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
    * already hung: the arrangement they have made since is theirs to keep.
    */
   function reportForImage(imageID: Maybe<string>) {
-    if (!settings.value.autoApply) return;
-    if (!isMatchable(imageID)) {
+    // With automatic hanging off, or on data that cannot match, no protocol
+    // owns this study — and the previous study's must not be left on screen.
+    if (!settings.value.autoApply || !isMatchable(imageID)) {
       applied.value = null;
       resetPresentationChrome();
       return;
@@ -568,11 +569,14 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     const windowingStore = useWindowingStore();
     const coloringStore = useVolumeColoringStore();
 
-    // `visibleViews` is pushed in the same depth-first order in which
+    // The layout itself, not the visible one: maximizing a view collapses the
+    // visible layout to that single pane, and capturing then would store a
+    // one-view protocol instead of the arrangement the reader built.
+    // `layoutViews` is pushed in the same depth-first order in which
     // `parseLayoutConfig` assigns slot indices, so slot index indexes it.
-    const slotViews = viewStore.visibleViews;
+    const slotViews = viewStore.layoutViews;
     const layout = layoutToConfig(
-      viewStore.visibleLayout,
+      viewStore.layout,
       (slotIndex) => slotViews[slotIndex]
     );
 
@@ -655,6 +659,9 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     }
     if (applied.value?.protocolId === id) {
       applied.value = null;
+      // Its overlay flags and focused module would otherwise stay in force
+      // with no indicator left to explain them.
+      resetPresentationChrome();
     }
     // Drop the studies that were pinned to it, so they hang by rule again.
     settings.value.overrides = Object.fromEntries(

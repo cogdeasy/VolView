@@ -30,6 +30,28 @@ const layoutSignature = (layout: LayoutConfig) => {
   return JSON.stringify([tree, views.map((view) => [view.type, view.options])]);
 };
 
+// The named layouts are fixed for the life of the app, but this runs for
+// every protocol row in the manager and in the indicator's switch menu, and
+// again on every apply. Their signatures are computed once per set.
+const namedSignatures = new WeakMap<
+  Record<string, LayoutConfig>,
+  Array<[string, string]>
+>();
+
+const signaturesOf = (named: Record<string, LayoutConfig>) => {
+  const cached = namedSignatures.get(named);
+  if (cached) return cached;
+  const signatures = Object.keys(named).flatMap((name): [string, string][] => {
+    try {
+      return [[name, layoutSignature(named[name])]];
+    } catch {
+      return [];
+    }
+  });
+  namedSignatures.set(named, signatures);
+  return signatures;
+};
+
 /** The named layout equal to this one, if any. */
 export function findNamedLayout(
   layout: LayoutConfig,
@@ -38,9 +60,9 @@ export function findNamedLayout(
   try {
     const signature = layoutSignature(layout);
     return (
-      Object.keys(named).find(
-        (name) => layoutSignature(named[name]) === signature
-      ) ?? null
+      signaturesOf(named).find(
+        ([, candidate]) => candidate === signature
+      )?.[0] ?? null
     );
   } catch {
     return null;
