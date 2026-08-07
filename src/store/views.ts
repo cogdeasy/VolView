@@ -154,7 +154,10 @@ export const useViewStore = defineStore('view', () => {
     const views: ViewInfo[] = [];
     iterLayout(layout.value, (item) => {
       const viewId = layoutSlots.value[item.slotIndex];
-      views.push(viewByID[viewId]);
+      // A slot can outlive the view it names while a layout is being swapped;
+      // callers index this by slot, so drop the hole rather than hand them one.
+      const view = viewByID[viewId];
+      if (view) views.push(view);
     });
     return views;
   });
@@ -162,6 +165,10 @@ export const useViewStore = defineStore('view', () => {
   const visibleViews = computed(() =>
     maximizedView.value ? [maximizedView.value] : layoutViews.value
   );
+
+  /** The view in a layout slot, or null if the slot names no live view. */
+  const getViewForSlot = (slotIndex: number) =>
+    viewByID[layoutSlots.value[slotIndex]] ?? null;
 
   const viewIDs = computed(() => Object.keys(viewByID));
 
@@ -453,6 +460,7 @@ export const useViewStore = defineStore('view', () => {
     namedLayouts,
     currentLayoutName,
     getView,
+    getViewForSlot,
     getAllViews,
     getViewsForData,
     replaceView,

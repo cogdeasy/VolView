@@ -83,10 +83,14 @@ export function readStoredProtocols(raw: string): HangingProtocol[] {
     if (!Array.isArray(parsed)) return cloneBuiltIns();
     // An empty list is a list the reader emptied on purpose; only an unusable
     // stored value falls back to the shipped protocols.
-    return parsed
+    const kept = parsed
       .map((entry) => hangingProtocol.safeParse(entry))
       .filter((result) => result.success)
       .map((result) => result.data);
+    // A stored list that had entries but kept none is a schema the code no
+    // longer understands, not a reader's choice: leaving them with nothing at
+    // all would be worse than the shipped protocols.
+    return kept.length || !parsed.length ? kept : cloneBuiltIns();
   } catch {
     return cloneBuiltIns();
   }
@@ -628,18 +632,26 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     // The layout itself, not the visible one: maximizing a view collapses the
     // visible layout to that single pane, and capturing then would store a
     // one-view protocol instead of the arrangement the reader built.
-    // `layoutViews` is pushed in the same depth-first order in which
-    // `parseLayoutConfig` assigns slot indices, so slot index indexes it.
     const slotViews = viewStore.layoutViews;
     const layout = layoutToConfig(
       viewStore.layout,
-      (slotIndex) => slotViews[slotIndex]
+      (slotIndex) => viewStore.getViewForSlot(slotIndex) ?? undefined
     );
 
-    const activeViewID = viewStore.activeView ?? slotViews[0]?.id;
+    // The window comes from a view that has one. A volume view is never
+    // windowed, so with the 3D pane active the store would hand back a
+    // synthesized default and the protocol would record a window the reader
+    // never chose.
+    const activeView = slotViews.find(
+      (view) => view.id === viewStore.activeView
+    );
+    const windowedView =
+      activeView && activeView.type !== '3D'
+        ? activeView
+        : slotViews.find((view) => view.type !== '3D');
     const wlConfig =
-      activeViewID && imageID
-        ? windowingStore.getConfig(activeViewID, imageID)
+      windowedView && imageID
+        ? windowingStore.getConfig(windowedView.id, imageID)
         : null;
     const matchedPreset =
       wlConfig?.width !== undefined && wlConfig?.level !== undefined
@@ -772,8 +784,11 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     const fresh = new Map(
       cloneBuiltIns().map((protocol) => [protocol.id, protocol])
     );
-    const restored = protocols.value.map(
-      (protocol) => fresh.get(protocol.id) ?? protocol
+    // Only a protocol still marked built-in is replaced. An imported file can
+    // carry a built-in's id (import only re-mints ids that are taken), and a
+    // protocol the reader authored is not ours to overwrite.
+    const restored = protocols.value.map((protocol) =>
+      protocol.builtIn ? (fresh.get(protocol.id) ?? protocol) : protocol
     );
     const present = new Set(protocols.value.map((protocol) => protocol.id));
     const missing = cloneBuiltIns().filter(

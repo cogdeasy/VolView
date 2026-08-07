@@ -80,6 +80,13 @@ describe('hanging protocol matching', () => {
     expect(checkPattern('(a[+])+').safe).toBe(true);
     expect(checkPattern('(x{2}y)?').safe).toBe(true);
     expect(checkPattern('(?:CTA?) head').safe).toBe(true);
+    // An optional group runs at most once, so what is inside it cannot
+    // compound: these are the shapes a reader actually writes.
+    expect(checkPattern('(head|brain)?').safe).toBe(true);
+    expect(checkPattern('(cta|angio)?\\s*head').safe).toBe(true);
+    // But an optional group is still a repetition to whatever repeats it.
+    expect(checkPattern('((head|brain)?)+').safe).toBe(false);
+    expect(checkPattern('(a?b?)+c').safe).toBe(false);
 
     expect(checkPattern('(a+)+$').safe).toBe(false);
     expect(checkPattern('(x|x*)*y').safe).toBe(false);

@@ -72,6 +72,13 @@ interface Quantifier {
   length: number;
   /** Whether it can repeat enough times to blow up when nested. */
   risky: boolean;
+  /**
+   * Whether it can run the thing it quantifies more than once. `?` cannot:
+   * it doubles the paths through the pattern and no more, so an optional
+   * group is safe however that group is built. It still counts as `risky`
+   * inside a group, because `(a?b?)+` does blow up.
+   */
+  repeats: boolean;
 }
 
 /** Reads `*`, `+`, `?` or `{n,m}` at `index`, if one starts there. */
@@ -79,9 +86,13 @@ function readQuantifier(pattern: string, index: number): Quantifier | null {
   const char = pattern[index];
   let length = 0;
   let risky = true;
+  let repeats = true;
 
-  if (char === '*' || char === '+' || char === '?') {
+  if (char === '*' || char === '+') {
     length = 1;
+  } else if (char === '?') {
+    length = 1;
+    repeats = false;
   } else if (char === '{') {
     const close = pattern.indexOf('}', index);
     if (close === -1) return null;
@@ -91,13 +102,14 @@ function readQuantifier(pattern: string, index: number): Quantifier | null {
     // `{n}` repeats exactly n times; `{n,}` has no ceiling at all.
     const ceiling = max === undefined ? min : max;
     risky = ceiling === '' || Number(ceiling) > SMALL_REPEAT;
+    repeats = risky;
     length = close - index + 1;
   }
 
   if (!length) return null;
   // A lazy quantifier backtracks just as badly as a greedy one.
   if (pattern[index + length] === '?') length += 1;
-  return { length, risky };
+  return { length, risky, repeats };
 }
 
 /** Consumes the `?:`, `?=`, `?<name>` etc. that follows a `(`. */
@@ -123,12 +135,14 @@ interface GroupFrame {
  * protocol for every study and on every render of the manager list, so one
  * `(a+)+` would freeze the tab.
  *
- * The rule is: a group that is itself repeated, and that contains either an
- * unbounded repetition or an alternation, is refused. Character classes are
- * skipped, so `(a[+])+` and `(x{2}y)?` stay usable. This is deliberately
- * conservative rather than exact — it refuses some harmless patterns, and it
- * cannot prove the ones it accepts are linear. A production version would run
- * patterns on a linear-time engine (RE2) and drop the heuristic entirely.
+ * The rule is: a group that is repeated more than once, and that contains
+ * either an unbounded repetition or an alternation, is refused. An optional
+ * group is not a repetition — `(head|brain)?` only doubles the paths through
+ * the pattern — so it stays usable, as do character classes: `(a[+])+` and
+ * `(x{2}y)?` are fine. This is deliberately conservative rather than exact —
+ * it still refuses some harmless patterns, and it cannot prove the ones it
+ * accepts are linear. A production version would run patterns on a
+ * linear-time engine (RE2) and drop the heuristic entirely.
  */
 export function checkPattern(pattern: string): {
   safe: boolean;
@@ -194,7 +208,7 @@ export function checkPattern(pattern: string): {
     } else {
       const quantifier = readQuantifier(pattern, index);
       if (
-        quantifier?.risky &&
+        quantifier?.repeats &&
         (closedGroup?.risky || closedGroup?.alternation)
       ) {
         return {

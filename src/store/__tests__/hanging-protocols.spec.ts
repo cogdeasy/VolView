@@ -28,6 +28,12 @@ describe('stored protocol list', () => {
     expect(protocols).toHaveLength(1);
     expect(protocols[0].id).toBe(BUILT_IN_PROTOCOLS[0].id);
   });
+
+  it('falls back to the built-ins when no stored entry parses', () => {
+    // A schema the code no longer understands, rather than an emptied list.
+    const stored = JSON.stringify([{ id: 'broken' }, { id: 'also-broken' }]);
+    expect(readStoredProtocols(stored)).toHaveLength(BUILT_IN_PROTOCOLS.length);
+  });
 });
 
 describe('restoring the shipped protocols', () => {
@@ -49,6 +55,19 @@ describe('restoring the shipped protocols', () => {
     expect(store.getProtocol(BUILT_IN_PROTOCOLS[0].id)?.name).toBe(
       BUILT_IN_PROTOCOLS[0].name
     );
+  });
+
+  it('leaves an authored protocol under a built-in id alone', () => {
+    const store = useHangingProtocolStore();
+    // What importing an edited copy of a deleted built-in leaves behind.
+    store.updateProtocol(BUILT_IN_PROTOCOLS[0].id, {
+      name: 'Mine',
+      builtIn: false,
+    });
+
+    store.restoreBuiltIns();
+
+    expect(store.getProtocol(BUILT_IN_PROTOCOLS[0].id)?.name).toBe('Mine');
   });
 
   it('brings back a built-in the reader deleted', () => {
