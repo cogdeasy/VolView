@@ -7,11 +7,13 @@ import vtkImageData from '@kitware/vtk.js/Common/DataModel/ImageData';
 import { useFindingsStore } from '@/src/store/findings';
 import { useImageCacheStore } from '@/src/store/image-cache';
 import { useFindingsUIStore } from '@/src/store/findings-ui';
+import { usePolygonStore } from '@/src/store/tools/polygons';
 import { useRulerStore } from '@/src/store/tools/rulers';
 import { AnnotationToolType } from '@/src/store/tools/types';
 import { ManifestSchema } from '@/src/io/state-file/schema';
 import { migrateManifest } from '@/src/io/state-file/migrations';
 import { MANIFEST_VERSION } from '@/src/io/state-file/serialize';
+import type { Vector3 } from '@kitware/vtk.js/types';
 import type { FileEntry } from '@/src/io/types';
 import type { ToolID } from '@/src/types/annotation-tool';
 
@@ -42,6 +44,27 @@ const addRuler = (imageID: string, labelName = 'Lesion') => {
   store.updateRuler(id, { labelName });
   return id;
 };
+
+// Merging requires the same plane, and the store compares those by identity.
+const SLICE_PLANE = {
+  planeNormal: [0, 0, 1] as Vector3,
+  planeOrigin: [0, 0, 5] as Vector3,
+};
+
+/** A square in the z = 5 plane, offset along x so two of them overlap. */
+const addPolygon = (imageID: string, x: number) =>
+  usePolygonStore().addTool({
+    imageID,
+    points: [
+      [x, 0, 5],
+      [x + 3, 0, 5],
+      [x + 3, 3, 5],
+      [x, 3, 5],
+    ],
+    frameOfReference: SLICE_PLANE,
+    slice: 5,
+    placing: false,
+  });
 
 const serializeFindings = async () => {
   const zip = new JSZip();
@@ -215,6 +238,40 @@ describe('findings store', () => {
 
     expect(store.findings).toHaveLength(1);
     expect(store.impression).toBe('Mildly dilated left ventricle.');
+  });
+
+  it('follows a promoted polygon into the shape it was merged into', () => {
+    const polygonStore = usePolygonStore();
+    const first = addPolygon('image-1', 0);
+    const second = addPolygon('image-1', 2);
+    const store = useFindingsStore();
+    const id = store.promoteMeasurement(AnnotationToolType.Polygon, first)!;
+
+    polygonStore.mergeWithOtherTools(second);
+
+    const merged = polygonStore.toolIDs.find(
+      (toolID) => toolID !== first && toolID !== second
+    );
+    expect(store.findingByID[id].measurements).toEqual([
+      { toolType: AnnotationToolType.Polygon, toolID: merged },
+    ]);
+    expect(store.liveMeasurements(store.findingByID[id])).toHaveLength(1);
+  });
+
+  it('leaves one measurement when a finding owned both merged shapes', () => {
+    const polygonStore = usePolygonStore();
+    const first = addPolygon('image-1', 0);
+    const second = addPolygon('image-1', 2);
+    const store = useFindingsStore();
+    const id = store.promoteMeasurement(AnnotationToolType.Polygon, first)!;
+    store.attachMeasurement(id, {
+      toolType: AnnotationToolType.Polygon,
+      toolID: second,
+    });
+
+    polygonStore.mergeWithOtherTools(second);
+
+    expect(store.findingByID[id].measurements).toHaveLength(1);
   });
 
   it('reorders a finding past a sibling, skipping other images', () => {

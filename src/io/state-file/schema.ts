@@ -468,6 +468,9 @@ const FindingCategoryScale = z.enum([
 /** Archive directory holding the findings' key images. */
 export const KEY_IMAGE_DIR = 'findings';
 
+/** The key images of that directory, and nothing else that may join them. */
+export const KEY_IMAGE_PATH_RE = new RegExp(`^${KEY_IMAGE_DIR}/[^/]+\\.png$`);
+
 export const FindingTypeRecord = z.object({
   id: z.string(),
   label: z.string(),

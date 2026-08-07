@@ -9,6 +9,7 @@ import { AnnotationToolType } from '@/src/store/tools/types';
 import { POLYGON_LABEL_DEFAULTS } from '@/src/config';
 import { Manifest, StateFile } from '@/src/io/state-file/schema';
 import { getPlaneTransforms } from '@/src/utils/frameOfReference';
+import { notifyAnnotationsReplaced } from '@/src/core/annotations/replacement';
 import { ToolID } from '@/src/types/annotation-tool';
 import { defineAnnotationToolStore } from '@/src/utils/defineAnnotationToolStore';
 import {
@@ -168,8 +169,16 @@ export const usePolygonStore = defineAnnotationToolStore('polygon', () => {
 
   function mergeTools(mergeGroup: Tool[]) {
     const mergedTool = mergePolygons(mergeGroup);
-    toolAPI.addTool(mergedTool);
-    mergeGroup.map(({ id }) => id).forEach(toolAPI.removeTool);
+    const replacementID = toolAPI.addTool(mergedTool);
+    const replacedIDs = mergeGroup.map(({ id }) => id);
+    // Announced before the removals, so a holder of one of these ids follows
+    // it to the merged polygon instead of watching its measurement disappear.
+    notifyAnnotationsReplaced({
+      toolType: AnnotationToolType.Polygon,
+      replacedIDs,
+      replacementID,
+    });
+    replacedIDs.forEach(toolAPI.removeTool);
   }
 
   function mergeSelectedTools() {

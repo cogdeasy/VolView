@@ -9,6 +9,7 @@ import { AnnotationToolType } from '@/src/store/tools/types';
 import { onImageDeleted } from '@/src/composables/onImageDeleted';
 import { declareManifestRefs } from '@/src/core/manifestRefs';
 import { applyLocator } from '@/src/core/annotations/locator';
+import { onAnnotationsReplaced } from '@/src/core/annotations/replacement';
 import { isRecord, removeFromArray } from '@/src/utils';
 import { KEY_IMAGE_DIR } from '@/src/io/state-file/schema';
 import type { Manifest, StateFile } from '@/src/io/state-file/schema';
@@ -22,10 +23,7 @@ import type {
   FindingType,
 } from '@/src/types/finding';
 import { BUILTIN_FINDING_TYPES } from '@/src/core/findings/taxonomy';
-import {
-  centroid,
-  lateralityFromPoints,
-} from '@/src/core/findings/measurements';
+import { lateralityFromPoints } from '@/src/core/findings/measurements';
 
 const keyImagePath = (id: FindingID) => `${KEY_IMAGE_DIR}/${id}.png`;
 
@@ -231,9 +229,6 @@ export const useFindingsStore = defineStore('findings', () => {
   const measurementPoints = (finding: Finding) =>
     finding.measurements.flatMap(getToolPoints);
 
-  const measurementCentroid = (finding: Finding) =>
-    centroid(measurementPoints(finding));
-
   // --- taxonomy --- //
 
   function upsertFindingType(type: FindingType) {
@@ -297,6 +292,28 @@ export const useFindingsStore = defineStore('findings', () => {
     // study's summary into the next study's report.
     if (doomed.length > 0 && findingIDs.value.length === 0)
       impression.value = '';
+  });
+
+  // Merging annotations mints a new tool and drops its sources, so a finding
+  // that owned one follows the geometry rather than losing the measurement.
+  onAnnotationsReplaced(({ toolType, replacedIDs, replacementID }) => {
+    const replaced = new Set<ToolID>(replacedIDs);
+    findingIDs.value.forEach((id) => {
+      const finding = findingByID.value[id];
+      if (
+        !finding.measurements.some(
+          (m) => m.toolType === toolType && replaced.has(m.toolID)
+        )
+      )
+        return;
+      const kept = finding.measurements.filter(
+        (m) => !(m.toolType === toolType && replaced.has(m.toolID))
+      );
+      // One entry however many of the merged shapes this finding owned.
+      updateFinding(id, {
+        measurements: [...kept, { toolType, toolID: replacementID }],
+      });
+    });
   });
 
   // --- serialization --- //
@@ -444,7 +461,6 @@ export const useFindingsStore = defineStore('findings', () => {
     promoteMeasurement,
     jumpToFinding,
     setKeyImage,
-    measurementCentroid,
     measurementPoints,
     liveMeasurements,
     getToolPoints,

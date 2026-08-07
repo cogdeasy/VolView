@@ -2,15 +2,6 @@ import type { Vector3 } from '@kitware/vtk.js/types';
 import { mat3, vec3 } from 'gl-matrix';
 import type { Laterality } from '@/src/types/finding';
 
-export type MeasurementQuantity = {
-  label: string;
-  value: number;
-  units: string;
-};
-
-export const formatQuantity = (quantity: MeasurementQuantity) =>
-  `${quantity.value.toFixed(2)} ${quantity.units}`;
-
 export function distance(a: Vector3, b: Vector3) {
   return vec3.distance(a as vec3, b as vec3);
 }

@@ -9,7 +9,7 @@ import { useViewStore } from '@/src/store/views';
 import {
   FindingRecord,
   FindingTypeRecord,
-  KEY_IMAGE_DIR,
+  KEY_IMAGE_PATH_RE,
   Manifest,
   ManifestSchema,
   ParentToLayers,
@@ -134,9 +134,7 @@ function dropUnreferencedKeyImages(
   zip
     .filter(
       (path, file) =>
-        !file.dir &&
-        path.startsWith(`${KEY_IMAGE_DIR}/`) &&
-        !referenced.has(path)
+        !file.dir && KEY_IMAGE_PATH_RE.test(path) && !referenced.has(path)
     )
     .forEach((file) => zip.remove(file.name));
 }
