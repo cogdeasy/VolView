@@ -9,6 +9,6 @@ import { Brand } from '@/src/branding';
 export function useBrandLogoColor(): ComputedRef<string> {
   const theme = useTheme();
   return computed(() =>
-    theme.current.value.dark ? '#ffffff' : Brand.colors.primary
+    theme.current.value.dark ? Brand.colors.onDark : Brand.colors.primary
   );
 }

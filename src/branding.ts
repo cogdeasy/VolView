@@ -11,6 +11,8 @@ export const BrandColors = {
   primaryDark: '#0A4FB4',
   primaryLight: '#3D82E3',
   accent: '#00A3E0',
+  /** Lockup color on dark surfaces, where the brand blue does not read. */
+  onDark: '#FFFFFF',
   selectionDark: '#0A3F8F',
   selectionLight: '#CFE0FA',
 } as const;
