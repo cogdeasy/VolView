@@ -1,13 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useTheme } from 'vuetify';
 import PhilipsEmblem from '@/src/components/icons/PhilipsEmblem.vue';
-import { Brand } from '@/src/branding';
+import { useBrandLogoColor } from '@/src/composables/useBrandLogoColor';
 
-const theme = useTheme();
-const logoColor = computed(() =>
-  theme.current.value.dark ? '#ffffff' : Brand.colors.primary
-);
+const logoColor = useBrandLogoColor();
 </script>
 
 <template>

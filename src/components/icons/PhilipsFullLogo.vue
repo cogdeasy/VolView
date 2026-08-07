@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useTheme } from 'vuetify';
 import PhilipsEmblem from '@/src/components/icons/PhilipsEmblem.vue';
 import { Brand } from '@/src/branding';
+import { useBrandLogoColor } from '@/src/composables/useBrandLogoColor';
 
 withDefaults(
   defineProps<{
@@ -12,12 +11,7 @@ withDefaults(
   { productNameHidden: false }
 );
 
-const theme = useTheme();
-// Philips branding uses the blue logo on light backgrounds and the
-// white logo on dark backgrounds.
-const logoColor = computed(() =>
-  theme.current.value.dark ? '#ffffff' : Brand.colors.primary
-);
+const logoColor = useBrandLogoColor();
 </script>
 
 <template>

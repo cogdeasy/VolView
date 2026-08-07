@@ -45,8 +45,8 @@ const vuetify = createVuetify({
 });
 
 const theme = useLocalStorage(ThemeStorageKey, DefaultTheme);
-if (theme.value in LegacyThemes) {
-  theme.value = LegacyThemes[theme.value];
+if (LegacyThemes.has(theme.value)) {
+  theme.value = LegacyThemes.get(theme.value);
 } else if (theme.value !== DarkTheme && theme.value !== LightTheme) {
   theme.value = DefaultTheme;
 }

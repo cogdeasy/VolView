@@ -10,10 +10,10 @@ export const DarkTheme = 'philips-dark';
 export const LightTheme = 'philips-light';
 export const DefaultTheme = DarkTheme;
 /** Theme names persisted by earlier releases, mapped to their replacements. */
-export const LegacyThemes: Record<string, string> = {
-  'kw-dark': DarkTheme,
-  'kw-light': LightTheme,
-};
+export const LegacyThemes = new Map([
+  ['kw-dark', DarkTheme],
+  ['kw-light', LightTheme],
+]);
 
 export const Messages = {
   WebGLLost: {
