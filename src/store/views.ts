@@ -13,6 +13,7 @@ import {
 import type { Manifest, StateFile } from '../io/state-file/schema';
 import { onImageDeleted } from '@/src/composables/onImageDeleted';
 import { declareManifestRefs } from '@/src/core/manifestRefs';
+import { comparisonPaneSpec } from '@/src/core/comparison/layout';
 import { isRecord } from '@/src/utils';
 
 // The manifest references this store's remove cascade keeps clean (see the
@@ -263,6 +264,13 @@ export const useViewStore = defineStore('view', () => {
 
   function setLayoutFromGrid(gridSize: [number, number]) {
     currentLayoutName.value = null;
+    // A grid keeps the views that are already in its slots, so the names a
+    // named layout gave them go back to plain orientations. Comparison panes
+    // are recognised by name, and a hand-built grid is not a comparison.
+    Object.values(viewByID).forEach((view) => {
+      const spec = comparisonPaneSpec(view.name);
+      if (spec) view.name = spec.axis;
+    });
     setLayout(generateLayoutFromGrid(gridSize));
   }
 

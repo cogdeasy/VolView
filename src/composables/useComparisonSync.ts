@@ -44,20 +44,62 @@ export function useComparisonSync() {
     if (claimedViewIDs.delete(oldViewID)) claimedViewIDs.add(newViewID);
   });
 
+  // What this composable last wrote into each slot, so a binding that came
+  // from somewhere else can be told apart from one of our own.
+  const boundByPair = new Map<string, Maybe<string>>();
+
+  function bindPanes() {
+    comparison.panes.forEach((pane) => {
+      claimedViewIDs.add(pane.viewID);
+      const shown = viewStore.getView(pane.viewID)?.dataID;
+      if (shown === pane.imageID) {
+        boundByPair.set(pane.viewID, shown);
+        return;
+      }
+
+      // Something outside the comparison bar put another loaded study in this
+      // slot while the pair held it — a drag onto the pane, "show in all
+      // views", a restored session binding its views as each dataset arrives.
+      // That is a reader's choice about this side of the pair, so the role
+      // follows it rather than snapping back. What a slot happened to show
+      // before the pair claimed it is not such a choice, and handing a pane
+      // the study already on the other side would collapse the pair.
+      const other =
+        pane.role === 'current'
+          ? comparison.priorImageID
+          : comparison.currentImageID;
+      const chosenElsewhere =
+        !!shown &&
+        boundByPair.has(pane.viewID) &&
+        shown !== boundByPair.get(pane.viewID) &&
+        shown !== other &&
+        comparison.candidates.some((study) => study.imageID === shown);
+
+      if (chosenElsewhere) {
+        boundByPair.set(pane.viewID, shown);
+        if (pane.role === 'current') comparison.setCurrentImageID(shown);
+        else comparison.setPriorImageID(shown);
+        return;
+      }
+
+      boundByPair.set(pane.viewID, pane.imageID);
+      viewStore.setDataForView(pane.viewID, pane.imageID);
+    });
+  }
+
   watch(
     [
       () => comparison.panes,
       () => comparison.currentImageID,
       () => comparison.priorImageID,
+      // What the slots hold is watched too: a pane bound from elsewhere has to
+      // be noticed before the pair can follow it.
+      () =>
+        comparison.panes
+          .map((pane) => viewStore.getView(pane.viewID)?.dataID)
+          .join(),
     ],
-    () => {
-      comparison.panes.forEach((pane) => {
-        claimedViewIDs.add(pane.viewID);
-        if (viewStore.getView(pane.viewID)?.dataID !== pane.imageID) {
-          viewStore.setDataForView(pane.viewID, pane.imageID);
-        }
-      });
-    },
+    bindPanes,
     { immediate: true, deep: true }
   );
 
@@ -75,6 +117,7 @@ export function useComparisonSync() {
       });
     }
     claimedViewIDs.clear();
+    boundByPair.clear();
   });
 
   // --- slice position --- //
@@ -307,6 +350,48 @@ export function useComparisonSync() {
   const cameraSnapshot = (cameras: PaneCamera[]) =>
     new Map(cameras.map((camera) => [paneKey(camera), cameraKey(camera)]));
 
+  function driveCameras(drivers: PaneCamera[], cameras: PaneCamera[]) {
+    drivers.forEach((driver) => {
+      const target = cameras.find(
+        (other) => other.axis === driver.axis && other.role !== driver.role
+      );
+      if (!target) return;
+
+      // Pan is only meaningful across studies that share patient
+      // coordinates; zoom always is.
+      const sharePatientSpace =
+        comparison.alignmentForAxis(driver.axis)?.mode === 'physical';
+
+      const patch: Partial<CameraConfig> = {};
+      if (driver.parallelScale != null)
+        patch.parallelScale = driver.parallelScale;
+      if (sharePatientSpace && driver.focalPoint && target.focalPoint) {
+        patch.focalPoint = copyInPlaneComponents(
+          driver.focalPoint,
+          target.focalPoint,
+          driver.axis
+        );
+      }
+      if (sharePatientSpace && driver.position && target.position) {
+        patch.position = copyInPlaneComponents(
+          driver.position,
+          target.position,
+          driver.axis
+        );
+      }
+      if (!Object.keys(patch).length) return;
+
+      const next = cameraKey({
+        ...target,
+        ...patch,
+      } as PaneCamera);
+      if (next === cameraKey(target)) return;
+
+      cameraEchoes.set(paneKey(target), next);
+      cameraStore.updateConfig(target.viewID, target.imageID, patch);
+    });
+  }
+
   watch(
     paneCameras,
     (cameras) => {
@@ -341,47 +426,30 @@ export function useComparisonSync() {
       );
 
       previousCameras = cameraSnapshot(cameras);
-
-      drivers.forEach((driver) => {
-        const target = cameras.find(
-          (other) => other.axis === driver.axis && other.role !== driver.role
-        );
-        if (!target) return;
-
-        // Pan is only meaningful across studies that share patient
-        // coordinates; zoom always is.
-        const sharePatientSpace =
-          comparison.alignmentForAxis(driver.axis)?.mode === 'physical';
-
-        const patch: Partial<CameraConfig> = {};
-        if (driver.parallelScale != null)
-          patch.parallelScale = driver.parallelScale;
-        if (sharePatientSpace && driver.focalPoint && target.focalPoint) {
-          patch.focalPoint = copyInPlaneComponents(
-            driver.focalPoint,
-            target.focalPoint,
-            driver.axis
-          );
-        }
-        if (sharePatientSpace && driver.position && target.position) {
-          patch.position = copyInPlaneComponents(
-            driver.position,
-            target.position,
-            driver.axis
-          );
-        }
-        if (!Object.keys(patch).length) return;
-
-        const next = cameraKey({
-          ...target,
-          ...patch,
-        } as PaneCamera);
-        if (next === cameraKey(target)) return;
-
-        cameraEchoes.set(paneKey(target), next);
-        cameraStore.updateConfig(target.viewID, target.imageID, patch);
-      });
+      driveCameras(drivers, cameras);
     },
     { immediate: true, deep: true }
+  );
+
+  /** Pulls the prior panes onto the zoom and pan of the current ones. */
+  function realignCamerasFromCurrent() {
+    if (!comparison.active || !comparison.links.camera) return;
+    const cameras = paneCameras.value;
+    driveCameras(
+      cameras.filter((camera) => camera.role === 'current'),
+      cameras
+    );
+  }
+
+  // Opening a comparison, relinking, or repairing the pair aligns zoom and pan
+  // straight away, rather than leaving the two panes at their own auto-fit
+  // until the reader happens to touch a camera.
+  watch(
+    [
+      () => comparison.links.camera,
+      () => comparison.pairKey,
+      () => comparison.panes.map((pane) => pane.viewID).join(),
+    ],
+    () => nextTick(realignCamerasFromCurrent)
   );
 }

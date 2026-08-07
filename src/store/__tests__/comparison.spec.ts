@@ -52,6 +52,22 @@ describe('comparison store — mode detection', () => {
     expect(comparison.isComparisonLayout).toBe(true);
   });
 
+  it('ends when the reader builds a grid out of the comparison panes', () => {
+    const comparison = useComparisonStore();
+    const viewStore = useViewStore();
+    viewStore.setNamedLayoutsFromConfig(ComparisonLayouts);
+    viewStore.switchToNamedLayout(ComparisonLayoutNames.pair);
+    expect(comparison.isComparisonLayout).toBe(true);
+
+    viewStore.setLayoutFromGrid([2, 1]);
+
+    expect(comparison.isComparisonLayout).toBe(false);
+    expect(viewStore.visibleViews.map((view) => view.name)).toEqual([
+      'Axial',
+      'Axial',
+    ]);
+  });
+
   it('is off when the layout name is the only thing left of a comparison', () => {
     const comparison = useComparisonStore();
     const viewStore = useViewStore();
