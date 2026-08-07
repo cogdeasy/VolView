@@ -13,6 +13,7 @@ import { useViewStore } from '@/src/store/views';
 import { useViewSliceStore } from '@/src/store/view-configs/slicing';
 import { useViewCameraStore } from '@/src/store/view-configs/camera';
 import { useWindowingStore } from '@/src/store/view-configs/windowing';
+import { useSyncWindowing } from '@/src/composables/useSyncWindowing';
 import {
   ComparisonLayoutNames,
   ComparisonLayouts,
@@ -260,10 +261,17 @@ describe('useComparisonSync — window/level link', () => {
     viewStore.switchToNamedLayout(ComparisonLayoutNames.pair);
     comparison.setCurrentImageID('current');
     comparison.setPriorImageID('prior');
-    scope.run(() => useComparisonSync());
+    // Installed the way the app does, so a window written to one view reaches
+    // every other view holding that study.
+    scope.run(() => {
+      useSyncWindowing();
+      useComparisonSync();
+    });
     const viewIDOf = (name: string) =>
       viewStore.visibleViews.find((view) => view?.name === name)!.id;
     return {
+      viewStore,
+      viewIDOf,
       comparison,
       currentViewID: viewIDOf(ComparisonViewNames.currentAxial),
       priorViewID: viewIDOf(ComparisonViewNames.priorAxial),
@@ -303,6 +311,41 @@ describe('useComparisonSync — window/level link', () => {
     );
     // The reader then retunes the prior itself, which is what they came to
     // compare at.
+    windowingStore.updateConfig(
+      priorViewID,
+      'prior',
+      { width: 120, level: 10 },
+      true
+    );
+
+    comparison.setLink('windowLevel', false);
+    await nextTick();
+
+    const prior = windowingStore.getConfig(priorViewID, 'prior');
+    expect(prior.useAuto).toBe(false);
+    expect(prior.width).toBe(120);
+  });
+
+  it('reads the pane the reader is looking at after a layout switch, not the one it replaced', async () => {
+    const { comparison, viewIDOf, currentViewID } = openPair();
+    const windowingStore = useWindowingStore();
+    const viewStore = useViewStore();
+    await nextTick();
+
+    windowingStore.updateConfig(
+      currentViewID,
+      'current',
+      { width: 300, level: 40 },
+      true
+    );
+
+    // Switching comparison layouts replaces the views the pair was holding,
+    // and a replaced view keeps a window config nothing updates again.
+    viewStore.switchToNamedLayout(ComparisonLayoutNames.quad);
+    await nextTick();
+    await nextTick();
+
+    const priorViewID = viewIDOf(ComparisonViewNames.priorAxial);
     windowingStore.updateConfig(
       priorViewID,
       'prior',

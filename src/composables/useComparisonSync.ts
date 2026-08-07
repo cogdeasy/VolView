@@ -60,6 +60,12 @@ export function useComparisonSync() {
       boundByPair.set(newViewID, boundByPair.get(oldViewID));
       boundByPair.delete(oldViewID);
     }
+    // A replaced view keeps its window configs, which nothing updates again:
+    // a restore record left pointing at one would be reading a window no one
+    // is looking at.
+    windowingRestores.forEach((restore) => {
+      if (restore.viewID === oldViewID) restore.viewID = newViewID;
+    });
   });
 
   function bindPanes() {
@@ -411,6 +417,10 @@ export function useComparisonSync() {
   }
   const windowingRestores = new Map<string, WindowingRestore>();
 
+  const viewShowing = (imageID: string) =>
+    comparison.panes.find((pane) => pane.imageID === imageID)?.viewID ??
+    viewStore.getAllViews().find((view) => view.dataID === imageID)?.id;
+
   /**
    * Hands a study back the window it had before the pair overwrote it.
    *
@@ -422,7 +432,11 @@ export function useComparisonSync() {
     const restore = windowingRestores.get(imageID);
     windowingRestores.delete(imageID);
     if (!restore) return;
-    const { viewID, before, wrote } = restore;
+    // A pane holding the study is the window the reader has been looking at;
+    // the recorded slot is the fallback for a study no view shows any more,
+    // which is the usual case on the way out of a comparison.
+    const viewID = viewShowing(imageID) ?? restore.viewID;
+    const { before, wrote } = restore;
     const now = windowingStore.getConfig(viewID, imageID);
     if (now.width !== wrote.width || now.level !== wrote.level) return;
     windowingEcho = true;
@@ -472,13 +486,16 @@ export function useComparisonSync() {
         targetViewID,
         toImageID
       );
-      if (!windowingRestores.has(toImageID))
+      const restore = windowingRestores.get(toImageID);
+      if (restore) {
+        restore.viewID = targetViewID;
+        restore.wrote = { width, level };
+      } else
         windowingRestores.set(toImageID, {
           viewID: targetViewID,
           before: { width: rest.width, level: rest.level, auto, useAuto },
           wrote: { width, level },
         });
-      else windowingRestores.get(toImageID)!.wrote = { width, level };
     }
     windowingEcho = true;
     try {
