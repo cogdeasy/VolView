@@ -1,25 +1,6 @@
-<script lang="ts">
-import { defineComponent } from 'vue';
+<script setup lang="ts">
 import ControlButton from '@/src/components/ControlButton.vue';
-import { createEventHook } from '@vueuse/core';
-
-const clickEvent = createEventHook<void>();
-export function useResetViewsEvents() {
-  return { onClick: clickEvent.on };
-}
-
-export default defineComponent({
-  components: {
-    ControlButton,
-  },
-  // setup() {
-  // },
-  methods: {
-    onClick() {
-      clickEvent.trigger();
-    },
-  },
-});
+import { triggerResetViews } from '@/src/components/tools/resetViewsEvent';
 </script>
 
 <template>
@@ -27,6 +8,6 @@ export default defineComponent({
     size="40"
     icon="mdi-camera-flip-outline"
     name="Reset Views"
-    @click="onClick"
+    @click="triggerResetViews()"
   />
 </template>

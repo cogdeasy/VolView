@@ -2,18 +2,31 @@
   <div
     class="vtk-container-wrapper"
     tabindex="0"
+    role="group"
+    aria-label="Cine view"
+    :aria-describedby="`view-state-${viewId}`"
     @pointerenter="hover = true"
     @pointerleave="hover = false"
     @focusin="hover = true"
     @focusout="hover = false"
   >
     <div class="vtk-gutter mt-1">
-      <v-btn dark icon size="medium" variant="text" @click="resetCamera">
-        <v-icon size="medium" class="py-1">mdi-camera-flip-outline</v-icon>
+      <v-btn
+        dark
+        icon
+        size="medium"
+        variant="text"
+        aria-label="Reset camera in the cine view"
+        @click="resetCamera"
+      >
+        <v-icon size="medium" class="py-1" aria-hidden="true">
+          mdi-camera-flip-outline
+        </v-icon>
         <v-tooltip
           location="right"
           activator="parent"
           transition="slide-x-transition"
+          :aria-hidden="true"
         >
           Reset Camera
         </v-tooltip>
@@ -25,6 +38,8 @@
         :max="frameRange[1]"
         :step="1"
         :handle-height="20"
+        unit="Frame"
+        aria-label="Cine frame"
       />
     </div>
     <div class="vtk-container" data-testid="two-view-container">
@@ -141,7 +156,7 @@ import VtkCineScrubKeyManipulator from '@/src/components/vtk/VtkCineScrubKeyMani
 import VtkMouseInteractionManipulator from '@/src/components/vtk/VtkMouseInteractionManipulator.vue';
 import vtkMouseCameraTrackballPanManipulator from '@kitware/vtk.js/Interaction/Manipulators/MouseCameraTrackballPanManipulator';
 import vtkMouseCameraTrackballZoomToMouseManipulator from '@kitware/vtk.js/Interaction/Manipulators/MouseCameraTrackballZoomToMouseManipulator';
-import { useResetViewsEvents } from '@/src/components/tools/ResetViews.vue';
+import { useResetViewsEvents } from '@/src/components/tools/resetViewsEvent';
 import { onVTKEvent } from '@/src/composables/onVTKEvent';
 import { get2DViewingVectors } from '@/src/utils/getViewingVectors';
 import type { LPSAxis } from '@/src/types/lps';

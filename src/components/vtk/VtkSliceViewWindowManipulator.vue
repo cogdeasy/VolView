@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useResetViewsEvents } from '@/src/components/tools/ResetViews.vue';
+import { useResetViewsEvents } from '@/src/components/tools/resetViewsEvent';
 import { VtkViewContext } from '@/src/components/vtk/context';
 import { useWindowingConfig } from '@/src/composables/useWindowingConfig';
 import { useMouseRangeManipulatorListener } from '@/src/core/vtk/useMouseRangeManipulatorListener';

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia';
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
 import { loadUserPromptedFiles } from '@/src/actions/loadUserFiles';
 import useRemoteSaveStateStore from '@/src/store/remote-save-state';
 import CloseableDialog from '@/src/components/CloseableDialog.vue';
@@ -13,6 +13,7 @@ import MessageCenter from '@/src/components/MessageCenter.vue';
 import { MessageType, useMessageStore } from '@/src/store/messages';
 import { ConnectionState, useServerStore } from '@/src/store/server';
 import LayoutSelector from '@/src/components/LayoutSelector.vue';
+import { useDialogStore } from '@/src/store/dialogs';
 
 interface Props {
   hasData: boolean;
@@ -23,8 +24,7 @@ defineProps<Props>();
 function useSaveControls() {
   const remoteSaveStateStore = useRemoteSaveStateStore();
   const { isSaving, saveUrl } = storeToRefs(remoteSaveStateStore);
-
-  const saveDialog = ref(false);
+  const { saveSessionOpen: saveDialog } = storeToRefs(useDialogStore());
 
   const handleSave = () => {
     if (saveUrl.value !== '') {
@@ -82,8 +82,8 @@ function useServerConnection() {
   return { icon, url };
 }
 
-const settingsDialog = ref(false);
-const messageDialog = ref(false);
+const { settingsOpen: settingsDialog, notificationsOpen: messageDialog } =
+  storeToRefs(useDialogStore());
 const { icon: connIcon, url: serverUrl } = useServerConnection();
 const { handleSave, saveDialog, isSaving } = useSaveControls();
 const { count: msgCount, badgeColor: msgBadgeColor } = useMessageBubble();
@@ -93,6 +93,9 @@ const { count: msgCount, badgeColor: msgBadgeColor } = useMessageBubble();
   <div
     id="tools-strip"
     class="bg-grey-darken-4 d-flex flex-column align-center"
+    role="toolbar"
+    aria-orientation="vertical"
+    aria-label="Viewer tools"
   >
     <control-button
       size="40"
@@ -110,14 +113,12 @@ const { count: msgCount, badgeColor: msgBadgeColor } = useMessageBubble();
     <div class="my-1 tool-separator" />
     <v-menu location="left" :close-on-content-click="true">
       <template v-slot:activator="{ props }">
-        <div>
-          <control-button
-            v-bind="props"
-            size="40"
-            icon="mdi-view-dashboard"
-            name="Layouts"
-          />
-        </div>
+        <control-button
+          v-bind="props"
+          size="40"
+          icon="mdi-view-dashboard"
+          name="Layouts"
+        />
       </template>
       <v-card>
         <v-card-text>
@@ -156,18 +157,26 @@ const { count: msgCount, badgeColor: msgBadgeColor } = useMessageBubble();
       @click="settingsDialog = true"
     />
   </div>
-  <closeable-dialog v-model="saveDialog" max-width="30%">
+  <closeable-dialog
+    v-model="saveDialog"
+    max-width="30%"
+    aria-label="Save session"
+  >
     <template v-slot="{ close }">
       <save-session :close="close" />
     </template>
   </closeable-dialog>
-  <closeable-dialog v-model="messageDialog" content-class="fill-height">
+  <closeable-dialog
+    v-model="messageDialog"
+    content-class="fill-height"
+    aria-label="Notifications"
+  >
     <message-center />
   </closeable-dialog>
 
   <message-notifications @open-notifications="messageDialog = true" />
 
-  <closeable-dialog v-model="settingsDialog">
+  <closeable-dialog v-model="settingsDialog" aria-label="Settings">
     <settings />
   </closeable-dialog>
 </template>

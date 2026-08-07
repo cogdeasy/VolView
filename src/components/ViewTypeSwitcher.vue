@@ -40,6 +40,7 @@ function updateView(newViewName: string) {
     density="compact"
     hide-details
     variant="solo"
+    aria-label="View orientation"
     class="pointer-events-all view-type-select"
   ></v-select>
 </template>

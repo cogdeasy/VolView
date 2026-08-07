@@ -209,22 +209,38 @@ export const ACTION_TO_KEY = {
   increaseBrushSize: ']',
   rectangle: 'r',
   crosshairs: 'c',
-  temporaryCrosshairs: 'shift-c',
+  temporaryCrosshairs: 'shift+c',
   crop: 'b',
   polygon: 'g',
   mergeNewPolygon: 'Shift',
   select: 's',
+  toggleCrosshairs: 'x',
+  cycleMeasurementTool: 't',
 
   nextSlice: 'arrowdown',
   previousSlice: 'arrowup',
+  firstSlice: 'home',
+  middleSlice: 'shift+home',
+  lastSlice: 'end',
+  nextSeries: 'pagedown',
+  previousSeries: 'pageup',
+  playPauseCine: 'space',
   grabSlice: 'Alt',
 
   decrementLabel: 'q',
   incrementLabel: 'w',
 
+  cycleLayout: 'shift+l',
+  maximizeActiveView: 'f',
+  resetView: 'shift+r',
+
+  cycleWindowPreset: 'shift+w',
+  invertGrayscale: 'i',
+
   deleteCurrentImage: 'ctrl+.',
   clearScene: 'ctrl+/',
 
+  showCommandPalette: 'ctrl+k',
   showKeyboardShortcuts: '?',
 } satisfies Record<Action, string>;
 

@@ -111,11 +111,12 @@ export default defineComponent({
           <v-btn
             icon
             variant="text"
+            aria-label="Delete selected studies"
             :disabled="!selectedSome"
             @click.stop="removeSelectedStudies"
           >
-            <v-icon>mdi-delete</v-icon>
-            <v-tooltip activator="parent" location="left">
+            <v-icon aria-hidden="true">mdi-delete</v-icon>
+            <v-tooltip activator="parent" location="left" :aria-hidden="true">
               Delete Selected
             </v-tooltip>
           </v-btn>
@@ -132,25 +133,31 @@ export default defineComponent({
         v-for="study in studies"
         :key="study.StudyInstanceUID"
         :value="study.StudyInstanceUID"
-        class="patient-data-study-panel"
+        class="patient-data-study-panel position-relative"
       >
+        <!--
+          The panel title renders as a button, so the study checkbox sits
+          beside it rather than inside it: nesting controls inside a button
+          makes them unreachable for keyboard and screen reader users.
+        -->
+        <v-checkbox
+          class="study-selector"
+          density="compact"
+          hide-details
+          :key="study.StudyInstanceUID"
+          :value="study.StudyInstanceUID"
+          :aria-label="`Select study ${study.title}`"
+          v-model="selected"
+          @click.stop
+        />
         <v-expansion-panel-title
           color="#1976fa0a"
-          class="pl-3 no-select"
+          class="study-panel-title no-select"
           :title="study.StudyDate"
         >
           <div class="study-header">
             <div class="study-header-title">
-              <v-checkbox
-                class="study-selector"
-                density="compact"
-                hide-details
-                :key="study.StudyInstanceUID"
-                :value="study.StudyInstanceUID"
-                v-model="selected"
-                @click.stop
-              />
-              <v-icon>mdi-folder-table</v-icon>
+              <v-icon aria-hidden="true">mdi-folder-table</v-icon>
               <div class="ml-2 overflow-hidden text-no-wrap">
                 <div class="text-subtitle-2 text-truncate" :title="study.title">
                   {{ study.title }}
@@ -166,11 +173,16 @@ export default defineComponent({
 
             <div class="d-flex flex-column align-center justify-end mx-2">
               <div class="d-flex flex-row align-center mr-2">
-                <v-icon small>mdi-folder-open</v-icon>
+                <v-icon small aria-hidden="true">mdi-folder-open</v-icon>
                 <span class="text-caption text--secondary text-no-wrap">
                   : {{ study.volumeKeys.length }}
+                  <span class="visually-hidden">series in study</span>
                 </span>
-                <v-tooltip location="bottom" activator="parent">
+                <v-tooltip
+                  location="bottom"
+                  activator="parent"
+                  :aria-hidden="true"
+                >
                   Total series in study
                 </v-tooltip>
               </div>
@@ -200,7 +212,15 @@ export default defineComponent({
 }
 
 .study-selector {
+  position: absolute;
+  top: 4px;
+  left: 12px;
+  z-index: 1;
   flex: 0 0 auto;
+}
+
+.study-panel-title {
+  padding-left: 52px;
 }
 
 .study-header-title {

@@ -1,5 +1,11 @@
 <template>
-  <div class="vtk-container-wrapper volume-viewer-container" tabindex="0">
+  <div
+    class="vtk-container-wrapper volume-viewer-container"
+    tabindex="0"
+    role="group"
+    aria-label="3D view"
+    :aria-describedby="`view-state-${viewId}`"
+  >
     <div class="vtk-container" data-testid="two-view-container">
       <v-progress-linear
         v-if="isImageLoading"
@@ -36,15 +42,17 @@
               icon
               size="medium"
               variant="text"
+              aria-label="Reset camera in the 3D view"
               @click="resetCamera"
             >
-              <v-icon size="medium" class="py-1">
+              <v-icon size="medium" class="py-1" aria-hidden="true">
                 mdi-camera-flip-outline
               </v-icon>
               <v-tooltip
                 location="right"
                 activator="parent"
                 transition="slide-x-transition"
+                :aria-hidden="true"
               >
                 Reset Camera
               </v-tooltip>
@@ -63,6 +71,10 @@
           </div>
         </template>
       </view-overlay-grid>
+      <div :id="`view-state-${viewId}`" class="visually-hidden">
+        {{ currentImageMetadata.name }}, cinematic 3D rendering,
+        {{ presetName }} preset.
+      </div>
     </div>
   </div>
 </template>
@@ -80,7 +92,7 @@ import { useWebGLWatchdog } from '@/src/composables/useWebGLWatchdog';
 import VtkOrientationMarker from '@/src/components/vtk/VtkOrientationMarker.vue';
 import ViewOverlayGrid from '@/src/components/ViewOverlayGrid.vue';
 import useVolumeColoringStore from '@/src/store/view-configs/volume-coloring';
-import { useResetViewsEvents } from '@/src/components/tools/ResetViews.vue';
+import { useResetViewsEvents } from '@/src/components/tools/resetViewsEvent';
 import { onVTKEvent } from '@/src/composables/onVTKEvent';
 import { useViewStore } from '@/src/store/views';
 import ViewTypeSwitcher from '@/src/components/ViewTypeSwitcher.vue';

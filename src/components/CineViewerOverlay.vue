@@ -47,6 +47,9 @@ const frameCount = computed(() => frameRange.value[1] + 1);
       </div>
     </template>
   </view-overlay-grid>
+  <div :id="`view-state-${viewId}`" class="visually-hidden">
+    {{ metadata.name }}, frame {{ frame + 1 }} of {{ frameCount }}.
+  </div>
 </template>
 
 <style scoped src="@/src/components/styles/vtk-view.css"></style>

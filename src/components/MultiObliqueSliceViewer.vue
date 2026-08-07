@@ -1,5 +1,10 @@
 <template>
-  <div class="vtk-container-wrapper" tabindex="0">
+  <div
+    class="vtk-container-wrapper"
+    tabindex="0"
+    role="group"
+    aria-label="Oblique 3D view"
+  >
     <div class="vtk-gutter"></div>
     <div class="vtk-container">
       <div class="vtk-sub-container">
@@ -48,7 +53,7 @@ import useResliceCursorStore, {
   mapAxisToViewType,
 } from '@/src/store/reslice-cursor';
 import { vtkFieldRef } from '@/src/core/vtk/vtkFieldRef';
-import { useResetViewsEvents } from '@/src/components/tools/ResetViews.vue';
+import { useResetViewsEvents } from '@/src/components/tools/resetViewsEvent';
 import { vec3 } from 'gl-matrix';
 import { OBLIQUE_OUTLINE_COLORS } from '@/src/constants';
 import type { RGBColor } from '@kitware/vtk.js/types';

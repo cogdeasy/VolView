@@ -9,13 +9,16 @@
     :max-width="sizeV"
     :class="classV"
     :data-testid="`control-button-${name}`"
+    :aria-label="ariaLabel || name"
+    :aria-pressed="pressed === undefined ? undefined : String(pressed)"
     v-bind="$attrs"
   >
-    <v-icon :size="iconSize">{{ icon }}</v-icon>
+    <v-icon :size="iconSize" aria-hidden="true">{{ icon }}</v-icon>
     <v-tooltip
       :location="tooltipLocation"
       activator="parent"
       transition="slide-x-transition"
+      :aria-hidden="true"
     >
       <span>{{ name }}</span>
     </v-tooltip>
@@ -29,6 +32,10 @@ export default {
   props: {
     icon: { type: String, required: true },
     name: { type: String, required: true },
+    // Screen reader name, when the visible tooltip text is not a good label.
+    ariaLabel: { type: String, default: '' },
+    // Toggle buttons report their state; plain buttons leave this undefined.
+    pressed: { type: Boolean, default: undefined },
     size: { type: [Number, String], default: 40 },
     buttonClass: [String, Array, Object],
     tooltipLocation: { type: String, default: 'right' },

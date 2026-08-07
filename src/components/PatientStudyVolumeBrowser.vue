@@ -196,11 +196,12 @@ export default defineComponent({
         <v-btn
           icon
           variant="text"
+          aria-label="Delete selected series"
           :disabled="!selectedSome"
           @click.stop="removeSelectedDICOMVolumes"
         >
-          <v-icon>mdi-delete</v-icon>
-          <v-tooltip location="left" activator="parent">
+          <v-icon aria-hidden="true">mdi-delete</v-icon>
+          <v-tooltip location="left" activator="parent" :aria-hidden="true">
             Delete selected
           </v-tooltip>
         </v-btn>
@@ -232,10 +233,16 @@ export default defineComponent({
             >
               <v-row no-gutters class="pa-0" justify="center">
                 <div class="thumbnail-container">
+                  <!--
+                    The thumbnail is decorative: it renders the series that is
+                    already named below the card, and an alt-less v-img would
+                    otherwise wrap the selection checkbox in a role="img".
+                  -->
                   <v-img
                     cover
                     height="150"
                     width="150"
+                    alt=""
                     :src="
                       (thumbnailCache[volume.cacheKey] &&
                         thumbnailCache[volume.cacheKey].kind === 'image' &&
@@ -274,6 +281,7 @@ export default defineComponent({
                             @click.stop
                             density="compact"
                             hide-details
+                            :aria-label="`Select ${volume.name}`"
                             class="series-selector"
                           />
                         </v-row>
@@ -292,6 +300,7 @@ export default defineComponent({
                   variant="plain"
                   size="x-small"
                   class="dataset-menu"
+                  :aria-label="`Actions for ${volume.name}`"
                   @click.stop
                   data-testid="dataset-menu-button"
                 >
@@ -320,7 +329,9 @@ export default defineComponent({
                       </v-list-item>
                     </v-list>
                   </v-menu>
-                  <v-icon size="medium">mdi-dots-vertical</v-icon>
+                  <v-icon size="medium" aria-hidden="true">
+                    mdi-dots-vertical
+                  </v-icon>
                 </v-btn>
               </v-row>
               <v-card-text

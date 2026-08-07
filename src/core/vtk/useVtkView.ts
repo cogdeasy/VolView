@@ -119,6 +119,11 @@ export function useVtkView(container: MaybeRef<Maybe<HTMLElement>>): View {
 
     interactor.initialize();
     interactor.setContainer(el);
+    // vtk.js makes the render container tabbable so it can receive key events.
+    // The container has no accessible name of its own, so keep it out of the
+    // tab order: the labelled wrapper around it is the real tab stop, and a
+    // click still focuses the container for vtk's key handling.
+    el.tabIndex = -1;
     onCleanup(() => {
       if (interactor.getContainer()) interactor.unbindEvents();
     });

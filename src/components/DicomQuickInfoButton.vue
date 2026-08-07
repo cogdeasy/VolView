@@ -51,15 +51,16 @@ const dicomInfo = computed(() => {
     max-width="300px"
   >
     <template v-slot:activator="{ props }">
-      <v-icon
+      <v-btn
         v-bind="props"
-        dark
-        size="medium"
+        icon="mdi-information"
+        variant="text"
+        density="compact"
+        size="small"
+        aria-label="Patient, study and series information"
         class="pointer-events-all"
         @click.stop
-      >
-        mdi-information
-      </v-icon>
+      />
     </template>
     <v-list class="bg-grey-darken-3">
       <v-list-item>
