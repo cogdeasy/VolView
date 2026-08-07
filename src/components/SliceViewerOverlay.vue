@@ -10,6 +10,9 @@ import DicomQuickInfoButton from '@/src/components/DicomQuickInfoButton.vue';
 import ViewTypeSwitcher from '@/src/components/ViewTypeSwitcher.vue';
 import { useImage } from '@/src/composables/useCurrentImage';
 import { computed } from 'vue';
+import { useComparisonStore } from '@/src/store/comparison';
+import { useViewStore } from '@/src/store/views';
+import { comparisonPaneSpec } from '@/src/core/comparison/layout';
 
 type Props = {
   viewId: string;
@@ -45,12 +48,25 @@ const LOCKED_ORIENTATION_SUFFIXES = [
 const isLockedOrientationView = computed(() =>
   LOCKED_ORIENTATION_SUFFIXES.some((suffix) => viewId.value.includes(suffix))
 );
+
+// Comparison panes carry their own study banner, so the annotations move down
+// out from under it and drop the now-duplicated series name.
+const comparison = useComparisonStore();
+const viewStore = useViewStore();
+const isComparisonPane = computed(
+  () =>
+    comparison.active &&
+    !!comparisonPaneSpec(viewStore.getView(viewId.value)?.name)
+);
 </script>
 
 <template>
-  <view-overlay-grid class="overlay-no-events view-annotations">
+  <view-overlay-grid
+    class="overlay-no-events view-annotations"
+    :class="{ 'comparison-inset': isComparisonPane }"
+  >
     <template v-slot:top-left>
-      <div class="annotation-cell">
+      <div v-if="!isComparisonPane" class="annotation-cell">
         <span>{{ metadata.name }}</span>
       </div>
     </template>
@@ -90,3 +106,10 @@ const isLockedOrientationView = computed(() =>
 </template>
 
 <style scoped src="@/src/components/styles/vtk-view.css"></style>
+
+<style scoped>
+.comparison-inset {
+  box-sizing: border-box;
+  padding-top: 26px;
+}
+</style>

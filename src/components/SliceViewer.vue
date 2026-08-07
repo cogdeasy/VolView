@@ -90,6 +90,7 @@
             :view-id="viewId"
             :image-id="currentImageID"
           ></slice-viewer-overlay>
+          <comparison-pane-label :view-id="viewId"></comparison-pane-label>
           <vtk-base-slice-representation
             ref="baseSliceRep"
             :view-id="viewId"
@@ -141,6 +142,7 @@
             :image-id="currentImageID"
             :view-direction="viewDirection"
           />
+          <prior-counterparts :view-id="viewId" :image-id="currentImageID" />
           <select-tool />
           <svg class="overlay-no-events">
             <bounding-rectangle :points="selectionPoints" />
@@ -180,6 +182,8 @@ import ScalarProbe from '@/src/components/tools/ScalarProbe.vue';
 import BoundingRectangle from '@/src/components/tools/BoundingRectangle.vue';
 import SliceSlider from '@/src/components/SliceSlider.vue';
 import SliceViewerOverlay from '@/src/components/SliceViewerOverlay.vue';
+import ComparisonPaneLabel from '@/src/components/ComparisonPaneLabel.vue';
+import PriorCounterparts from '@/src/components/tools/comparison/PriorCounterparts.vue';
 import { useToolSelectionStore } from '@/src/store/tools/toolSelection';
 import { useAnnotationToolStore, useToolStore } from '@/src/store/tools';
 import { doesToolFrameMatchViewAxis } from '@/src/composables/annotationTool';

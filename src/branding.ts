@@ -15,6 +15,13 @@ export const BrandColors = {
   onDark: '#FFFFFF',
   selectionDark: '#0A3F8F',
   selectionLight: '#CFE0FA',
+  /**
+   * Study-comparison pane accents. The current study carries the accent cyan
+   * so the reader's eye lands on it first; the prior study is deliberately
+   * neutral so it never competes with the live read.
+   */
+  currentStudy: '#00A3E0',
+  priorStudy: '#8A94A6',
 } as const;
 
 export const Brand = {
