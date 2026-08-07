@@ -30,10 +30,16 @@ watch(
 );
 
 const messageStore = useMessageStore();
+// Tracked by id, not by list length: dismissing a notification must not speak
+// the one before it again.
+const announced = new Set<string>();
 watch(
-  () => messageStore.messages.length,
-  () => {
-    const latest = messageStore.messages[messageStore.messages.length - 1];
+  () => messageStore.msgList[messageStore.msgList.length - 1],
+  (id) => {
+    if (!id || announced.has(id)) return;
+    announced.add(id);
+
+    const latest = messageStore.byID[id];
     if (!latest) return;
     if (latest.type === MessageType.Error) {
       announcements.announceUrgent(`Error: ${latest.title}`);

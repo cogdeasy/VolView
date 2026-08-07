@@ -71,11 +71,23 @@ const vert = useMouseRangeManipulatorListener(
   'vertical',
   computed(() => [1e-12, wlConfig.range.value[1] - wlConfig.range.value[0]]),
   wlStep,
-  wlConfig.width.value
+  Math.abs(wlConfig.width.value)
 );
 
+/** A negative color window is how the app stores an inverted grayscale ramp. */
+const inverted = computed(() => wlConfig.width.value < 0);
+
 syncRef(horiz, wlConfig.level, { immediate: true });
-syncRef(vert, wlConfig.width, { immediate: true });
+// The manipulator's range is positive, so it only ever carries the window
+// magnitude; the sign - which is how the app stores an inverted grayscale
+// ramp - is reapplied here so a drag does not clamp the inversion away.
+syncRef(vert, wlConfig.width, {
+  immediate: true,
+  transform: {
+    ltr: (magnitude) => (inverted.value ? -Math.abs(magnitude) : magnitude),
+    rtl: (width) => Math.abs(width),
+  },
+});
 </script>
 
 <template><slot></slot></template>

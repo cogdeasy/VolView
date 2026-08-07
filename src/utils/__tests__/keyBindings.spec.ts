@@ -35,6 +35,13 @@ describe('parseBinding', () => {
   it('treats a lone modifier as the bound key', () => {
     expect(parseBinding('Alt')).toMatchObject({ alt: false, key: 'alt' });
   });
+
+  it('keeps a separator character that is itself the key', () => {
+    expect(parseBinding('ctrl+-')).toMatchObject({ ctrl: true, key: '-' });
+    expect(parseBinding('ctrl++')).toMatchObject({ ctrl: true, key: '+' });
+    expect(parseBinding('ctrl+_')).toMatchObject({ ctrl: true, key: '_' });
+    expect(parseBinding('-')).toMatchObject({ ctrl: false, key: '-' });
+  });
 });
 
 describe('bindingFromEvent', () => {

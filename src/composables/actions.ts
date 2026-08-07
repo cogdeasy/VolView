@@ -18,6 +18,7 @@ import { useAnnouncementStore } from '../store/announcements';
 import { useWindowingStore } from '../store/view-configs/windowing';
 import { useCinePlaybackStore } from '../store/view-configs/cine-playback';
 import { triggerResetViews } from '../components/tools/resetViewsEvent';
+import useRemoteSaveStateStore from '../store/remote-save-state';
 
 /** Tools cycled through by `cycleMeasurementTool`, in reading order. */
 const MEASUREMENT_TOOLS = [Tools.Ruler, Tools.Rectangle, Tools.Polygon];
@@ -111,6 +112,15 @@ const showCommandPalette = () => {
 const saveSession = () => {
   const dialogStore = useDialogStore();
   dialogStore.commandPaletteOpen = false;
+
+  // Same rule as the toolbar's save button: a deployment configured with a
+  // save URL writes straight to it instead of prompting for a file name.
+  const remoteSaveStateStore = useRemoteSaveStateStore();
+  if (remoteSaveStateStore.saveUrl !== '') {
+    announce('Saving session');
+    remoteSaveStateStore.saveState();
+    return;
+  }
   dialogStore.saveSessionOpen = true;
 };
 
@@ -206,12 +216,31 @@ function activeWindowingTarget() {
   return { viewID: activeView, imageID: currentImageID.value as string };
 }
 
+/**
+ * Applies a window/level preset, preserving an active inversion (a negative
+ * window) so the palette and the cycle shortcut behave the same way.
+ */
+export function applyWindowPreset(
+  viewID: string,
+  imageID: string,
+  preset: { width: number; level: number }
+) {
+  const windowingStore = useWindowingStore();
+  const config = windowingStore.getConfig(viewID, imageID);
+  const inverted = (config.width ?? 0) < 0;
+  windowingStore.updateConfig(
+    viewID,
+    imageID,
+    { width: inverted ? -preset.width : preset.width, level: preset.level },
+    true
+  );
+}
+
 const cycleWindowPreset = () => {
   const target = activeWindowingTarget();
   if (!target) return;
 
-  const windowingStore = useWindowingStore();
-  const config = windowingStore.getConfig(target.viewID, target.imageID);
+  const config = useWindowingStore().getConfig(target.viewID, target.imageID);
   const presets = Object.entries(WLPresetsCT);
   const currentIndex = presets.findIndex(
     ([, preset]) =>
@@ -219,14 +248,7 @@ const cycleWindowPreset = () => {
       preset.level === config.level
   );
   const [name, preset] = presets[(currentIndex + 1) % presets.length];
-  // Preserve an active inversion (a negative window) across preset changes.
-  const inverted = (config.width ?? 0) < 0;
-  windowingStore.updateConfig(
-    target.viewID,
-    target.imageID,
-    { width: inverted ? -preset.width : preset.width, level: preset.level },
-    true
-  );
+  applyWindowPreset(target.viewID, target.imageID, preset);
   announce(
     `Window preset ${name}: width ${preset.width}, level ${preset.level}`
   );

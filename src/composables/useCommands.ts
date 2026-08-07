@@ -1,5 +1,6 @@
 import { computed } from 'vue';
 import { useTheme } from 'vuetify';
+import { useLocalStorage } from '@vueuse/core';
 
 import {
   ACTIONS,
@@ -11,7 +12,7 @@ import {
   WLPresetsCT,
 } from '@/src/constants';
 import { SAMPLE_DATA } from '@/src/config';
-import { ACTION_TO_FUNC } from '@/src/composables/actions';
+import { ACTION_TO_FUNC, applyWindowPreset } from '@/src/composables/actions';
 import { actionToKey } from '@/src/composables/useKeyboardShortcuts';
 import { useCurrentImage } from '@/src/composables/useCurrentImage';
 import { loadSample } from '@/src/actions/loadSampleData';
@@ -20,7 +21,6 @@ import { useDialogStore } from '@/src/store/dialogs';
 import { useKeyboardShortcutsStore } from '@/src/store/keyboard-shortcuts';
 import { useAnnouncementStore } from '@/src/store/announcements';
 import { useViewStore } from '@/src/store/views';
-import { useWindowingStore } from '@/src/store/view-configs/windowing';
 import { getEntries } from '@/src/utils';
 
 export interface Command {
@@ -55,15 +55,17 @@ export function useCommands() {
   const dialogStore = useDialogStore();
   const keyboardStore = useKeyboardShortcutsStore();
   const viewStore = useViewStore();
-  const windowingStore = useWindowingStore();
   const announcements = useAnnouncementStore();
   const theme = useTheme();
+  const storedTheme = useLocalStorage(ThemeStorageKey, theme.global.name.value);
   const { currentImageID } = useCurrentImage();
 
   const actionCommands = computed<Command[]>(() =>
     getEntries(ACTIONS)
-      // Hold-to-modify keys are not runnable commands.
+      // Hold-to-modify keys are not runnable commands, and the palette's own
+      // toggle would just close and reopen the palette.
       .filter(([, info]) => !('hold' in info && info.hold))
+      .filter(([action]) => action !== 'showCommandPalette')
       .map(([action, info]) => ({
         id: `action.${action}`,
         title: info.readable,
@@ -120,7 +122,7 @@ export function useCommands() {
         const viewID = viewStore.activeView;
         const imageID = currentImageID.value;
         if (!viewID || !imageID) return;
-        windowingStore.updateConfig(viewID, imageID, { ...preset }, true);
+        applyWindowPreset(viewID, imageID, preset);
         announcements.announce(`Window preset ${name}`);
       },
     }))
@@ -213,7 +215,9 @@ export function useCommands() {
 
   function setTheme(name: string) {
     theme.global.name.value = name;
-    localStorage.setItem(ThemeStorageKey, name);
+    // Written through the same reactive store the settings dialog reads, so
+    // the two stay in sync within the tab.
+    storedTheme.value = name;
     announcements.announce(
       `${name === DarkTheme ? 'Dark' : 'Light'} theme enabled`
     );

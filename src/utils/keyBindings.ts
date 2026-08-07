@@ -15,6 +15,7 @@ export interface ParsedBinding {
 }
 
 const MODIFIERS = ['ctrl', 'control', 'shift', 'alt', 'option', 'meta', 'cmd'];
+const SEPARATORS = '+-_';
 
 const KEY_ALIASES: Record<string, string> = {
   ' ': 'space',
@@ -64,29 +65,31 @@ export function parseBinding(binding: string): ParsedBinding {
     key: '',
   };
 
-  const parts = binding
-    .toLowerCase()
-    .split(/[+\-_]/)
-    .filter((part) => part.length > 0);
+  // Modifiers are peeled off the front rather than the binding being split on
+  // the separators, so a separator character can itself be the key: `ctrl+-`
+  // is Ctrl plus minus, not a malformed Ctrl.
+  let rest = binding.toLowerCase();
+  let peeled = true;
+  while (peeled) {
+    peeled = false;
+    const modifier = MODIFIERS.find(
+      (candidate) =>
+        rest.length > candidate.length + 1 &&
+        rest.startsWith(candidate) &&
+        SEPARATORS.includes(rest.charAt(candidate.length))
+    );
+    if (!modifier) break;
 
-  // A binding that is only a separator character (e.g. '-') round-trips as
-  // itself rather than as an empty binding.
-  if (parts.length === 0) {
-    parsed.key = binding.toLowerCase();
-    return parsed;
+    if (modifier === 'ctrl' || modifier === 'control') parsed.ctrl = true;
+    else if (modifier === 'shift') parsed.shift = true;
+    else if (modifier === 'alt' || modifier === 'option') parsed.alt = true;
+    else parsed.meta = true;
+
+    rest = rest.slice(modifier.length + 1);
+    peeled = true;
   }
 
-  parts.forEach((part, index) => {
-    const isLast = index === parts.length - 1;
-    if (!isLast && MODIFIERS.includes(part)) {
-      if (part === 'ctrl' || part === 'control') parsed.ctrl = true;
-      else if (part === 'shift') parsed.shift = true;
-      else if (part === 'alt' || part === 'option') parsed.alt = true;
-      else parsed.meta = true;
-      return;
-    }
-    parsed.key = KEY_ALIASES[part] ?? part;
-  });
+  parsed.key = KEY_ALIASES[rest] ?? rest;
 
   // A modifier used on its own (`ctrl`, `shift`) is a valid binding: the app
   // uses those as hold-to-modify keys.

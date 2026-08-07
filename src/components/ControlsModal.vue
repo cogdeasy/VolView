@@ -55,25 +55,32 @@ watch(
   }
 );
 
-useEventListener(window, 'keydown', (event: KeyboardEvent) => {
-  const action = recording.value;
-  if (!action) return;
+// Capture phase: the dialog stops every key but Escape from bubbling, so a
+// bubble-phase recorder would only ever see the key that cancels it.
+useEventListener(
+  window,
+  'keydown',
+  (event: KeyboardEvent) => {
+    const action = recording.value;
+    if (!action) return;
 
-  event.preventDefault();
-  event.stopPropagation();
+    event.preventDefault();
+    event.stopPropagation();
 
-  if (event.key === 'Escape') {
+    if (event.key === 'Escape') {
+      recording.value = null;
+      return;
+    }
+
+    const binding = bindingFromEvent(event);
+    // Modifier-only presses are ignored until a real key arrives.
+    if (!binding) return;
+
+    setActionKey(action, binding);
     recording.value = null;
-    return;
-  }
-
-  const binding = bindingFromEvent(event);
-  // Modifier-only presses are ignored until a real key arrives.
-  if (!binding) return;
-
-  setActionKey(action, binding);
-  recording.value = null;
-});
+  },
+  { capture: true }
+);
 </script>
 
 <template>

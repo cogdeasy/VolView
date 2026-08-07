@@ -20,13 +20,42 @@ const overrides = useLocalStorage<Partial<Record<Action, string>>>(
 );
 
 /**
+ * Overrides for actions this build still has. A binding persisted for an
+ * action that a later release renamed or dropped is discarded rather than
+ * left to break every keypress.
+ */
+function knownOverrides() {
+  return Object.fromEntries(
+    Object.entries(overrides.value).filter(([action]) => action in ACTIONS)
+  ) as Partial<Record<Action, string>>;
+}
+
+/**
+ * The bindings a reset returns to: the shipped defaults, replaced by whatever
+ * a deployment's config.json supplied.
+ */
+const defaultBindings = ref<Record<Action, string>>({ ...ACTION_TO_KEY });
+
+/**
  * The single binding registry: the keyboard handler, the command palette, the
  * cheat sheet and the shortcut editor all read and write this map.
  */
 export const actionToKey = ref<Record<Action, string>>({
   ...ACTION_TO_KEY,
-  ...overrides.value,
+  ...knownOverrides(),
 });
+
+/**
+ * Applies deployment-configured bindings. They become the defaults, so a
+ * reset restores the deployment's keys rather than the shipped ones, and they
+ * do not displace a binding the user has personally changed.
+ */
+export function setDefaultActionKeys(
+  bindings: Partial<Record<Action, string>>
+) {
+  defaultBindings.value = { ...defaultBindings.value, ...bindings };
+  actionToKey.value = { ...defaultBindings.value, ...knownOverrides() };
+}
 
 /**
  * The action whose binding is being re-recorded, if any. While this is set
@@ -47,19 +76,22 @@ export function setActionKey(action: Action, binding: string) {
 }
 
 export function resetActionKey(action: Action) {
-  actionToKey.value = { ...actionToKey.value, [action]: ACTION_TO_KEY[action] };
+  actionToKey.value = {
+    ...actionToKey.value,
+    [action]: defaultBindings.value[action],
+  };
   const rest = { ...overrides.value };
   delete rest[action];
   overrides.value = rest;
 }
 
 export function resetAllActionKeys() {
-  actionToKey.value = { ...ACTION_TO_KEY };
+  actionToKey.value = { ...defaultBindings.value };
   overrides.value = {};
 }
 
 export function isCustomizedActionKey(action: Action) {
-  return actionToKey.value[action] !== ACTION_TO_KEY[action];
+  return actionToKey.value[action] !== defaultBindings.value[action];
 }
 
 export function shouldIgnoreKeyboardShortcuts(
@@ -128,19 +160,33 @@ export function focusHandlesKey(
   return false;
 }
 
+/**
+ * True when focus sits inside a modal dialog. The viewer behind it must not
+ * react to `f`, `i` or the arrow keys while a dialog has the user's attention.
+ */
+export function inModalDialog(
+  activeElement: Element | null = document.activeElement
+) {
+  if (!(activeElement instanceof Element)) return false;
+  return (
+    activeElement.closest('[role="dialog"], [role="alertdialog"]') !== null
+  );
+}
+
 export function findActionForEvent(
   event: KeyboardEvent,
   bindings: Record<Action, string> = actionToKey.value
 ) {
   if (focusHandlesKey(event)) return null;
 
-  const typing = shouldIgnoreKeyboardShortcuts();
+  // Typing and dialogs both restrict the app to chorded, non-destructive
+  // shortcuts: Ctrl+K and Ctrl+S stay reachable, `i` and Ctrl+/ do not.
+  const restricted = shouldIgnoreKeyboardShortcuts() || inModalDialog();
   return (
     getEntries(bindings).find(([action, binding]) => {
       if (isHoldAction(action)) return false;
       if (!eventMatchesBinding(event, binding)) return false;
-      if (!typing) return true;
-      // While the user is typing, only non-destructive chorded shortcuts fire.
+      if (!restricted) return true;
       return (event.ctrlKey || event.metaKey) && !isDestructiveAction(action);
     })?.[0] ?? null
   );

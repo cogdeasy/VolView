@@ -7,7 +7,7 @@ import { useRulerStore } from '@/src/store/tools/rulers';
 import { usePolygonStore } from '@/src/store/tools/polygons';
 import { useViewStore } from '@/src/store/views';
 import { useWindowingStore } from '@/src/store/view-configs/windowing';
-import { actionToKey } from '@/src/composables/useKeyboardShortcuts';
+import { setDefaultActionKeys } from '@/src/composables/useKeyboardShortcuts';
 import { useSegmentGroupStore } from '@/src/store/segmentGroups';
 import { AnnotationToolStore } from '@/src/store/tools/useAnnotationTool';
 import useLoadDataStore from '@/src/store/load-data';
@@ -216,10 +216,7 @@ const applyLayout = (manifest: Config) => {
 const applyShortcuts = (manifest: Config) => {
   if (!manifest.shortcuts) return;
 
-  actionToKey.value = {
-    ...actionToKey.value,
-    ...manifest.shortcuts,
-  };
+  setDefaultActionKeys(manifest.shortcuts);
 };
 
 const applyIo = (manifest: Config) => {

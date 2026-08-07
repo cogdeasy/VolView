@@ -8,7 +8,7 @@
     :aria-valuemin="min"
     :aria-valuemax="max"
     :aria-valuenow="modelValue"
-    :aria-valuetext="`${unit} ${modelValue + 1} of ${max + 1}`"
+    :aria-valuetext="`${unit} ${modelValue - min + 1} of ${max - min + 1}`"
     @keydown="onKeyDown"
     @pointerdown="onDragStart"
     @pointermove="onDragMove"
@@ -119,7 +119,11 @@ export default {
     },
 
     onDragStart(ev) {
+      // preventDefault suppresses the focus a pointer press would normally
+      // give the rail, so the slider takes focus itself and keeps owning the
+      // arrow keys after being clicked.
       ev.preventDefault();
+      this.$refs.handleContainer.focus();
 
       this.dragging = true;
       this.initialMousePosY = ev.pageY;

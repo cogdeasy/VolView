@@ -51,10 +51,11 @@ export async function loadSample(
     announcements.announce(`${sample.name} loaded`);
     return selection;
   } catch (error) {
-    useMessageStore().addError('Failed to load sample data', {
+    // Naming the sample in the notification title is enough: the live
+    // announcer speaks new errors, so announcing here as well says it twice.
+    useMessageStore().addError(`Failed to load ${sample.name}`, {
       error: error as Error,
     });
-    announcements.announceUrgent(`Failed to load ${sample.name}`);
     throw error;
   }
 }
