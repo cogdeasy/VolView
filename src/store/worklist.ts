@@ -17,6 +17,7 @@ import type {
   ReadStatus,
   SortKey,
   WorklistFilters,
+  WorklistSeries,
   WorklistSort,
   WorklistStudy,
 } from '@/src/types/worklist';
@@ -36,6 +37,14 @@ function daysAgoToDicomDate(daysAgo: number): string {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}${month}${day}`;
+}
+
+/** Study-level counts, so a row can never disagree with its own series. */
+function seriesTotals(series: WorklistSeries[]) {
+  return {
+    seriesCount: series.length,
+    imageCount: series.reduce((total, entry) => total + entry.imageCount, 0),
+  };
 }
 
 /** The modality that best characterizes a multi-modality study. */
@@ -171,6 +180,13 @@ export const useWorklistStore = defineStore('worklist', () => {
       const meta = SAMPLE_WORKLIST_METADATA[sample.name];
       if (!meta) return [];
       const key = `sample:${sample.name}`;
+      // The dataset's own artwork stands in for the first series' thumbnail;
+      // the rest have none until the study is downloaded.
+      const series = meta.series.map((entry, index) => ({
+        ...entry,
+        key: `${key}:${index}`,
+        ...(index === 0 ? { thumbnail: sample.image } : {}),
+      }));
       return [
         {
           ...meta,
@@ -181,16 +197,8 @@ export const useWorklistStore = defineStore('worklist', () => {
           readStatus: readStatusOverrides[key] ?? meta.readStatus,
           volumeKeys: [],
           sample,
-          series: [
-            {
-              key: `${key}:1`,
-              seriesNumber: '1',
-              description: sample.description,
-              modality: meta.modality,
-              imageCount: meta.imageCount,
-              thumbnail: sample.image,
-            },
-          ],
+          series,
+          ...seriesTotals(series),
         },
       ];
     });
@@ -198,19 +206,23 @@ export const useWorklistStore = defineStore('worklist', () => {
 
   /** Fabricated rows, so the worklist reads like a real reading list. */
   const syntheticStudies = computed<WorklistStudy[]>(() =>
-    WORKLIST_DEMO_STUDIES.map((demo) => ({
-      ...demo,
-      key: `demo:${demo.key}`,
-      origin: 'synthetic' as const,
-      studyDate: daysAgoToDicomDate(demo.daysAgo),
-      studyTime: demo.time,
-      readStatus: readStatusOverrides[`demo:${demo.key}`] ?? demo.readStatus,
-      volumeKeys: [],
-      series: demo.series.map((series, index) => ({
-        ...series,
+    WORKLIST_DEMO_STUDIES.map((demo) => {
+      const series = demo.series.map((entry, index) => ({
+        ...entry,
         key: `demo:${demo.key}:${index}`,
-      })),
-    }))
+      }));
+      return {
+        ...demo,
+        key: `demo:${demo.key}`,
+        origin: 'synthetic' as const,
+        studyDate: daysAgoToDicomDate(demo.daysAgo),
+        studyTime: demo.time,
+        readStatus: readStatusOverrides[`demo:${demo.key}`] ?? demo.readStatus,
+        volumeKeys: [],
+        series,
+        ...seriesTotals(series),
+      };
+    })
   );
 
   const studies = computed<WorklistStudy[]>(() => [
@@ -279,6 +291,14 @@ export const useWorklistStore = defineStore('worklist', () => {
     readStatusOverrides[key] = status;
   }
 
+  /**
+   * Records data a sample produced, whichever entry point downloaded it, so
+   * the sample row gives way to the real study instead of doubling it up.
+   */
+  function noteSampleImported(sampleName: string, selection: string) {
+    importedSamples[sampleName] = selection;
+  }
+
   /** Opening a study starts a read; it never regresses a finished one. */
   function markOpened(key: string, current: ReadStatus) {
     if (current === 'unread') setReadStatus(key, 'in-progress');
@@ -313,7 +333,7 @@ export const useWorklistStore = defineStore('worklist', () => {
         },
       });
       const studyKey = volumeKey ? dicomStore.volumeStudy[volumeKey] : '';
-      if (volumeKey) importedSamples[sample.name] = volumeKey;
+      if (volumeKey) noteSampleImported(sample.name, volumeKey);
       // Only the row that actually owns the data changes status; a synthetic
       // row that borrowed a sample has still not been read.
       if (study.sample === sample) {
@@ -387,6 +407,7 @@ export const useWorklistStore = defineStore('worklist', () => {
     resetFilters,
     setFilter,
     setReadStatus,
+    noteSampleImported,
     show,
     hide,
     dismissForExternalLoad,

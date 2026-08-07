@@ -205,6 +205,34 @@ describe('Worklist store', () => {
     );
   });
 
+  it('counts what the preview can actually show', () => {
+    const worklist = useWorklistStore();
+    useDataBrowserStore().hideSampleData = false;
+
+    worklist.studies
+      .filter((entry) => entry.origin !== 'loaded')
+      .forEach((entry) => {
+        expect(entry.seriesCount).toBe(entry.series.length);
+        expect(entry.imageCount).toBe(
+          entry.series.reduce((total, series) => total + series.imageCount, 0)
+        );
+      });
+  });
+
+  it('strikes off a sample downloaded from the data panel', async () => {
+    const worklist = useWorklistStore();
+    useDataBrowserStore().hideSampleData = false;
+    const sample = worklist.studies.find((entry) => entry.origin === 'sample')!;
+
+    addLoadedVolume('volume-1');
+    worklist.noteSampleImported(sample.sample!.name, 'volume-1');
+    await nextTick();
+
+    expect(worklist.studies.some((entry) => entry.key === sample.key)).toBe(
+      false
+    );
+  });
+
   it('treats a cleared search or filter as empty rather than null', () => {
     const worklist = useWorklistStore();
     worklist.setFilter('search', 'chest');

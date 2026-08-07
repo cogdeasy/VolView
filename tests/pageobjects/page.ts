@@ -9,7 +9,11 @@ export default class Page {
    */
   public async open(path: string = '/') {
     const result = await browser.url(path);
-    await this.dismissWorklist();
+    // A launch that carries data goes straight to the viewer; only a bare
+    // launch lands on the worklist.
+    if (!path.includes('urls=')) {
+      await this.dismissWorklist();
+    }
     return result;
   }
 
@@ -19,11 +23,7 @@ export default class Page {
    */
   public async dismissWorklist() {
     const exit = await $('button[data-testid="worklist-back-to-viewer"]');
-    try {
-      await exit.waitForClickable({ timeout: 3000 });
-    } catch {
-      return;
-    }
+    await exit.waitForClickable();
     await exit.click();
   }
 }

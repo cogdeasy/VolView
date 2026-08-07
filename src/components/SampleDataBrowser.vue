@@ -7,6 +7,7 @@ import { useMessageStore } from '@/src/store/messages';
 import { SampleDataset } from '@/src/types';
 import { useImageStore } from '@/src/store/datasets-images';
 import { useDICOMStore } from '@/src/store/datasets-dicom';
+import { useWorklistStore } from '@/src/store/worklist';
 
 enum ProgressState {
   Pending,
@@ -86,6 +87,7 @@ export default defineComponent({
         if (selection) {
           loaded.idToURL[selection] = sample.url;
           loaded.urlToID[sample.url] = selection;
+          useWorklistStore().noteSampleImported(sample.name, selection);
         }
       } catch (error) {
         status.progress[sample.name].state = ProgressState.Error;

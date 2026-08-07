@@ -197,8 +197,11 @@ export default defineComponent({
 
     onMounted(async () => {
       await authReady;
-      await loadUrls(urlParams);
-      launchLoadPending = false;
+      try {
+        await loadUrls(urlParams);
+      } finally {
+        launchLoadPending = false;
+      }
       // Feature entry points subscribe to this (see launchLoad.ts).
       await signalLaunchLoadComplete();
     });

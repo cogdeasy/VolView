@@ -74,17 +74,16 @@ export interface SampleWorklistMetadata {
   daysAgo: number;
   /** DICOM TM (HHMMSS). */
   time: string;
-  seriesCount: number;
-  imageCount: number;
   priority: Priority;
   readStatus: ReadStatus;
   assignedReader: string;
+  /** The row's series and image counts are derived from this. */
+  series: Array<Omit<WorklistSeries, 'key' | 'thumbnail'>>;
 }
 
 /** A fabricated worklist row with no pixel data behind it. */
 export interface SyntheticWorklistStudy extends SampleWorklistMetadata {
   key: string;
-  series: Array<Omit<WorklistSeries, 'key' | 'thumbnail'>>;
 }
 
 export type SortKey =
