@@ -80,6 +80,6 @@ const maxWidth = computed(() => {
 <style>
 /* add padding to inner v-cards */
 .closeable-dialog > .v-card {
-  padding: 8px 0;
+  padding: var(--pv-density-block-padding) 0;
 }
 </style>

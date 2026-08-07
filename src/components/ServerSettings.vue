@@ -49,8 +49,7 @@ const connectBtnText = computed(() => {
         size="x-small"
         :href="Brand.urls.serverDocumentation"
         target="_blank"
-        class="ml-1"
-        style="color: #777"
+        class="ml-1 pv-text-muted"
         title="Server Documentation"
       ></v-btn>
     </h3>

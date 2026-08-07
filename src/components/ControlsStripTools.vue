@@ -244,6 +244,7 @@ export default defineComponent({
 <style>
 .tool-btn-selected {
   background-color: rgb(var(--v-theme-selection-bg-color));
+  color: rgb(var(--v-theme-on-selection));
 }
 </style>
 
@@ -255,9 +256,10 @@ export default defineComponent({
 
 .tool-separator {
   width: 75%;
-  height: 1px;
+  height: var(--pv-border-width-hairline);
   border: none;
-  border-top: 1px solid rgb(112, 112, 112);
+  border-top: var(--pv-border-width-hairline) solid
+    rgb(var(--v-theme-border-strong));
 }
 
 .popup-menu {

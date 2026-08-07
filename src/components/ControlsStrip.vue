@@ -13,6 +13,7 @@ import MessageCenter from '@/src/components/MessageCenter.vue';
 import { MessageType, useMessageStore } from '@/src/store/messages';
 import { ConnectionState, useServerStore } from '@/src/store/server';
 import LayoutSelector from '@/src/components/LayoutSelector.vue';
+import { useUiDensityStore } from '@/src/store/ui-density';
 
 interface Props {
   hasData: boolean;
@@ -61,6 +62,18 @@ function useMessageBubble() {
   return { count, badgeColor };
 }
 
+/**
+ * The badge is pulled a quarter of the button inwards so it overlaps the icon
+ * corner rather than floating off the strip. A fraction rather than a constant,
+ * because the button follows the density token.
+ */
+function useBadgeOffset() {
+  const densityStore = useUiDensityStore();
+  return computed(() =>
+    Math.round(parseFloat(densityStore.tokens.toolButtonSize) / 4)
+  );
+}
+
 function useServerConnection() {
   const serverStore = useServerStore();
 
@@ -87,21 +100,20 @@ const messageDialog = ref(false);
 const { icon: connIcon, url: serverUrl } = useServerConnection();
 const { handleSave, saveDialog, isSaving } = useSaveControls();
 const { count: msgCount, badgeColor: msgBadgeColor } = useMessageBubble();
+const badgeOffset = useBadgeOffset();
 </script>
 
 <template>
   <div
     id="tools-strip"
-    class="bg-grey-darken-4 d-flex flex-column align-center"
+    class="pv-surface-sunken d-flex flex-column align-center"
   >
     <control-button
-      size="40"
       icon="mdi-folder-open"
       name="Open files"
       @click="loadUserPromptedFiles"
     />
     <control-button
-      size="40"
       icon="mdi-content-save-all"
       name="Save session"
       :loading="isSaving"
@@ -113,7 +125,6 @@ const { count: msgCount, badgeColor: msgBadgeColor } = useMessageBubble();
         <div>
           <control-button
             v-bind="props"
-            size="40"
             icon="mdi-view-dashboard"
             name="Layouts"
           />
@@ -129,28 +140,25 @@ const { count: msgCount, badgeColor: msgBadgeColor } = useMessageBubble();
     <v-spacer />
     <control-button
       v-if="serverUrl"
-      size="40"
       :icon="connIcon"
       name="Open Server Settings"
       @click="settingsDialog = true"
     />
     <v-badge
-      offset-x="10"
-      offset-y="10"
+      :offset-x="badgeOffset"
+      :offset-y="badgeOffset"
       :content="msgCount"
       :color="msgBadgeColor"
       :model-value="msgCount > 0"
       id="notifications"
     >
       <control-button
-        size="40"
         icon="mdi-bell-outline"
         name="Notifications"
         @click="messageDialog = true"
       />
     </v-badge>
     <control-button
-      size="40"
       icon="mdi-cog"
       name="Settings"
       @click="settingsDialog = true"
@@ -175,14 +183,18 @@ const { count: msgCount, badgeColor: msgBadgeColor } = useMessageBubble();
 <style src="@/src/components/styles/utils.css"></style>
 <style scoped>
 #tools-strip {
-  border-left: 1px solid #212121;
-  flex: 0 0 40px;
+  border-left: var(--pv-border-width-hairline) solid rgb(var(--v-theme-border));
+  /* The hairline is inside the border box, so the basis has to carry it or the
+     buttons overflow the strip by a pixel. */
+  flex: 0 0
+    calc(var(--pv-density-tool-button-size) + var(--pv-border-width-hairline));
 }
 
 .tool-separator {
   width: 75%;
-  height: 1px;
+  height: var(--pv-border-width-hairline);
   border: none;
-  border-top: 1px solid rgb(112, 112, 112);
+  border-top: var(--pv-border-width-hairline) solid
+    rgb(var(--v-theme-border-strong));
 }
 </style>

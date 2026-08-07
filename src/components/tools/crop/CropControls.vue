@@ -28,11 +28,6 @@ export default defineComponent({
 
 <template>
   <v-card dark>
-    <control-button
-      size="40"
-      icon="mdi-restore"
-      name="Reset Crop"
-      @click="resetCrop"
-    />
+    <control-button icon="mdi-restore" name="Reset Crop" @click="resetCrop" />
   </v-card>
 </template>

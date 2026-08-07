@@ -24,7 +24,6 @@ export default defineComponent({
 
 <template>
   <control-button
-    size="40"
     icon="mdi-camera-flip-outline"
     name="Reset Views"
     @click="onClick"

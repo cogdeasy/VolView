@@ -20,15 +20,14 @@ const dataSecurityDialog = ref(false);
 </script>
 
 <template>
-  <v-container class="page-container bg-grey-darken-3" v-bind="$attrs">
+  <v-container class="page-container pv-surface-sunken" v-bind="$attrs">
     <v-col>
       <v-row justify="center">
         <v-card
           flat
-          dark
           rounded="0"
           color="transparent"
-          class="text-center headline"
+          class="text-center pv-text-subtitle"
         >
           <template v-if="!loading">
             <div>
@@ -80,6 +79,6 @@ const dataSecurityDialog = ref(false);
 }
 
 .vertical-offset-margin {
-  margin-top: 128px;
+  margin-top: calc(4 * var(--pv-space-xxl));
 }
 </style>

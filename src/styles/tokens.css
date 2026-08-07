@@ -1,0 +1,326 @@
+/*
+ * Philips design system: the CSS side of the token layer.
+ *
+ * Every value here reads a `--pv-*` custom property emitted from
+ * `src/design-tokens.ts` (see `src/plugins/designTokens.ts`). Nothing in this
+ * file should contain a literal size, radius or color — if you need a new one,
+ * add a token.
+ */
+
+/* ---------------------------------------------------------------- type --- */
+
+html,
+.v-application {
+  font-family: var(--pv-font-family);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Frutiger-style humanist figures: lining, proportional-width by default,
+     tabular where we ask for it. */
+  font-variant-numeric: lining-nums;
+}
+
+.v-application code,
+.v-application kbd,
+.v-application pre,
+.pv-numeric {
+  font-family: var(--pv-font-family-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Remap Vuetify's Material type ramp onto the Philips scale. Vuetify emits
+   these with `!important`, so we have to match it. */
+.v-application .text-h1,
+.v-application .text-h2,
+.v-application .text-h3 {
+  font-family: var(--pv-font-family);
+  font-size: var(--pv-font-size-display) !important;
+  line-height: var(--pv-line-height-display);
+  font-weight: var(--pv-font-weight-display);
+  letter-spacing: var(--pv-letter-spacing-display) !important;
+}
+
+.v-application .text-h4,
+.v-application .text-h5,
+.v-application .text-h6 {
+  font-family: var(--pv-font-family);
+  font-size: var(--pv-font-size-title) !important;
+  line-height: var(--pv-line-height-title);
+  font-weight: var(--pv-font-weight-title);
+  letter-spacing: var(--pv-letter-spacing-title) !important;
+}
+
+.v-application .text-subtitle-1,
+.v-application .text-subtitle-2 {
+  font-family: var(--pv-font-family);
+  font-size: var(--pv-font-size-subtitle) !important;
+  line-height: var(--pv-line-height-subtitle);
+  font-weight: var(--pv-font-weight-subtitle);
+  letter-spacing: var(--pv-letter-spacing-subtitle) !important;
+}
+
+.v-application .text-body-1,
+.v-application .text-body-2 {
+  font-family: var(--pv-font-family);
+  font-size: var(--pv-font-size-body) !important;
+  line-height: var(--pv-line-height-body);
+  font-weight: var(--pv-font-weight-body);
+  letter-spacing: var(--pv-letter-spacing-body) !important;
+}
+
+.v-application .text-button {
+  font-family: var(--pv-font-family);
+  font-size: var(--pv-font-size-label) !important;
+  font-weight: var(--pv-font-weight-label);
+  letter-spacing: var(--pv-letter-spacing-label) !important;
+  text-transform: var(--pv-text-transform-label, none) !important;
+}
+
+.v-application .text-caption,
+.v-application .text-overline {
+  font-family: var(--pv-font-family);
+  font-size: var(--pv-font-size-caption) !important;
+  line-height: var(--pv-line-height-caption);
+  font-weight: var(--pv-font-weight-caption);
+  letter-spacing: var(--pv-letter-spacing-caption) !important;
+}
+
+.v-application .text-overline {
+  text-transform: uppercase !important;
+}
+
+.pv-text-display {
+  font-size: var(--pv-font-size-display);
+  line-height: var(--pv-line-height-display);
+  font-weight: var(--pv-font-weight-display);
+  letter-spacing: var(--pv-letter-spacing-display);
+}
+
+.pv-text-title {
+  font-size: var(--pv-font-size-title);
+  line-height: var(--pv-line-height-title);
+  font-weight: var(--pv-font-weight-title);
+  letter-spacing: var(--pv-letter-spacing-title);
+}
+
+.pv-text-subtitle {
+  font-size: var(--pv-font-size-subtitle);
+  line-height: var(--pv-line-height-subtitle);
+  font-weight: var(--pv-font-weight-subtitle);
+  letter-spacing: var(--pv-letter-spacing-subtitle);
+}
+
+.pv-text-body {
+  font-size: var(--pv-font-size-body);
+  line-height: var(--pv-line-height-body);
+  font-weight: var(--pv-font-weight-body);
+  letter-spacing: var(--pv-letter-spacing-body);
+}
+
+.pv-text-label {
+  font-size: var(--pv-font-size-label);
+  line-height: var(--pv-line-height-label);
+  font-weight: var(--pv-font-weight-label);
+  letter-spacing: var(--pv-letter-spacing-label);
+}
+
+.pv-text-caption {
+  font-size: var(--pv-font-size-caption);
+  line-height: var(--pv-line-height-caption);
+  font-weight: var(--pv-font-weight-caption);
+  letter-spacing: var(--pv-letter-spacing-caption);
+}
+
+/* Secondary copy reads from the token rather than an opacity guess, so its
+   contrast is measurable. */
+.pv-text-muted {
+  color: rgb(var(--v-theme-text-muted));
+}
+
+/* -------------------------------------------------------------- radius --- */
+
+.rounded-pv-none {
+  border-radius: var(--pv-radius-none) !important;
+}
+.rounded-pv-sm {
+  border-radius: var(--pv-radius-sm) !important;
+}
+.rounded-pv-md {
+  border-radius: var(--pv-radius-md) !important;
+}
+.rounded-pv-lg {
+  border-radius: var(--pv-radius-lg) !important;
+}
+.rounded-pv-xl {
+  border-radius: var(--pv-radius-xl) !important;
+}
+
+/* ----------------------------------------------------------- elevation --- */
+
+.pv-elevation-raised {
+  box-shadow: var(--pv-elevation-raised);
+}
+.pv-elevation-overlay {
+  box-shadow: var(--pv-elevation-overlay);
+}
+.pv-elevation-dialog {
+  box-shadow: var(--pv-elevation-dialog);
+}
+
+/* ------------------------------------------------------------ surfaces --- */
+
+/* Doubled selectors: Vuetify's own component CSS (`.v-list`, `.v-sheet`, …)
+   also sets `background-color` at one class of specificity and is injected
+   after this file, so a single class here loses the cascade. */
+
+.pv-surface.pv-surface {
+  background-color: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
+}
+
+.pv-surface-raised.pv-surface-raised {
+  background-color: rgb(var(--v-theme-surface-raised));
+  color: rgb(var(--v-theme-on-surface-raised));
+}
+
+.pv-surface-sunken.pv-surface-sunken {
+  background-color: rgb(var(--v-theme-surface-sunken));
+  color: rgb(var(--v-theme-on-surface-sunken));
+}
+
+/* Hairline helpers. `border` is decorative; `border-strong` carries meaning
+   and is held at >= 3:1 against every surface it can sit on. */
+.pv-border-block-end {
+  border-bottom: var(--pv-border-width-hairline) solid
+    rgb(var(--v-theme-border));
+}
+
+.pv-border-inline-start {
+  border-left: var(--pv-border-width-hairline) solid rgb(var(--v-theme-border));
+}
+
+.pv-border-inline-end {
+  border-right: var(--pv-border-width-hairline) solid rgb(var(--v-theme-border));
+}
+
+/* ------------------------------------------------------------- density --- */
+
+.pv-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pv-density-stack-gap);
+}
+
+.pv-panel-padding {
+  padding: var(--pv-density-block-padding) var(--pv-density-inline-padding);
+}
+
+/* ---------------------------------------------------- component tuning --- */
+
+/* Philips chrome is calm: dialogs get one shadow step and a soft radius, and
+   nothing else floats. */
+.v-overlay__content > .v-card,
+.v-overlay__content > .v-sheet {
+  border-radius: var(--pv-radius-lg);
+  box-shadow: var(--pv-elevation-dialog);
+  background-color: rgb(var(--v-theme-surface-raised));
+  color: rgb(var(--v-theme-on-surface-raised));
+}
+
+.v-menu > .v-overlay__content {
+  border-radius: var(--pv-radius-md);
+  box-shadow: var(--pv-elevation-overlay);
+}
+
+/* The default tooltip was a hardcoded white slab in both themes. Matched on
+   the component rather than the default `contentClass`, so a call site that
+   passes its own `content-class` still gets the themed tooltip; doubled to
+   outrank Vuetify's own `.v-tooltip > .v-overlay__content`. */
+.v-tooltip.v-tooltip > .v-overlay__content {
+  background-color: rgb(var(--v-theme-surface-raised)) !important;
+  color: rgb(var(--v-theme-on-surface-raised)) !important;
+  border: var(--pv-border-width-hairline) solid
+    rgb(var(--v-theme-border-strong));
+  border-radius: var(--pv-radius-sm);
+  box-shadow: var(--pv-elevation-overlay);
+  font-size: var(--pv-font-size-caption);
+  line-height: var(--pv-line-height-caption);
+  letter-spacing: var(--pv-letter-spacing-caption);
+  opacity: 1 !important;
+}
+
+/* Doubled for the same reason as the surface utilities above: Vuetify sets
+   these at one class of specificity from a stylesheet injected after this one,
+   so a single class loses and the token is silently inert. */
+.v-card-title.v-card-title {
+  font-size: var(--pv-font-size-title) !important;
+  line-height: var(--pv-line-height-title) !important;
+  font-weight: var(--pv-font-weight-title) !important;
+  letter-spacing: var(--pv-letter-spacing-title) !important;
+  padding: var(--pv-density-block-padding) var(--pv-density-inline-padding);
+}
+
+.v-card-text.v-card-text {
+  font-size: var(--pv-font-size-body);
+  line-height: var(--pv-line-height-body);
+  padding: var(--pv-density-block-padding) var(--pv-density-inline-padding);
+}
+
+/* Vuetify draws a divider as `currentColor` faded by `--v-border-opacity`,
+   which the theme pins to 1 so that explicit border tokens render truthfully.
+   That would leave dividers as full-strength text-colored rules, so they are
+   given the decorative hairline token instead. */
+.v-divider.v-divider {
+  border-color: rgb(var(--v-theme-border));
+  opacity: 1;
+}
+
+/* The module switcher stacks an icon over a caption, so the tab needs its own
+   height token: Vuetify's density-derived button height is shorter than that
+   content and the label would spill over the active-tab slider. */
+.v-tab.v-tab {
+  letter-spacing: var(--pv-letter-spacing-label);
+  text-transform: none;
+  height: var(--pv-density-tab-height);
+  min-height: var(--pv-density-tab-height);
+}
+
+.v-tab.v-tab .v-btn__content {
+  height: 100%;
+  overflow: hidden;
+}
+
+.v-tab.v-tab .v-icon {
+  font-size: var(--pv-density-tool-icon-size);
+}
+
+/* A selected segmented button reads as a filled selection rather than a
+   tinted label: Vuetify's tint left the label at 3.87:1 on dark chrome, and
+   the selection pair is contrast-checked in both themes. */
+.v-btn-group .v-btn.v-btn--active {
+  background-color: rgb(var(--v-theme-selection-bg-color));
+  color: rgb(var(--v-theme-on-selection));
+}
+
+.v-list-item-title.v-list-item-title {
+  font-size: var(--pv-font-size-body);
+  line-height: var(--pv-line-height-body);
+}
+
+.v-expansion-panel-title.v-expansion-panel-title {
+  font-size: var(--pv-font-size-label);
+  font-weight: var(--pv-font-weight-label);
+  letter-spacing: var(--pv-letter-spacing-label);
+  min-height: var(--pv-density-list-row-height) !important;
+}
+
+.v-slider-thumb__label {
+  background-color: rgb(var(--v-theme-surface-raised)) !important;
+  color: rgb(var(--v-theme-on-surface-raised)) !important;
+  font-size: var(--pv-font-size-caption);
+}
+
+/* Focus ring: brand accent, visible on every surface, never suppressed. */
+.v-application :focus-visible {
+  outline: var(--pv-border-width-emphasis) solid rgb(var(--v-theme-accent));
+  outline-offset: var(--pv-space-xxs);
+}

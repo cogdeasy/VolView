@@ -37,6 +37,7 @@
     "@commitlint/cli": "^21.0.0",
     "@commitlint/config-conventional": "^21.0.0",
     "@eslint/js": "^9.39.1",
+    "@fontsource-variable/source-sans-3": "^5.3.0",
     "@itk-wasm/dicom": "^7.6.4",
     "@itk-wasm/image-io": "1.6.1",
     "@itk-wasm/morphological-contour-interpolation": "2.0.0",

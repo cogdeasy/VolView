@@ -168,9 +168,11 @@ export default defineComponent({
 #module-switcher {
   display: relative;
   flex: 0 2;
+  background-color: rgb(var(--v-theme-surface));
   /* roughly match vuetify's dark/light transition */
   transition: border-bottom 0.3s;
-  border-bottom: 2px solid rgb(var(--v-theme-on-surface-variant));
+  border-bottom: var(--pv-border-width-hairline) solid
+    rgb(var(--v-theme-border));
 }
 
 #close-btn {
@@ -186,6 +188,7 @@ export default defineComponent({
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
+  padding-top: var(--pv-density-block-padding);
 }
 
 .module-window,
@@ -194,7 +197,8 @@ export default defineComponent({
 }
 
 .module-text {
-  font-size: 0.6rem;
+  font-size: var(--pv-font-size-caption);
+  letter-spacing: var(--pv-letter-spacing-caption);
   white-space: pre;
 }
 

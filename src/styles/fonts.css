@@ -1,0 +1,25 @@
+/*
+ * Application typeface.
+ *
+ * Philips' corporate typeface is Neue Frutiger World. It is licensed per-seat
+ * and cannot be redistributed in an open-source build, so this fork ships
+ * Source Sans 3 (SIL OFL 1.1) as a humanist stand-in with a comparable
+ * skeleton, x-height and figure set. The webfonts are self-hosted through the
+ * `@fontsource-variable/source-sans-3` package and bundled by Vite; there is
+ * no runtime request to a font CDN.
+ *
+ * To use the real typeface:
+ *   1. Drop the licensed `.woff2` files into `public/fonts/`.
+ *   2. Replace the import below with `@font-face` rules pointing at them, e.g.
+ *        @font-face {
+ *          font-family: 'Neue Frutiger World';
+ *          src: url('/fonts/NeueFrutigerWorld-Regular.woff2') format('woff2');
+ *          font-weight: 400;
+ *          font-display: swap;
+ *        }
+ *   3. Put `'Neue Frutiger World'` at the front of `FontStacks.sans` in
+ *      `src/design-tokens.ts`.
+ * No component names a font, so those three edits are the whole swap.
+ */
+
+@import '@fontsource-variable/source-sans-3/wght.css';

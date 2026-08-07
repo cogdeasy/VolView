@@ -50,13 +50,19 @@
 <style scoped>
 .image-list-card-active {
   background-color: rgb(var(--v-theme-selection-bg-color));
-  border-color: rgb(var(--v-theme-selection-border-color));
+  border-color: rgb(var(--v-theme-selection-border-color)) !important;
+  color: rgb(var(--v-theme-on-selection));
+}
+
+/* Selection outranks hover, so hovering the selected card keeps its border. */
+.image-list-card-hover:not(.image-list-card-active) {
+  border-color: rgb(var(--v-theme-primary)) !important;
 }
 
 .image-container {
   position: relative;
-  margin-left: 8px;
-  margin-right: 8px;
+  margin-left: var(--pv-space-sm);
+  margin-right: var(--pv-space-sm);
 }
 </style>
 

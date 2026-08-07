@@ -18,7 +18,8 @@ defineProps<{ color: RGBAColor }>();
 .color-dot {
   width: 18px;
   height: 18px;
-  border-radius: 16px;
-  border: 1px solid #111;
+  border-radius: var(--pv-radius-circle);
+  border: var(--pv-border-width-hairline) solid
+    rgb(var(--v-theme-border-strong));
 }
 </style>

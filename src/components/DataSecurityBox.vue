@@ -16,7 +16,7 @@ const reportingEnabled = computed({
 </script>
 
 <template>
-  <v-card class="text-grey-lighten-1">
+  <v-card>
     <v-card-title>Data Privacy and Security Notice</v-card-title>
     <v-card-text>
       <p class="mb-4">
@@ -47,8 +47,6 @@ const reportingEnabled = computed({
           v-if="errorReportingConfigured"
           v-model="reportingEnabled"
           :label="`Error Reporting: ${reportingEnabled ? 'On' : 'Off'}`"
-          color="secondary"
-          hide-details
         />
         <v-alert v-else type="info" variant="text">
           <span>Error reporting has been turned off at build time.</span>
@@ -60,11 +58,11 @@ const reportingEnabled = computed({
 
 <style scoped>
 .bullet-points {
-  padding-left: 20px;
-  margin-bottom: 16px;
+  padding-left: var(--pv-space-xl);
+  margin-bottom: var(--pv-space-lg);
 }
 
 .bullet-points > li:not(:last-child) {
-  margin-bottom: 8px;
+  margin-bottom: var(--pv-space-sm);
 }
 </style>

@@ -226,7 +226,7 @@ function deleteSelected() {
 <template>
   <div class="mt-2 px-3" v-if="currentImageID">
     <div
-      class="text-grey text-subtitle-2 d-flex align-center justify-start ga-4 mb-2"
+      class="pv-text-muted pv-text-label d-flex align-center justify-start ga-4 mb-2"
     >
       <v-btn
         class="my-1"
@@ -360,7 +360,7 @@ function deleteSelected() {
         </div>
       </v-list-item>
       <v-list-item v-if="currentSegmentGroups.length === 0">
-        <div class="text-center text-grey-darken-1 py-4 w-100">
+        <div class="text-center pv-text-muted py-4 w-100">
           Create a segment group with the above buttons or click the paint tool
         </div>
       </v-list-item>

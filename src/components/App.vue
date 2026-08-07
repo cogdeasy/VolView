@@ -207,7 +207,7 @@ export default defineComponent({
 }
 
 #left-nav {
-  border-right: 1px solid rgb(var(--v-theme-background));
+  border-right: var(--pv-border-width-hairline) solid rgb(var(--v-theme-border));
 }
 
 #content-main > .v-content__wrap {
@@ -236,8 +236,8 @@ export default defineComponent({
 .dnd-prompt {
   background: rgba(0, 0, 0, 0.4);
   color: white;
-  border-radius: 8px;
-  box-shadow: 0px 0px 10px 5px rgba(0, 0, 0, 0.4);
-  padding: 64px;
+  border-radius: var(--pv-radius-lg);
+  box-shadow: var(--pv-elevation-dialog);
+  padding: var(--pv-space-xxxl);
 }
 </style>
