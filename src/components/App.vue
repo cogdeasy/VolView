@@ -216,6 +216,9 @@ export default defineComponent({
         // Disarmed once the launch load is over, so a later import can never
         // inherit an exemption the config load did not consume.
         launchConfigLoad = false;
+        // A launch whose URLs brought nothing in has no viewer to show, so the
+        // dismissal it triggered is taken back.
+        worklistStore.restoreIfEmpty();
       }
       // Feature entry points subscribe to this (see launchLoad.ts).
       await signalLaunchLoadComplete();

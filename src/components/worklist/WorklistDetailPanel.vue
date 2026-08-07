@@ -53,8 +53,10 @@ const isOpening = computed(
   () => !!selectedStudy.value && openingKey.value === selectedStudy.value.key
 );
 
+// Only a sample whose pixels are still on the server costs a download.
 const openLabel = computed(() =>
-  selectedStudy.value?.origin === 'sample'
+  selectedStudy.value?.origin === 'sample' &&
+  selectedStudy.value.volumeKeys.length === 0
     ? 'Download and open study'
     : 'Open study'
 );

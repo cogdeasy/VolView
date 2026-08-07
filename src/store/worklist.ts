@@ -353,6 +353,14 @@ export const useWorklistStore = defineStore('worklist', () => {
     dismissed.value = true;
   }
 
+  /**
+   * Takes back a dismissal that brought no data with it, so a launch whose
+   * URLs all failed lands on the worklist rather than the empty viewer.
+   */
+  function restoreIfEmpty() {
+    if (!hasData.value) dismissed.value = false;
+  }
+
   function dismissDemoEntry() {
     demoEntry.value = null;
   }
@@ -454,6 +462,7 @@ export const useWorklistStore = defineStore('worklist', () => {
     show,
     hide,
     dismissForExternalLoad,
+    restoreIfEmpty,
     dismissDemoEntry,
     openStudy,
     openDemoSubstitute,

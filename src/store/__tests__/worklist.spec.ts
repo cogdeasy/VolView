@@ -248,6 +248,26 @@ describe('Worklist store', () => {
     expect(setDataForAllViews).toHaveBeenLastCalledWith('image-1');
   });
 
+  it('comes back when a launch dismissal brought no data', () => {
+    const worklist = useWorklistStore();
+
+    worklist.dismissForExternalLoad();
+    expect(worklist.visible).toBe(false);
+
+    worklist.restoreIfEmpty();
+    expect(worklist.visible).toBe(true);
+  });
+
+  it('stays dismissed when a launch dismissal did bring data', () => {
+    const worklist = useWorklistStore();
+    useImageStore().idList.push('image-1');
+
+    worklist.dismissForExternalLoad();
+    worklist.restoreIfEmpty();
+
+    expect(worklist.visible).toBe(false);
+  });
+
   it('stays on the worklist when a sample loads nothing displayable', async () => {
     const worklist = useWorklistStore();
     const messageStore = useMessageStore();
