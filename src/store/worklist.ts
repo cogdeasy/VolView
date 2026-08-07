@@ -321,9 +321,9 @@ export const useWorklistStore = defineStore('worklist', () => {
         // The sample row is now replaced by the real DICOM row; the reading
         // it just started, and the preview, have to follow it.
         if (studyKey) {
-          markOpened(`loaded:${studyKey}`, 'unread');
-          if (selectedKey.value === study.key)
-            selectedKey.value = `loaded:${studyKey}`;
+          const loadedKey = `loaded:${studyKey}`;
+          markOpened(loadedKey, readStatusOverrides[loadedKey] ?? 'unread');
+          if (selectedKey.value === study.key) selectedKey.value = loadedKey;
         }
       }
       hide();

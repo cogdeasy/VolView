@@ -35,6 +35,7 @@
           v-if="worklistVisible"
           :has-data="hasData"
           @open-files="loadUserPromptedFiles"
+          @close="closeWorklist"
         />
       </v-app>
       <persistent-overlay
@@ -170,16 +171,34 @@ export default defineComponent({
       worklistStore.dismissForExternalLoad();
     }
 
-    // The first data loaded from outside the worklist (drag and drop, the file
-    // dialog, DICOMweb) takes the reader to the viewer. Later series arriving
-    // from the same import must not close a worklist opened in the meantime.
-    watch(hasData, (dataPresent, hadData) => {
-      if (dataPresent && !hadData) worklistStore.dismissForExternalLoad();
-    });
+    // An import started from outside the worklist (drag and drop, the file
+    // dialog, DICOMweb) takes the reader to the viewer. Keyed on the import
+    // starting, so series landing one by one cannot close a worklist the
+    // reader opened while the import runs, and the launch-time config load —
+    // which brings no studies — leaves the worklist up.
+    let launchLoadPending = Boolean(urlParams.config);
+    watch(
+      () => loadDataStore.isLoading,
+      (loading, wasLoading) => {
+        if (launchLoadPending || !loading || wasLoading) return;
+        worklistStore.dismissForExternalLoad();
+      }
+    );
+
+    const display = useDisplay();
+    const leftSideBar = ref(!display.mobile.value);
+
+    // With no study open, leaving the worklist hands the reader to the data
+    // panel, so the drawer has to be up even where it starts closed.
+    function closeWorklist() {
+      worklistStore.hide();
+      if (!hasData.value) leftSideBar.value = true;
+    }
 
     onMounted(async () => {
       await authReady;
       await loadUrls(urlParams);
+      launchLoadPending = false;
       // Feature entry points subscribe to this (see launchLoad.ts).
       await signalLaunchLoadComplete();
     });
@@ -206,10 +225,9 @@ export default defineComponent({
 
     // --- //
 
-    const display = useDisplay();
-
     return {
-      leftSideBar: ref(!display.mobile.value),
+      leftSideBar,
+      closeWorklist,
       loadUserPromptedFiles,
       loadFiles,
       hasData,

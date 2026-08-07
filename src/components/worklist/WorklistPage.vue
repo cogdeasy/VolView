@@ -16,6 +16,7 @@ defineProps<{
 
 const emit = defineEmits<{
   (event: 'open-files'): void;
+  (event: 'close'): void;
 }>();
 
 const worklist = useWorklistStore();
@@ -59,7 +60,7 @@ const cssVars = useWorklistTheme();
         color="primary"
         :prepend-icon="hasData ? 'mdi-arrow-left' : 'mdi-database-outline'"
         data-testid="worklist-back-to-viewer"
-        @click="worklist.hide()"
+        @click="emit('close')"
       >
         {{ hasData ? 'Back to viewer' : 'Data browser' }}
       </v-btn>

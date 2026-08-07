@@ -7,7 +7,23 @@ export default class Page {
    * Opens a sub page of the page
    * @param path path of the sub page (e.g. /path/to/page.html)
    */
-  public open(path: string = '/') {
-    return browser.url(path);
+  public async open(path: string = '/') {
+    const result = await browser.url(path);
+    await this.dismissWorklist();
+    return result;
+  }
+
+  /**
+   * Leaves the landing worklist, which covers the app shell when the app is
+   * opened without data. Tests drive the viewer and the data panel directly.
+   */
+  public async dismissWorklist() {
+    const exit = await $('button[data-testid="worklist-back-to-viewer"]');
+    try {
+      await exit.waitForClickable({ timeout: 3000 });
+    } catch {
+      return;
+    }
+    await exit.click();
   }
 }

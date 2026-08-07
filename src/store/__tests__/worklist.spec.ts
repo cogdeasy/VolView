@@ -168,6 +168,21 @@ describe('Worklist store', () => {
     );
   });
 
+  it('does not restart a reading that was already finished', async () => {
+    const worklist = useWorklistStore();
+    useDataBrowserStore().hideSampleData = false;
+    const sample = worklist.studies.find((entry) => entry.origin === 'sample')!;
+
+    addLoadedVolume('volume-1');
+    worklist.setReadStatus('loaded:study-uid-1', 'read');
+    await worklist.openStudy(sample);
+
+    expect(
+      worklist.studies.find((entry) => entry.key === 'loaded:study-uid-1')
+        ?.readStatus
+    ).toBe('read');
+  });
+
   it('hides a sample that imported as a plain image, and restores it', async () => {
     const worklist = useWorklistStore();
     const imageStore = useImageStore();
