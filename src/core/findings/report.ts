@@ -59,6 +59,17 @@ const escapeHtml = (value: string) =>
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 
+/**
+ * A key image can come from a restored archive, so it is untrusted content
+ * heading for a document that is downloaded and printed outside the app's
+ * sandbox. Only a base64 raster data URL is allowed through.
+ */
+const IMAGE_DATA_URL_RE =
+  /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
+
+const imageSrc = (dataURL: string) =>
+  IMAGE_DATA_URL_RE.test(dataURL) ? dataURL : '';
+
 const fieldsToText = (fields: ReportHeaderField[]) =>
   fields.map(({ label, value }) => `${label}: ${value || NOT_RECORDED}`);
 
@@ -293,9 +304,9 @@ const findingHtml = (finding: ReportFinding, index: number) => {
               }</div>
             </div>
             ${
-              finding.keyImage
+              finding.keyImage && imageSrc(finding.keyImage.dataURL)
                 ? `<figure class="key-image">
-              <img src="${finding.keyImage.dataURL}" alt="${escapeHtml(
+              <img src="${imageSrc(finding.keyImage.dataURL)}" alt="${escapeHtml(
                 finding.keyImage.caption
               )}" />
               <figcaption>${escapeHtml(finding.keyImage.caption)}</figcaption>

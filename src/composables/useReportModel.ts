@@ -146,14 +146,17 @@ export function useReportModel() {
     ];
   });
 
-  const report = computed<Report>(() => ({
+  /** Stamped when called, so an export carries its own generation time. */
+  const buildReport = (): Report => ({
     generatedAt: new Date().toLocaleString(),
     patient: patientFields.value,
     study: studyFields.value,
     series: seriesFields.value,
     impression: findingsStore.impression,
     findings: findings.value.map(describeFinding),
-  }));
+  });
 
-  return { report, modality, findings, dicomInfo };
+  const report = computed<Report>(buildReport);
+
+  return { report, buildReport, modality, findings, dicomInfo };
 }

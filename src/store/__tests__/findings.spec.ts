@@ -20,19 +20,19 @@ import type { ToolID } from '@/src/types/annotation-tool';
 const KEY_IMAGE_DATA_URL =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 
-const addRuler = (imageID: string) => {
+const addRuler = (imageID: string, labelName = 'Lesion') => {
   const store = useRulerStore();
   const id = store.addRuler({
     firstPoint: [0, 0, 5],
     secondPoint: [3, 4, 5],
     imageID,
     name: 'Ruler',
-    labelName: 'Lesion',
+    labelName,
     frameOfReference: { planeNormal: [0, 0, 1], planeOrigin: [0, 0, 5] },
     slice: 5,
     placing: false,
   });
-  store.updateRuler(id, { labelName: 'Lesion' });
+  store.updateRuler(id, { labelName });
   return id;
 };
 
@@ -52,9 +52,8 @@ const serializeFindings = async () => {
       .filter((entry) => !entry.dir)
       .map(async ({ name: path }) => ({
         archivePath: path,
-        file: new File([await zip.file(path)!.async('blob')], path, {
-          type: 'image/png',
-        }),
+        // extractFilesFromZip yields typeless files, like a real restore.
+        file: new File([await zip.file(path)!.async('blob')], path),
       }))
   );
   return { manifest: parsed, stateFiles };
@@ -136,7 +135,66 @@ describe('findings store', () => {
       { toolType: AnnotationToolType.Ruler, toolID: restoredToolID },
     ]);
     expect(finding.keyImage?.viewName).toBe('Axial');
+    // A typeless archive member must still restore as a usable <img> source.
     expect(finding.keyImage?.dataURL).toBe(KEY_IMAGE_DATA_URL);
+  });
+
+  it('reorders a finding past a sibling, skipping other images', () => {
+    const store = useFindingsStore();
+    const first = store.promoteMeasurement(
+      AnnotationToolType.Ruler,
+      addRuler('image-1', 'First')
+    )!;
+    const other = store.promoteMeasurement(
+      AnnotationToolType.Ruler,
+      addRuler('image-2', 'Other image')
+    )!;
+    const second = store.promoteMeasurement(
+      AnnotationToolType.Ruler,
+      addRuler('image-1', 'Second')
+    )!;
+
+    // The panel shows first, second - moving "second" up must swap those two
+    // rather than step onto the hidden other-image finding.
+    store.moveFindingRelative(second, first, 'before');
+
+    expect(store.findingIDs).toEqual([second, first, other]);
+    expect(store.findingsForImage('image-1').map((f) => f.id)).toEqual([
+      second,
+      first,
+    ]);
+
+    store.moveFindingRelative(second, first, 'after');
+    expect(store.findingsForImage('image-1').map((f) => f.id)).toEqual([
+      first,
+      second,
+    ]);
+  });
+
+  it('mints custom type ids that cannot collide with restored ones', async () => {
+    const store = useFindingsStore();
+    const typeID = store.addFindingType({
+      label: 'Papillary muscle',
+      modalities: ['MR'],
+      defaultBodySite: 'Left ventricle',
+      categoryScale: 'severity',
+    });
+    const { manifest, stateFiles } = await serializeFindings();
+
+    // A fresh session restores the saved type without advancing the id store.
+    setActivePinia(createPinia());
+    const restored = useFindingsStore();
+    await restored.deserialize(manifest, {}, {}, stateFiles);
+    const newID = restored.addFindingType({
+      label: 'Trabecula',
+      modalities: ['MR'],
+      defaultBodySite: 'Left ventricle',
+      categoryScale: 'severity',
+    });
+
+    expect(newID).not.toBe(typeID);
+    expect(restored.findingTypeByID[typeID].label).toBe('Papillary muscle');
+    expect(restored.findingTypeByID[newID].label).toBe('Trabecula');
   });
 
   it('drops a measurement whose annotation did not restore', async () => {

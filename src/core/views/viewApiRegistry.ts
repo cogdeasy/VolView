@@ -1,3 +1,4 @@
+import { shallowReactive } from 'vue';
 import type { VtkViewApi } from '@/src/types/vtk-types';
 
 /**
@@ -5,9 +6,10 @@ import type { VtkViewApi } from '@/src/types/vtk-types';
  *
  * Rasterizing a view for a key image has to reach a mounted view's render
  * window from outside the view tree (the findings panel), which the component
- * hierarchy does not otherwise allow.
+ * hierarchy does not otherwise allow. Reactive so that a list of capture
+ * sources tracks views mounting and unmounting.
  */
-const viewApis = new Map<string, VtkViewApi>();
+const viewApis = shallowReactive(new Map<string, VtkViewApi>());
 
 export function registerViewApi(viewID: string, api: VtkViewApi) {
   viewApis.set(viewID, api);

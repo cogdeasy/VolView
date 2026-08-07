@@ -46,8 +46,11 @@ export async function captureViewKeyImage(
   const view = getViewApi(viewID);
   if (!view) return null;
 
+  // captureImages() only settles on the next render pass, so the capture has
+  // to be registered before asking for one.
   const captured = view.renderWindow.captureImages()[0];
   if (!captured) return null;
+  view.requestRender({ immediate: true });
   const base = await loadImage(await captured);
 
   const container = view.renderWindowView.getContainer();

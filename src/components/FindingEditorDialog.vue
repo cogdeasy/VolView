@@ -122,6 +122,10 @@ function saveNewType() {
 
 watch(editingFindingID, resetNewType);
 
+// The editor reads slice/axis and linkable measurements from the current
+// image, so it must not outlive a switch to another one.
+watch(currentImageID, () => uiStore.closeEditor());
+
 // --- measurements --- //
 
 const measurementRows = computed(() =>

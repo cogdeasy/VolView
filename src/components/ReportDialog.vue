@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useTheme } from 'vuetify';
 import { saveAs } from 'file-saver';
@@ -14,8 +14,11 @@ const findingsStore = useFindingsStore();
 const uiStore = useFindingsUIStore();
 const { reportOpen } = storeToRefs(uiStore);
 const { impression } = storeToRefs(findingsStore);
-const { report } = useReportModel();
+const { report, buildReport } = useReportModel();
 const theme = useTheme();
+
+/** How long the hidden print frame outlives the print() call. */
+const PRINT_FRAME_LIFETIME_MS = 60000;
 
 const documentTheme = computed<'dark' | 'light'>(() =>
   theme.global.current.value.dark ? 'dark' : 'light'
@@ -38,7 +41,7 @@ const fileStem = computed(() => {
 async function copyText() {
   const messageStore = useMessageStore();
   try {
-    await navigator.clipboard.writeText(renderReportText(report.value));
+    await navigator.clipboard.writeText(renderReportText(buildReport()));
     messageStore.addSuccess('Report copied to clipboard');
   } catch (err) {
     messageStore.addError('Could not copy the report', {
@@ -48,13 +51,20 @@ async function copyText() {
 }
 
 function downloadHtml() {
-  const blob = new Blob([renderReportHtml(report.value, { theme: 'light' })], {
+  const blob = new Blob([renderReportHtml(buildReport(), { theme: 'light' })], {
     type: 'text/html;charset=utf-8',
   });
   saveAs(blob, `${fileStem.value}.html`);
 }
 
 const printing = ref(false);
+let printFrame: HTMLIFrameElement | null = null;
+
+function disposePrintFrame() {
+  printFrame?.remove();
+  printFrame = null;
+  printing.value = false;
+}
 
 /**
  * PDF via the browser's own print pipeline: a hidden frame holding the print
@@ -62,6 +72,8 @@ const printing = ref(false);
  * user picks "Save as PDF" in the print dialog.
  */
 function printReport() {
+  // One frame at a time: each holds a full inline copy of the report.
+  disposePrintFrame();
   const frame = document.createElement('iframe');
   frame.setAttribute('aria-hidden', 'true');
   frame.style.position = 'fixed';
@@ -70,21 +82,29 @@ function printReport() {
   frame.style.width = '0';
   frame.style.height = '0';
   frame.style.border = '0';
-  frame.srcdoc = renderReportHtml(report.value, {
+  frame.srcdoc = renderReportHtml(buildReport(), {
     theme: 'light',
     forPrint: true,
   });
   printing.value = true;
+  printFrame = frame;
   frame.onload = () => {
     const frameWindow = frame.contentWindow;
     frameWindow?.focus();
     frameWindow?.print();
     printing.value = false;
-    // Give the print dialog time to take its snapshot of the document.
-    window.setTimeout(() => frame.remove(), 60000);
+    // The print dialog needs the document to outlive this handler.
+    window.setTimeout(disposePrintFrame, PRINT_FRAME_LIFETIME_MS);
   };
+  frame.onerror = disposePrintFrame;
+  // A frame that never loads must not leave the button spinning.
+  window.setTimeout(() => {
+    if (printing.value) disposePrintFrame();
+  }, PRINT_FRAME_LIFETIME_MS);
   document.body.appendChild(frame);
 }
+
+onBeforeUnmount(disposePrintFrame);
 </script>
 
 <template>

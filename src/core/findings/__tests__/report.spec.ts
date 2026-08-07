@@ -84,6 +84,19 @@ describe('report rendering', () => {
     expect(html).not.toContain('<cavity>');
   });
 
+  it('drops a key image whose source is not a raster data url', () => {
+    // The exported document runs outside the app's sandbox, and a key image
+    // can arrive from someone else's `.volview.zip`.
+    const doc = report();
+    doc.findings[0].keyImage!.dataURL =
+      'data:image/png;base64,AAAA" onerror="alert(1)';
+
+    const html = renderReportHtml(doc);
+
+    expect(html).not.toContain('onerror');
+    expect(html).not.toContain('<img');
+  });
+
   it('uses a print-safe surface when printing a dark session', () => {
     const dark = renderReportHtml(report(), { theme: 'dark' });
     const printed = renderReportHtml(report(), {

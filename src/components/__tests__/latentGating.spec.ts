@@ -101,6 +101,7 @@ describe('Jobs tab is latent — gated on provider presence', () => {
     expect(moduleNames(wrapper)).toEqual([
       'Data',
       'Annotations',
+      'Findings',
       'Rendering',
       'Jobs',
       'Remote',

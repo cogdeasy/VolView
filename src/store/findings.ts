@@ -113,11 +113,29 @@ export const useFindingsStore = defineStore('findings', () => {
     delete findingByID.value[id];
   }
 
-  function moveFinding(id: FindingID, offset: number) {
+  /**
+   * Moves a finding next to a sibling in the report order. The panel lists one
+   * image at a time, so an offset in the global order would step over findings
+   * the user cannot see.
+   */
+  function moveFindingRelative(
+    id: FindingID,
+    siblingID: FindingID,
+    placement: 'before' | 'after'
+  ) {
     const from = findingIDs.value.indexOf(id);
-    const to = from + offset;
-    if (from === -1 || to < 0 || to >= findingIDs.value.length) return;
-    findingIDs.value.splice(to, 0, ...findingIDs.value.splice(from, 1));
+    if (from === -1 || id === siblingID) return;
+    const [moved] = findingIDs.value.splice(from, 1);
+    const siblingIndex = findingIDs.value.indexOf(siblingID);
+    if (siblingIndex === -1) {
+      findingIDs.value.splice(from, 0, moved);
+      return;
+    }
+    findingIDs.value.splice(
+      placement === 'before' ? siblingIndex : siblingIndex + 1,
+      0,
+      moved
+    );
   }
 
   function attachMeasurement(id: FindingID, measurement: FindingMeasurement) {
@@ -195,7 +213,13 @@ export const useFindingsStore = defineStore('findings', () => {
   }
 
   function addFindingType(type: Omit<FindingType, 'id' | 'builtin'>) {
-    const id = `custom-${useIdStore().nextId()}`;
+    const idStore = useIdStore();
+    // A restored session re-seats saved type ids without advancing the id
+    // store, so the next minted id can collide with one of them.
+    let id = `custom-${idStore.nextId()}`;
+    while (findingTypes.value.some((existing) => existing.id === id)) {
+      id = `custom-${idStore.nextId()}`;
+    }
     findingTypes.value.push({ ...type, id });
     return id;
   }
@@ -276,7 +300,9 @@ export const useFindingsStore = defineStore('findings', () => {
         const file = fileByPath.get(saved.keyImage.path);
         if (file) {
           keyImage = {
-            dataURL: await blobToDataURL(file),
+            // Archive members carry no MIME type, and the data URL of a
+            // typeless blob is not a usable <img> source in the exported report.
+            dataURL: await blobToDataURL(file.slice(0, file.size, 'image/png')),
             viewName: saved.keyImage.viewName,
             slice: saved.keyImage.slice,
             capturedAt: saved.keyImage.capturedAt,
@@ -312,7 +338,7 @@ export const useFindingsStore = defineStore('findings', () => {
     addFinding,
     updateFinding,
     removeFinding,
-    moveFinding,
+    moveFindingRelative,
     attachMeasurement,
     detachMeasurement,
     promoteMeasurement,

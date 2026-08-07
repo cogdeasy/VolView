@@ -6,7 +6,6 @@ import { useCurrentImage } from '@/src/composables/useCurrentImage';
 import { measurementHeadline } from '@/src/core/findings/summarize';
 import { LATERALITY_LABELS } from '@/src/core/findings/taxonomy';
 import { AXIAL_FRAME_OF_REFERENCE } from '@/src/utils/frameOfReference';
-import type { FindingID } from '@/src/types/finding';
 
 const findingsStore = useFindingsStore();
 const uiStore = useFindingsUIStore();
@@ -34,8 +33,17 @@ function addBlankFinding() {
   uiStore.editFinding(id);
 }
 
-const move = (id: FindingID, offset: number) =>
-  findingsStore.moveFinding(id, offset);
+/** Reorders within the visible list; other images' findings sit in between. */
+function move(index: number, offset: number) {
+  const finding = findings.value[index];
+  const sibling = findings.value[index + offset];
+  if (!finding || !sibling) return;
+  findingsStore.moveFindingRelative(
+    finding.id,
+    sibling.id,
+    offset < 0 ? 'before' : 'after'
+  );
+}
 </script>
 
 <template>
@@ -172,7 +180,7 @@ const move = (id: FindingID, offset: number) =>
               size="small"
               variant="text"
               :disabled="index === 0"
-              @click="move(finding.id, -1)"
+              @click="move(index, -1)"
             >
               <v-icon size="small">mdi-arrow-up</v-icon>
               <v-tooltip location="top" activator="parent">Move up</v-tooltip>
@@ -182,7 +190,7 @@ const move = (id: FindingID, offset: number) =>
               size="small"
               variant="text"
               :disabled="index === findings.length - 1"
-              @click="move(finding.id, 1)"
+              @click="move(index, 1)"
             >
               <v-icon size="small">mdi-arrow-down</v-icon>
               <v-tooltip location="top" activator="parent">Move down</v-tooltip>
