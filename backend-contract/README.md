@@ -6,12 +6,12 @@
 > in lockstep). Sole known consumer: girder_volview, which reads this tree from
 > the installed `volview` npm package.
 
-The neutral VolView backend contract: task discovery, inputs, the job
+The neutral Volume Viewer backend contract: task discovery, inputs, the job
 lifecycle, result intents, and personal job history. No backend speaks these
 shapes natively; each backend translates its own task format into this spec.
 
 To bring a new backend online, implement the [OpenAPI surface](#the-neutral-rest-surface-openapi)
-and validate against the fixtures and generated schemas. Zero VolView client
+and validate against the fixtures and generated schemas. Zero Volume Viewer client
 change, and no need to read girder_volview source: girder_volview is a
 consumer of this package, not its owner.
 

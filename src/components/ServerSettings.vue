@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { ConnectionState, useServerStore } from '@/src/store/server';
 import { storeToRefs } from 'pinia';
+import { Brand } from '@/src/branding';
 
 const serverStore = useServerStore();
 const { connState } = storeToRefs(serverStore);
@@ -46,7 +47,7 @@ const connectBtnText = computed(() => {
         icon="mdi-help-circle"
         variant="flat"
         size="x-small"
-        href="https://kitware.github.io/VolView/doc/server.html"
+        :href="Brand.urls.serverDocumentation"
         target="_blank"
         class="ml-1"
         style="color: #777"

@@ -1,9 +1,9 @@
 {
-  "name": "volview",
+  "name": "philips-volume-viewer",
   "version": "0.0.0",
   "type": "module",
   "packageManager": "npm@10.9.8",
-  "repository": "https://github.com/Kitware/VolView",
+  "repository": "https://github.com/cogdeasy/VolView",
   "files": [
     "dist",
     "src",

@@ -1,7 +1,8 @@
 import { createVuetify } from 'vuetify';
 import { useLocalStorage } from '@vueuse/core';
 
-import KitwareMark from '@/src/components/icons/KitwareLogoIcon.vue';
+import PhilipsEmblem from '@/src/components/icons/PhilipsEmblem.vue';
+import { BrandColors } from '@/src/branding';
 import {
   DefaultTheme,
   DarkTheme,
@@ -12,8 +13,8 @@ import {
 const vuetify = createVuetify({
   icons: {
     values: {
-      kitwareMark: {
-        component: KitwareMark,
+      philipsMark: {
+        component: PhilipsEmblem,
       },
     },
   },
@@ -23,15 +24,19 @@ const vuetify = createVuetify({
       [DarkTheme]: {
         dark: true,
         colors: {
-          'selection-bg-color': '#01579b',
-          'selection-border-color': '#01579b',
+          primary: BrandColors.primaryLight,
+          secondary: BrandColors.accent,
+          'selection-bg-color': BrandColors.selectionDark,
+          'selection-border-color': BrandColors.selectionDark,
         },
       },
       [LightTheme]: {
         dark: false,
         colors: {
-          'selection-bg-color': '#b3e5fc',
-          'selection-border-color': '#b3e5fc',
+          primary: BrandColors.primary,
+          secondary: BrandColors.accent,
+          'selection-bg-color': BrandColors.selectionLight,
+          'selection-border-color': BrandColors.selectionLight,
           surface: '#f0f0f0',
           'on-surface-variant': '#d0d0d0',
         },

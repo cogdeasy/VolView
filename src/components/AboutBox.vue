@@ -1,7 +1,30 @@
+<script setup lang="ts">
+/* global __VERSIONS__ */
+
+import { useDisplay } from 'vuetify';
+import PhilipsFullLogo from '@/src/components/icons/PhilipsFullLogo.vue';
+import { Brand, copyright } from '@/src/branding';
+import { useKeyboardShortcutsStore } from '@/src/store/keyboard-shortcuts';
+
+const display = useDisplay();
+const mobile = display.xs;
+
+const keyboardStore = useKeyboardShortcutsStore();
+const openKeyboardShortcuts = () => {
+  keyboardStore.settingsOpen = true;
+};
+
+const versions = {
+  app: __VERSIONS__.app,
+  'vtk.js': __VERSIONS__['vtk.js'],
+  'itk-wasm': __VERSIONS__['itk-wasm'],
+};
+</script>
+
 <template>
   <v-card>
     <v-card-title class="d-flex flex-row justify-center">
-      <vol-view-full-logo />
+      <philips-full-logo />
     </v-card-title>
     <v-alert color="secondary" variant="tonal" class="notice">
       For investigational use only
@@ -15,12 +38,12 @@
       >
         Keyboard Shortcuts and View Controls
       </v-btn>
-      <h2 class="mt-2">About VolView</h2>
+      <h2 class="mt-2">About {{ Brand.productName }}</h2>
       <v-divider class="mb-2" />
       <p class="float-right">
         <v-img
           v-show="!mobile"
-          src="../assets/KitwareHeadAndNeck.jpg"
+          src="../assets/HeadAndNeckRendering.jpg"
           alt="Head and neck CT rendering"
           width="200px"
           class="ma-1"
@@ -31,19 +54,15 @@
         <a
           rel="noopener noreferrer"
           target="_blank"
-          href="https://volview.kitware.com/"
+          :href="Brand.urls.healthcare"
         >
-          <span>VolView</span>
+          <span>{{ Brand.productName }}</span>
         </a>
-        is an open-source web application developed at
-        <a
-          rel="noopener noreferrer"
-          target="_blank"
-          href="https://kitware.com/"
-        >
-          <span>Kitware</span>
+        is a web application from
+        <a rel="noopener noreferrer" target="_blank" :href="Brand.urls.company">
+          <span>{{ Brand.company }}</span>
         </a>
-        for visualizing and annotating medical images. It key features include:
+        for visualizing and annotating medical images. Its key features include:
       </p>
 
       <ul>
@@ -65,9 +84,8 @@
         </li>
       </ul>
       <br />
-      VolView is freely available for research, educational, and commercial
-      applications. It is built on a variety of open-source toolkits created by
-      Kitware, such as
+      {{ Brand.productName }} is built on a variety of open-source toolkits,
+      such as
       <a
         rel="noopener noreferrer"
         target="_blank"
@@ -83,58 +101,56 @@
       >
         <span>vtk.js</span>
       </a>
-      for in-browser scientific visualization.
-      <br />
-      <br />
-      Want help customizing VolView or creating a new web-based visualization
-      application?
+      for in-browser scientific visualization. It derives from the open-source
       <a
-        rel-="noopener noreferrer"
+        rel="noopener noreferrer"
         target="_blank"
-        href="https://www.kitware.com/contact/project/"
-        >Contact Kitware!</a
+        href="https://github.com/Kitware/VolView"
       >
+        <span>VolView</span>
+      </a>
+      project by Kitware, Inc.
       <h2 class="mt-2">Useful Links</h2>
       <v-divider class="mb-2" />
       <ul>
         <li>
-          <span>VolView source code repo: </span>
+          <span>Documentation: </span>
           <a
             rel="noopener noreferrer"
             target="_blank"
-            href="https://github.com/Kitware/VolView"
+            :href="Brand.urls.documentation"
           >
-            https://github.com/Kitware/VolView
+            {{ Brand.urls.documentation }}
           </a>
         </li>
         <li>
-          <span>Community support forum: </span>
+          <span>Source code repository: </span>
           <a
             rel="noopener noreferrer"
             target="_blank"
-            href="https://discourse.vtk.org/c/web/volview/14"
+            :href="Brand.urls.sourceCode"
           >
-            https://discourse.vtk.org/c/web/volview/14
+            {{ Brand.urls.sourceCode }}
           </a>
         </li>
         <li>
-          <span>File an bug report or feature request: </span>
+          <span>File a bug report or feature request: </span>
           <a
             rel="noopener noreferrer"
             target="_blank"
-            href="https://github.com/Kitware/VolView/issues"
+            :href="Brand.urls.issues"
           >
-            https://github.com/Kitware/VolView/issues
+            {{ Brand.urls.issues }}
           </a>
         </li>
         <li>
-          <span>Submit feedback: </span>
+          <span>{{ Brand.company }} Healthcare: </span>
           <a
             rel="noopener noreferrer"
             target="_blank"
-            href="https://volview.kitware.com/feedback/"
+            :href="Brand.urls.healthcare"
           >
-            https://volview.kitware.com/feedback/
+            {{ Brand.urls.healthcare }}
           </a>
         </li>
       </ul>
@@ -143,8 +159,8 @@
       <ul>
         <li>
           <div class="d-flex flex-flow align-center text-no-wrap">
-            <span>VolView: </span>
-            <v-badge inline :content="versions.volview" />
+            <span>{{ Brand.productShortName }}: </span>
+            <v-badge inline :content="versions.app" />
           </div>
         </li>
         <li>
@@ -162,8 +178,9 @@
       </ul>
       <h2 class="mt-2">Acknowledgments</h2>
       <v-divider class="mb-2" />
-      This work was funded, in part, by the NIH via NIBIB and NIGMS R01EB021396,
-      NIBIB R01EB014955, NCI R01CA220681, and NINDS R42NS086295
+      {{ Brand.productName }} builds on VolView, whose development was funded,
+      in part, by the NIH via NIBIB and NIGMS R01EB021396, NIBIB R01EB014955,
+      NCI R01CA220681, and NINDS R42NS086295
       <br />
       <br />
       Sample data provided by the following sources:
@@ -198,6 +215,7 @@
           >
         </li>
       </ul>
+      <p class="mt-4 text-caption">{{ copyright() }}</p>
     </v-card-text>
   </v-card>
 </template>
@@ -209,37 +227,3 @@
   text-transform: uppercase;
 }
 </style>
-
-<script>
-/* global __VERSIONS__ */
-
-import { defineComponent } from 'vue';
-import { useDisplay } from 'vuetify';
-import VolViewFullLogo from './icons/VolViewFullLogo.vue';
-import { useKeyboardShortcutsStore } from '../store/keyboard-shortcuts';
-
-export default defineComponent({
-  name: 'AboutBox',
-  components: {
-    VolViewFullLogo,
-  },
-  setup() {
-    const display = useDisplay();
-
-    const keyboardStore = useKeyboardShortcutsStore();
-    const openKeyboardShortcuts = () => {
-      keyboardStore.settingsOpen = true;
-    };
-
-    return {
-      openKeyboardShortcuts,
-      mobile: display.xs,
-      versions: {
-        volview: __VERSIONS__.volview,
-        'vtk.js': __VERSIONS__['vtk.js'],
-        'itk-wasm': __VERSIONS__['itk-wasm'],
-      },
-    };
-  },
-});
-</script>

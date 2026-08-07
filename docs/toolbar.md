@@ -56,7 +56,7 @@ Ruler annotations can be tagged with a label. Use the palette in the upper left 
 
 ### Label Configuration
 
-If VolView loads a JSON file matching the schemas below, labels are added to the 2D annotation tools.
+If Volume Viewer loads a JSON file matching the schemas below, labels are added to the 2D annotation tools.
 Example configuration JSON:
 
 ```json

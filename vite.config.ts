@@ -48,7 +48,7 @@ function getPackageInfo() {
 
   return {
     versions: {
-      volview: mainPkg.version,
+      app: mainPkg.version,
       'vtk.js': vtkJsPkg.version,
       'itk-wasm': itkWasmPkg.version,
     },
@@ -106,7 +106,7 @@ export default defineConfig({
   },
   define: {
     __VERSIONS__: {
-      volview: pkgInfo.versions.volview,
+      app: pkgInfo.versions.app,
       'vtk.js': pkgInfo.versions['vtk.js'],
       'itk-wasm': pkgInfo.versions['itk-wasm'],
     },

@@ -6,8 +6,8 @@ export const NO_NAME = '(no name)';
 
 // themes
 export const ThemeStorageKey = 'app-theme';
-export const DarkTheme = 'kw-dark';
-export const LightTheme = 'kw-light';
+export const DarkTheme = 'philips-dark';
+export const LightTheme = 'philips-light';
 export const DefaultTheme = DarkTheme;
 
 export const Messages = {

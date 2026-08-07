@@ -88,6 +88,7 @@ import { defaultImageMetadata } from '@/src/core/progressiveImage';
 import VtkRenderWindowParent from '@/src/components/vtk/VtkRenderWindowParent.vue';
 import { useSyncWindowing } from '@/src/composables/useSyncWindowing';
 import { readLaunchParams } from '@/src/utils/urlParams';
+import { Brand } from '@/src/branding';
 
 export default defineComponent({
   name: 'App',
@@ -141,7 +142,7 @@ export default defineComponent({
       ) {
         prefix = `${newMetadata.name} -`;
       }
-      document.title = `${prefix}VolView`;
+      document.title = `${prefix}${Brand.productName}`;
     });
 
     // --- parse URL -- //

@@ -8,7 +8,7 @@
 
 Information on the Patient data and non-DICOM data that have been loaded. The currently display image data is highlighted in blue.
 
-**Sample Data** presents a variety of DICOM data that can be used to quickly explore the capabilities of VolView. When you select a sample dataset, that data is downloaded from [http://data.kitware.com/](https://data.kitware.com/#collection/586fef9f8d777f05f44a5c86/folder/634713cf11dab81428208e1e).
+**Sample Data** presents a variety of DICOM data that can be used to quickly explore the capabilities of Volume Viewer. When you select a sample dataset, that data is downloaded from [http://data.kitware.com/](https://data.kitware.com/#collection/586fef9f8d777f05f44a5c86/folder/634713cf11dab81428208e1e).
 
 ### Annotations
 
@@ -20,7 +20,7 @@ Controls for the 3D cinematic volume rendering.
 
 ## Load / Save State
 
-Restore or create a local file that captures the current configuration of the application and its data. This includes the layout, annotations, cinematic rendering settings, and all other options specified. The local file is in json format, so it provides a basis for integrating VolView with other applications and workflows.
+Restore or create a local file that captures the current configuration of the application and its data. This includes the layout, annotations, cinematic rendering settings, and all other options specified. The local file is in json format, so it provides a basis for integrating Volume Viewer with other applications and workflows.
 
 ## Notifications and Settings
 

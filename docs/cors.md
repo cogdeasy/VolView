@@ -2,13 +2,13 @@
 
 CORS is a browser mechanism to let servers protect user data from malicious user-side scripts. In a nutshell, CORS protections prevent browsers from allowing JavaScript to read the responses of cross-origin requests unless certain conditions are met.
 
-For VolView, this manifests most prominently when fetching remote datasets. If the public VolView instance at <https://volview.kitware.app> requests MRI data from <https://example.com/mri-data.nrrd>, the request may fail if `example.com` has not whitelisted `volview.kitware.app`.
+For Volume Viewer, this manifests most prominently when fetching remote datasets. If the public Volume Viewer instance at <https://volview.kitware.app> requests MRI data from <https://example.com/mri-data.nrrd>, the request may fail if `example.com` has not whitelisted `volview.kitware.app`.
 
 The rest of this document describes two ways to resolve this issue.
 
-## Whitelist your VolView domain on the data server
+## Whitelist your Volume Viewer domain on the data server
 
-If you have control over the data server, you can whitelist your VolView domain. The simpliest way to do this is to set the `Access-Control-Allow-Origin: MYDOMAIN` header on the server. How this is done depends on the static file server that you are using. An example is provided below.
+If you have control over the data server, you can whitelist your Volume Viewer domain. The simpliest way to do this is to set the `Access-Control-Allow-Origin: MYDOMAIN` header on the server. How this is done depends on the static file server that you are using. An example is provided below.
 
 ### Nginx example
 

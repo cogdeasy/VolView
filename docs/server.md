@@ -1,27 +1,27 @@
-# VolView Server Guide
+# Volume Viewer Server Guide
 
-The VolView server extends the VolView viewer with remote processing
+The Volume Viewer server extends the Volume Viewer with remote processing
 capabilities. It integrates with your Python-based code and exposes that
 functionality directly into the viewer.
 
 ## Quick Start
 
-There are two parts to getting started with this VolView server example: the
+There are two parts to getting started with this Volume Viewer server example: the
 server and the viewer.
 
 ### Starting the Server
 
 The easiest way to get started is to install
 [Poetry](https://python-poetry.org/) and create a new Python environment for
-running the VolView server.
+running the Volume Viewer server.
 
 ```
 cd ./server/
 poetry install
 ```
 
-The VolView codebase comes with a several sample APIs in `server/examples/` that
-work with the remote functions sample in the VolView viewer.
+The Volume Viewer codebase comes with a several sample APIs in `server/examples/` that
+work with the remote functions sample in the Volume Viewer.
 
 - `server/examples/example_api.py`: basic set of example endpoints
 - `server/examples/example_class_api.py`: example endpoints using a class
@@ -64,17 +64,17 @@ the `examples/example_api.py` script.
 
 ## In-Depth Guide
 
-This guide will cover how to install, use, customize, and deploy the VolView
+This guide will cover how to install, use, customize, and deploy the Volume Viewer
 server.
 
 ### Server Installation
 
-The VolView server is set up with [Poetry](https://python-poetry.org/). To
+The Volume Viewer server is set up with [Poetry](https://python-poetry.org/). To
 install dependencies manually, read the `pyproject.toml` file and extract the
 dependencies from the `[tool.poetry.dependencies]` entry.
 
 If you are using Poetry, you can proceed to install the dependencies and set up
-a VolView environment like so:
+a Volume Viewer environment like so:
 
 ```
 cd ./server/
@@ -212,7 +212,7 @@ how to add routers to the `VolViewApi`.
 
 ### Invoking RPCs from the Client
 
-VolView keeps a global client object in the server store, accessible via `const
+Volume Viewer keeps a global client object in the server store, accessible via `const
 { client } = useServerStore()`.
 
 Use `result = await client.call(endpoint, [arg1, arg2, ...])` to invoke a
@@ -238,7 +238,7 @@ let done = true;
 
 ### Deployment
 
-The VolView server comes with its own aiohttp-based server, which can be run via
+The Volume Viewer server comes with its own aiohttp-based server, which can be run via
 the `volview_server` module.
 
 ```
@@ -246,7 +246,7 @@ python -m volview_server [...options] api_script.py
 ```
 
 By default, `volview_server` expects the `api_script.py` module to contain a
-`volview` symbol. If the VolView API is under a different name, add it to the
+`volview` symbol. If the Volume Viewer API is under a different name, add it to the
 end of the module filename with a colon.
 
 ```python
@@ -279,7 +279,7 @@ volview = VolViewApi()
 app = VolViewApi(app)
 ```
 
-The VolView API's path can be customized, as well as a host of other properties.
+The Volume Viewer API's path can be customized, as well as a host of other properties.
 These are exposed as keyword arguments to `VolViewApi(app, server_kwargs={}, asgi_kwargs={})`.
 
 - `server_kwargs`: see <https://python-socketio.readthedocs.io/en/latest/api.html#asyncserver-class>
@@ -302,29 +302,29 @@ To start the FastAPI server, use `uvicorn` as follows.
 uvicorn examples.example_fastapi:app
 ```
 
-Edit the VolView `.env` file to point to the FastAPI server:
+Edit the Volume Viewer `.env` file to point to the FastAPI server:
 
 ```
 VITE_REMOTE_SERVER_URL=http://localhost:8000/
 ```
 
-Rebuild the VolView viewer app and navigate to the "Remote Functions" tab to
+Rebuild the Volume Viewer app and navigate to the "Remote Functions" tab to
 verify that the server works.
 
 ###### Changing the socket.io path
 
 If the default `https://your-host/socket.io/` path conflicts with an existing
-route, VolView can be configured to use a different path. In this guide, we will
+route, Volume Viewer can be configured to use a different path. In this guide, we will
 rename the default `/socket.io/` path to `/my-custom-path/`.
 
-On the server-side, the VolView middleware must be configured with the new path,
+On the server-side, the Volume Viewer middleware must be configured with the new path,
 as shown.
 
 ```python
 app.add_middlware(volview, asgi_kwargs={"socketio_path": "/my-custom-path"})
 ```
 
-Then, the VolView client server URL must be updated to match. The following sets
+Then, the Volume Viewer client server URL must be updated to match. The following sets
 the server URL in the `.env` file.
 
 ```
@@ -337,7 +337,7 @@ achieved.
 #### Python-socketio supported deployment strategies
 
 You can follow the [deployment strategies](https://python-socketio.readthedocs.io/en/latest/server.html#deployment-strategies)
-supported by the python-socketio project, which powers the VolView server. In
+supported by the python-socketio project, which powers the Volume Viewer server. In
 order to do so, you will need to get access to the underlying socket.io
 instance.
 
