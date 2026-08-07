@@ -30,7 +30,7 @@ export function useHangingProtocolAutoApply() {
       finalizedFor = null;
       // A study restored from a saved session keeps the presentation the
       // reader saved with it.
-      if (store.takeRestoredPresentation(imageID)) {
+      if (store.reportRestoredPresentation(imageID)) {
         finalizedFor = imageID;
         return;
       }
@@ -43,11 +43,19 @@ export function useHangingProtocolAutoApply() {
     store.autoRangesReady(currentImageID.value)
   );
 
+  /** Only an auto window depends on the histogram; nothing else does. */
+  const needsHistogram = computed(
+    () => store.appliedProtocol?.windowLevel.kind === 'auto'
+  );
+
   watch(
-    [currentImageID, isImageLoading, autoRangesReady],
-    ([imageID, loading, ready]) => {
-      if (!imageID || loading || !ready) return;
+    [currentImageID, isImageLoading, autoRangesReady, needsHistogram],
+    ([imageID, loading, ready, needsRanges]) => {
+      if (!imageID || loading) return;
       if (imageID !== appliedFor || imageID === finalizedFor) return;
+      // A protocol with a fixed window must still take effect on a study whose
+      // histogram never arrives, so only auto windows wait for the ranges.
+      if (needsRanges && !ready) return;
       finalizedFor = imageID;
       store.applyLoadedImageSettings(imageID);
     }

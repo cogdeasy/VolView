@@ -242,7 +242,9 @@ export async function completeStateFileRestore(
   const byId = dataSourcesById(manifest);
   const datasets = manifestDatasets(manifest);
   // The manifest carries its own layout and view configs; hanging protocols
-  // must not overwrite them when the restored images reach the views.
+  // must not overwrite them when the restored images reach the views. The mark
+  // therefore has to be in place before the views are bound below, which is
+  // what makes the auto-apply watcher see it on its first run for these images.
   useHangingProtocolStore().noteRestoredPresentation(
     Object.values(stateIDToStoreID)
   );

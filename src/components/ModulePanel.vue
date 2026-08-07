@@ -111,9 +111,12 @@ export default defineComponent({
 
     // An applied hanging protocol decides which module the reader lands on.
     const hangingProtocolStore = useHangingProtocolStore();
+    // Keyed on the request counter, not the module: two studies hung by the
+    // same protocol must both bring the reader back to that panel.
     watch(
-      () => hangingProtocolStore.focusedModule,
-      (module) => {
+      () => hangingProtocolStore.focusRequest,
+      () => {
+        const module = hangingProtocolStore.focusedModule;
         if (module) selectedModule.value = module;
       }
     );

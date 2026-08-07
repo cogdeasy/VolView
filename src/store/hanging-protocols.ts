@@ -13,6 +13,7 @@ import { layoutToConfig } from '@/src/utils/layoutParsing';
 import { DefaultNamedLayouts } from '@/src/config';
 import { findNamedLayout } from '@/src/core/hanging-protocols/describe';
 import { getImageData } from '@/src/composables/useCurrentImage';
+import { PresetNameList } from '@/src/vtk/ColorMaps';
 import {
   emptyStudyContext,
   hangingProtocol,
@@ -105,8 +106,17 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
 
   // Runtime display state a protocol drives. Not persisted: it always follows
   // whichever protocol is currently applied.
-  const overlays = ref<OverlaysSpec>({ viewLabels: true, annotations: true });
+  const defaultOverlays = (): OverlaysSpec => ({
+    viewLabels: true,
+    annotations: true,
+  });
+  const overlays = ref<OverlaysSpec>(defaultOverlays());
   const focusedModule = ref<Maybe<FocusedModule>>(null);
+  /**
+   * Bumped every time a protocol asks for a panel, so two studies hung by the
+   * same protocol both move the reader back to it.
+   */
+  const focusRequest = ref(0);
 
   const applied = ref<Maybe<AppliedProtocolInfo>>(null);
   const indicatorDismissed = ref(false);
@@ -168,6 +178,8 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     const windowingStore = useWindowingStore();
     const spec = protocol.windowLevel;
 
+    // Every view is written even though windowing sync mirrors the first one:
+    // sync can be off, and a handful of views makes the redundancy cheap.
     viewIDs.forEach((viewID) => {
       if (spec.kind === 'dicom') {
         windowingStore.resetConfig(viewID, imageID);
@@ -202,6 +214,10 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     if (!protocol.volume.preset) return;
     // The coloring store needs the image data to compute a mapping range.
     if (!getImageData(imageID)) return;
+
+    // An imported protocol can name a preset this build does not have; the
+    // coloring store would throw on it.
+    if (!PresetNameList.includes(protocol.volume.preset)) return;
 
     const coloringStore = useVolumeColoringStore();
     viewIDs.forEach((viewID) => {
@@ -272,6 +288,13 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
 
     overlays.value = { ...protocol.overlays };
     focusedModule.value = protocol.focusedModule;
+    focusRequest.value += 1;
+  }
+
+  /** Nothing is hanging this study: the chrome goes back to viewer defaults. */
+  function resetPresentationChrome() {
+    overlays.value = defaultOverlays();
+    focusedModule.value = null;
   }
 
   /**
@@ -320,10 +343,13 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     imageIDs.forEach((imageID) => restoredImages.value.add(imageID));
   }
 
-  /** True (once) if the image's presentation came from a restored session. */
-  function takeRestoredPresentation(imageID: Maybe<string>) {
+  /** True if the image's presentation came from a restored session. */
+  function reportRestoredPresentation(imageID: Maybe<string>) {
+    // The mark is kept, not consumed: navigating away from a restored study
+    // and back to it must not hang it either. Applying a protocol by hand
+    // clears it.
     if (!imageID || !restoredImages.value.has(imageID)) return false;
-    restoredImages.value.delete(imageID);
+    resetPresentationChrome();
     applied.value = {
       protocolId: null,
       reason: 'restored',
@@ -347,8 +373,9 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
   ) {
     if (!settings.value.autoApply && !options?.force) {
       // Nothing hangs this study, so the previous study's protocol must not
-      // linger in the indicator or in the after-load phase.
+      // linger in the indicator, the chrome or the after-load phase.
       applied.value = null;
+      resetPresentationChrome();
       return null;
     }
 
@@ -362,6 +389,7 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     if (!selection.protocol) {
       // Still report the outcome: the reader needs to know the study was not
       // hung by a protocol, and needs one click to pick one.
+      resetPresentationChrome();
       applied.value = {
         protocolId: null,
         reason: 'none',
@@ -390,8 +418,12 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     const protocol = getProtocol(protocolId);
     if (!protocol) return;
 
+    // The reader has overruled whatever a restored session set up.
+    if (imageID) restoredImages.value.delete(imageID);
+
     const studyUID = getStudyUID(imageID);
-    if (studyUID) {
+    // Only a protocol that selection would honour later is worth remembering.
+    if (studyUID && protocol.enabled) {
       settings.value.overrides = {
         ...settings.value.overrides,
         [studyUID]: protocolId,
@@ -404,7 +436,7 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
       reason: 'override',
       criteria: [],
       explanation: `${protocol.name} was applied manually${
-        studyUID ? ' and will be reused for this study' : ''
+        studyUID && protocol.enabled ? ' and will be reused for this study' : ''
       }.`,
       studyInstanceUID: studyUID,
     };
@@ -599,6 +631,7 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     settings,
     overlays,
     focusedModule,
+    focusRequest,
     applied,
     appliedProtocol,
     indicatorDismissed,
@@ -610,7 +643,7 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     applyLoadedImageSettings,
     autoRangesReady,
     noteRestoredPresentation,
-    takeRestoredPresentation,
+    reportRestoredPresentation,
     applyForImage,
     applyManually,
     clearOverride,

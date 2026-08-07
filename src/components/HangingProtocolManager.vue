@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
+import { saveAs } from 'file-saver';
 import { useHangingProtocolStore } from '@/src/store/hanging-protocols';
 import { useCurrentImage } from '@/src/composables/useCurrentImage';
 import { useMessageStore } from '@/src/store/messages';
@@ -35,11 +36,19 @@ const selected = computed(
     protocols.value.find((protocol) => protocol.id === selectedId.value) ?? null
 );
 
+/** Everything the editor owns, i.e. everything but the list's enable switch. */
+const editedFields = (protocol: HangingProtocol): Partial<HangingProtocol> => {
+  const fields: Partial<HangingProtocol> = cloneProtocol(protocol);
+  delete fields.enabled;
+  return fields;
+};
+
 const dirty = computed(
   () =>
     !!draft.value &&
     !!selected.value &&
-    JSON.stringify(draft.value) !== JSON.stringify(selected.value)
+    JSON.stringify(editedFields(draft.value)) !==
+      JSON.stringify(editedFields(selected.value))
 );
 
 // Keyed on the id, not the object: the stored protocol is replaced whenever
@@ -59,7 +68,10 @@ const select = (id: string) => {
 
 const save = () => {
   if (!draft.value) return;
-  store.updateProtocol(draft.value.id, draft.value);
+  // `enabled` is deliberately left out: the list switch can have toggled it
+  // while edits were in progress, and writing the draft copy back would undo
+  // that.
+  store.updateProtocol(draft.value.id, editedFields(draft.value));
   messageStore.addSuccess(`Saved ${draft.value.name}`);
 };
 
@@ -104,15 +116,10 @@ const applyNow = (id: string) => {
 };
 
 const exportAll = () => {
-  const blob = new Blob([store.exportProtocols()], {
-    type: 'application/json',
-  });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = 'hanging-protocols.json';
-  anchor.click();
-  URL.revokeObjectURL(url);
+  saveAs(
+    new Blob([store.exportProtocols()], { type: 'application/json' }),
+    'hanging-protocols.json'
+  );
 };
 
 const onImportFile = async (event: Event) => {

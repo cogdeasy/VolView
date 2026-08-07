@@ -74,9 +74,18 @@ describe('hanging protocol matching', () => {
 
   it('refuses expressions that can backtrack catastrophically', () => {
     expect(checkPattern('head|brain').safe).toBe(true);
-    expect(checkPattern('(head|brain)+').safe).toBe(true);
+    expect(checkPattern('(head|brain) w/?o? contrast').safe).toBe(true);
+    // Repetitions that cannot expand: a class atom and a small bounded repeat.
+    expect(checkPattern('(a[+])+').safe).toBe(true);
+    expect(checkPattern('(x{2}y)?').safe).toBe(true);
+    expect(checkPattern('(?:CTA?) head').safe).toBe(true);
+
     expect(checkPattern('(a+)+$').safe).toBe(false);
     expect(checkPattern('(x|x*)*y').safe).toBe(false);
+    expect(checkPattern('((a*))+').safe).toBe(false);
+    expect(checkPattern('(a{20})+').safe).toBe(false);
+    expect(checkPattern('(a|b)*c').safe).toBe(false);
+    expect(checkPattern('(head)\\1+').safe).toBe(false);
     expect(checkPattern('([').safe).toBe(false);
     expect(checkPattern('a'.repeat(300)).safe).toBe(false);
 
@@ -85,6 +94,18 @@ describe('hanging protocol matching', () => {
       evaluateProtocol(protocol, makeContext({ studyDescription: 'aaaaaa!' }))
         .matched
     ).toBe(false);
+  });
+
+  it('accepts every pattern the built-ins ship with', () => {
+    BUILT_IN_PROTOCOLS.forEach((protocol) => {
+      [protocol.match.studyDescription, protocol.match.seriesDescription]
+        .filter((pattern): pattern is string => !!pattern)
+        .forEach((pattern) => {
+          expect(checkPattern(pattern), `${protocol.name}: ${pattern}`).toEqual(
+            { safe: true }
+          );
+        });
+    });
   });
 
   it('ignores a disabled protocol even when it is pinned to the study', () => {

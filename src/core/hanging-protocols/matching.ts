@@ -64,15 +64,71 @@ const anyOf = (
 };
 
 export const MAX_PATTERN_LENGTH = 200;
+/** Above this, a bounded repeat is treated as unbounded for safety. */
+const SMALL_REPEAT = 10;
+
+interface Quantifier {
+  /** Characters the quantifier occupies, including a trailing lazy `?`. */
+  length: number;
+  /** Whether it can repeat enough times to blow up when nested. */
+  risky: boolean;
+}
+
+/** Reads `*`, `+`, `?` or `{n,m}` at `index`, if one starts there. */
+function readQuantifier(pattern: string, index: number): Quantifier | null {
+  const char = pattern[index];
+  let length = 0;
+  let risky = true;
+
+  if (char === '*' || char === '+' || char === '?') {
+    length = 1;
+  } else if (char === '{') {
+    const close = pattern.indexOf('}', index);
+    if (close === -1) return null;
+    const body = pattern.slice(index + 1, close);
+    if (!/^\d+(,\d*)?$/.test(body)) return null;
+    const [min, max] = body.split(',');
+    // `{n}` repeats exactly n times; `{n,}` has no ceiling at all.
+    const ceiling = max === undefined ? min : max;
+    risky = ceiling === '' || Number(ceiling) > SMALL_REPEAT;
+    length = close - index + 1;
+  }
+
+  if (!length) return null;
+  // A lazy quantifier backtracks just as badly as a greedy one.
+  if (pattern[index + length] === '?') length += 1;
+  return { length, risky };
+}
+
+/** Consumes the `?:`, `?=`, `?<name>` etc. that follows a `(`. */
+function readGroupPrefix(pattern: string, index: number) {
+  if (pattern[index] !== '?') return 0;
+  if (pattern[index + 1] === '<' && !'=!'.includes(pattern[index + 2] ?? '')) {
+    const close = pattern.indexOf('>', index);
+    return close === -1 ? 1 : close - index + 1;
+  }
+  return pattern[index + 1] === '<' ? 3 : 2;
+}
+
+interface GroupFrame {
+  /** A repetition that can expand far enough to matter sits inside. */
+  risky: boolean;
+  /** Alternation branches that can match the same text sit inside. */
+  alternation: boolean;
+}
 
 /**
  * Rejects expressions that can backtrack catastrophically before they are ever
  * run. Protocols can be imported from a file, and matching runs on every
  * protocol for every study and on every render of the manager list, so one
- * `(a+)+` would freeze the tab. The check is the standard conservative one: a
- * quantified group that itself contains a quantifier. A production version
- * would evaluate patterns with a linear-time engine (RE2) instead of rejecting
- * them.
+ * `(a+)+` would freeze the tab.
+ *
+ * The rule is: a group that is itself repeated, and that contains either an
+ * unbounded repetition or an alternation, is refused. Character classes are
+ * skipped, so `(a[+])+` and `(x{2}y)?` stay usable. This is deliberately
+ * conservative rather than exact — it refuses some harmless patterns, and it
+ * cannot prove the ones it accepts are linear. A production version would run
+ * patterns on a linear-time engine (RE2) and drop the heuristic entirely.
  */
 export function checkPattern(pattern: string): {
   safe: boolean;
@@ -91,25 +147,63 @@ export function checkPattern(pattern: string): {
     return { safe: false, reason: 'Pattern is not a valid expression.' };
   }
 
-  const quantifier = /[*+?}]/;
-  const openGroups: number[] = [];
-  for (let i = 0; i < pattern.length; i += 1) {
-    const char = pattern[i];
+  const stack: GroupFrame[] = [{ risky: false, alternation: false }];
+  const top = () => stack[stack.length - 1];
+  // The group that just closed, and so is what a quantifier here would repeat.
+  let closedGroup: GroupFrame | null = null;
+  let index = 0;
+
+  while (index < pattern.length) {
+    const char = pattern[index];
+
     if (char === '\\') {
-      i += 1;
-    } else if (char === '(') {
-      openGroups.push(i);
-    } else if (char === ')') {
-      const start = openGroups.pop();
-      if (start === undefined) continue;
-      const body = pattern.slice(start + 1, i);
-      const next = pattern[i + 1] ?? '';
-      if (quantifier.test(body) && quantifier.test(next)) {
+      // A backreference makes the matcher's cost impossible to reason about.
+      if (/[1-9]/.test(pattern[index + 1] ?? '')) {
         return {
           safe: false,
-          reason: 'Nested quantifiers can hang the browser.',
+          reason: 'Backreferences are not allowed in a protocol pattern.',
         };
       }
+      index += 2;
+      closedGroup = null;
+    } else if (char === '[') {
+      // A class is one atom: quantifiers inside it are literal characters.
+      let cursor = index + 1;
+      while (cursor < pattern.length && pattern[cursor] !== ']') {
+        cursor += pattern[cursor] === '\\' ? 2 : 1;
+      }
+      index = cursor + 1;
+      closedGroup = null;
+    } else if (char === '(') {
+      stack.push({ risky: false, alternation: false });
+      index += 1 + readGroupPrefix(pattern, index + 1);
+      closedGroup = null;
+    } else if (char === ')') {
+      // The validity check above guarantees the parentheses balance.
+      closedGroup = stack.pop() ?? { risky: false, alternation: false };
+      // What was risky inside the group is risky inside its parent too.
+      if (closedGroup.risky) top().risky = true;
+      index += 1;
+    } else if (char === '|') {
+      top().alternation = true;
+      index += 1;
+      closedGroup = null;
+    } else {
+      const quantifier = readQuantifier(pattern, index);
+      if (
+        quantifier?.risky &&
+        (closedGroup?.risky || closedGroup?.alternation)
+      ) {
+        return {
+          safe: false,
+          reason:
+            'A repeated group containing a repetition or alternation can ' +
+            'hang the browser.',
+        };
+      }
+      if (quantifier?.risky) top().risky = true;
+      index += quantifier?.length ?? 1;
+      closedGroup = null;
     }
   }
 
