@@ -144,11 +144,14 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
    */
   const restoredImages = ref(new Set<string>());
   /**
-   * Images a protocol has actually hung in this tab, however it was chosen.
-   * The phases that need pixel data run later, and only for these: a study the
-   * store merely reported on is showing whatever the reader arranged.
+   * Images a protocol has actually hung in this tab, mapped to the protocol
+   * that hung them, however it was chosen. The phases that need pixel data run
+   * later, and only for these: a study the store merely reported on is showing
+   * whatever the reader arranged. Holding the protocol per image, rather than
+   * reading the globally applied one, keeps those late phases writing this
+   * study's settings even if the reader has moved on to another study.
    */
-  const hungImages = ref(new Set<string>());
+  const hungImages = ref(new Map<string, string>());
   /**
    * The last study the reader hung by hand, with a counter so that hanging the
    * same study twice is still two events. Watched by the auto-apply composable,
@@ -388,15 +391,16 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     !!imageID && isDicomImage(imageID);
 
   /**
-   * Re-runs the parts of the applied protocol that need pixel data: the window
+   * Re-runs the parts of this image's protocol that need pixel data: the window
    * (an auto window needs the histogram, and a slice view that mounts before
    * the histogram exists pins the config to the placeholder W/L of 1 / 0.5),
    * the volume preset (which needs a scalar range) and the slice policy (which
    * needs the image dimensions). Called once the image finishes loading, and
-   * again once the auto ranges are computed.
+   * again once the auto ranges are computed. A study nothing has hung — or
+   * whose protocol has since been deleted — is left as it is.
    */
   function applyLoadedImageSettings(imageID: Maybe<string>) {
-    const protocol = appliedProtocol.value;
+    const protocol = getProtocol(imageID && hungImages.value.get(imageID));
     if (!protocol || !imageID) return;
     applyToViews(protocol, viewsShowing(imageID), imageID, {
       keepReaderWindow: true,
@@ -408,7 +412,7 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
    * has already been finalized.
    */
   function applyAppliedWindowLevel(imageID: Maybe<string>) {
-    const protocol = appliedProtocol.value;
+    const protocol = getProtocol(imageID && hungImages.value.get(imageID));
     if (!protocol || !imageID) return;
     applyWindowLevel(
       protocol,
@@ -503,7 +507,7 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     }
 
     applyProtocol(selection.protocol, imageID);
-    if (imageID) hungImages.value.add(imageID);
+    if (imageID) hungImages.value.set(imageID, selection.protocol.id);
     applied.value = {
       protocolId: selection.protocol.id,
       reason: selection.reason,
@@ -572,7 +576,7 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
 
     applyProtocol(protocol, imageID);
     if (imageID) {
-      hungImages.value.add(imageID);
+      hungImages.value.set(imageID, protocolId);
       // A study picked mid-load still owes its volume preset, slice position
       // and window; announcing the apply is what gets those phases scheduled.
       manualApply.value = {

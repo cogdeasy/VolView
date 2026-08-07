@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { PresetNameList } from '@/src/vtk/ColorMaps';
 import { DefaultNamedLayouts } from '@/src/config';
 import { WINDOW_LEVEL_PRESET_LIST } from '@/src/core/hanging-protocols/windowPresets';
@@ -100,6 +100,40 @@ const csvToList = (value: string) =>
     .split(',')
     .map((entry) => entry.trim())
     .filter((entry) => entry !== '');
+
+type ListField = 'modality' | 'bodyPart';
+
+/**
+ * What the reader has typed into a comma-separated field, kept apart from the
+ * list it parses to. The field would otherwise be unusable: `CT, ` parses to
+ * `['CT']`, whose re-joined form is `CT`, and the input is bound to that, so
+ * the separator is taken back out from under them as they type it.
+ */
+const listDrafts = ref<Partial<Record<ListField, string>>>({});
+
+// A different protocol in the editor is a different list; the draft goes.
+watch(
+  () => protocol.value.id,
+  () => {
+    listDrafts.value = {};
+  }
+);
+
+const listText = (field: ListField) => {
+  const stored = (protocol.value.match[field] ?? []).join(', ');
+  const draft = listDrafts.value[field];
+  // The draft only stands while it still means the stored list: anything else
+  // changed the protocol from elsewhere and the stored list wins.
+  return draft !== undefined && csvToList(draft).join(', ') === stored
+    ? draft
+    : stored;
+};
+
+const patchList = (field: ListField, value: string) => {
+  listDrafts.value[field] = value;
+  const list = csvToList(value);
+  patchMatch({ [field]: list.length ? list : undefined });
+};
 
 const regexError = (pattern: string | undefined) => {
   if (!pattern) return undefined;
@@ -325,31 +359,24 @@ const countOrUndefined = (value: string) => {
 
     <div class="d-flex ga-2 mb-3">
       <v-text-field
-        :model-value="(protocol.match.modality ?? []).join(', ')"
+        :model-value="listText('modality')"
         label="Modality"
         placeholder="CT, MR"
         density="compact"
         variant="outlined"
         hide-details
         data-testid="protocol-match-modality"
-        @update:model-value="
-          patchMatch({
-            modality: csvToList($event).length ? csvToList($event) : undefined,
-          })
-        "
+        @update:model-value="patchList('modality', $event)"
       />
       <v-text-field
-        :model-value="(protocol.match.bodyPart ?? []).join(', ')"
+        :model-value="listText('bodyPart')"
         label="Body part examined"
         placeholder="HEAD, BRAIN"
         density="compact"
         variant="outlined"
         hide-details
-        @update:model-value="
-          patchMatch({
-            bodyPart: csvToList($event).length ? csvToList($event) : undefined,
-          })
-        "
+        data-testid="protocol-match-body-part"
+        @update:model-value="patchList('bodyPart', $event)"
       />
     </div>
 

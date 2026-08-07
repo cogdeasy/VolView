@@ -73,13 +73,15 @@ describe('hanging a study by hand', () => {
 
     store.applyManually(BUILT_IN_PROTOCOLS[0].id, 'image-1');
 
-    expect(store.hungImages.has('image-1')).toBe(true);
+    expect(store.hungImages.get('image-1')).toBe(BUILT_IN_PROTOCOLS[0].id);
     expect(store.manualApply).toEqual({ imageID: 'image-1', tick: 1 });
 
     store.applyManually(BUILT_IN_PROTOCOLS[1].id, 'image-1');
 
-    // A second hand-pick of the same study is its own event.
+    // A second hand-pick of the same study is its own event, and the later
+    // phases follow the protocol that hung it last.
     expect(store.manualApply?.tick).toBe(2);
+    expect(store.hungImages.get('image-1')).toBe(BUILT_IN_PROTOCOLS[1].id);
   });
 });
 
