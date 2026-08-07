@@ -52,6 +52,13 @@ const linkSummary = computed(() => {
   return `${linkedCount.value} of ${LINK_LABELS.length} linked`;
 });
 
+// A pair with no pane taking part in it — a restored view whose name and
+// orientation disagree — is not being navigated together, so the controls
+// that describe and correct that navigation have nothing to act on.
+const syncing = computed(
+  () => comparison.active && comparison.axesInUse.length > 0
+);
+
 const alignment = computed(() => comparison.alignment);
 const isPhysical = computed(() => alignment.value?.mode === 'physical');
 const alignmentLabel = computed(() =>
@@ -204,9 +211,9 @@ const nudgeScope = computed(() =>
         </v-tooltip>
       </v-chip>
 
-      <v-divider v-if="comparison.active" vertical class="mx-1" />
+      <v-divider v-if="syncing" vertical class="mx-1" />
 
-      <div v-if="comparison.active" class="nudge">
+      <div v-if="syncing" class="nudge">
         <span class="nudge-label">
           Align priors{{ nudgeScope }}
           <v-tooltip activator="parent" location="bottom" max-width="320">

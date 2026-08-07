@@ -192,6 +192,27 @@ describe('comparison store — pair selection', () => {
     expect(comparison.sliceOffsetFor('Axial')).toBe(0);
   });
 
+  it('claims no alignment when no pane is taking part', () => {
+    const comparison = useComparisonStore();
+    const viewStore = useViewStore();
+    viewStore.setNamedLayoutsFromConfig(ComparisonLayouts);
+    viewStore.switchToNamedLayout(ComparisonLayoutNames.pair);
+    comparison.setCurrentImageID('img-a');
+    comparison.setPriorImageID('img-b');
+    expect(comparison.alignment).not.toBeNull();
+
+    // A restored manifest can bring back a pane whose name and orientation
+    // contradict each other. Such a pane is left out of the pair, and with
+    // none left nothing is being mapped for the chip to describe.
+    viewStore.visibleViews.forEach((view) => {
+      if (view.type === '2D') view.options.orientation = 'Sagittal';
+    });
+
+    expect(comparison.active).toBe(true);
+    expect(comparison.panes).toEqual([]);
+    expect(comparison.alignment).toBeNull();
+  });
+
   it('forgets a deleted study and the nudge that aligned it', () => {
     const comparison = useComparisonStore();
     comparison.setCurrentImageID('img-a');

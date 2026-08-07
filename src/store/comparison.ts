@@ -221,13 +221,12 @@ export const useComparisonStore = defineStore('comparison', () => {
 
   /**
    * Worst-case assessment across the axes on screen: if any pane has to fall
-   * back to index alignment, the pair as a whole is reported that way.
+   * back to index alignment, the pair as a whole is reported that way. An
+   * assessment describes how the panes are being mapped, so with no pane
+   * taking part there is nothing to describe.
    */
   const alignment = computed<AlignmentAssessment | null>(() => {
-    const axes = axesInUse.value.length
-      ? axesInUse.value
-      : (['Axial'] as LPSAxis[]);
-    const assessments = axes
+    const assessments = axesInUse.value
       .map(alignmentForAxis)
       .filter((a): a is AlignmentAssessment => !!a);
     if (!assessments.length) return null;
