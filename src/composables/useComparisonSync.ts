@@ -36,6 +36,14 @@ export function useComparisonSync() {
 
   // --- bind each comparison pane to its study --- //
 
+  // Slots the pair has taken over, so leaving comparison hands back those and
+  // nothing else. A layout switch can swap the view sitting in a slot, and the
+  // replacement inherits the dataset, so claims follow the replacement.
+  const claimedViewIDs = new Set<string>();
+  viewStore.LayoutViewReplacedEvent.on((oldViewID, newViewID) => {
+    if (claimedViewIDs.delete(oldViewID)) claimedViewIDs.add(newViewID);
+  });
+
   watch(
     [
       () => comparison.panes,
@@ -44,6 +52,7 @@ export function useComparisonSync() {
     ],
     () => {
       comparison.panes.forEach((pane) => {
+        claimedViewIDs.add(pane.viewID);
         if (viewStore.getView(pane.viewID)?.dataID !== pane.imageID) {
           viewStore.setDataForView(pane.viewID, pane.imageID);
         }
@@ -52,12 +61,20 @@ export function useComparisonSync() {
     { immediate: true, deep: true }
   );
 
-  // Leaving comparison hands every slot back to the current study, so the
-  // reader never lands in a normal layout silently showing the prior.
+  // Leaving comparison hands the prior's slots back to the current study, so
+  // the reader never lands in a normal layout silently showing the prior. A
+  // dataset the reader put in some other view is theirs, so only the slots the
+  // pair claimed, and only while they still show the prior, are released.
   watch(isComparisonLayout, (inLayout, wasInLayout) => {
-    if (wasInLayout && !inLayout && comparison.currentImageID) {
-      viewStore.setDataForAllViews(comparison.currentImageID);
+    if (inLayout || !wasInLayout) return;
+    const { currentImageID, priorImageID } = comparison;
+    if (currentImageID && priorImageID) {
+      claimedViewIDs.forEach((viewID) => {
+        if (viewStore.getView(viewID)?.dataID === priorImageID)
+          viewStore.setDataForView(viewID, currentImageID);
+      });
     }
+    claimedViewIDs.clear();
   });
 
   // --- slice position --- //
@@ -114,6 +131,18 @@ export function useComparisonSync() {
   const snapshot = (panes: PaneSlice[]) =>
     new Map(panes.map((pane) => [paneKey(pane), pane.slice]));
 
+  /**
+   * Drops bookkeeping for panes that are no longer on screen: an echo left
+   * unconsumed by a study switch would otherwise swallow a later scroll if
+   * that view/study pair ever came back.
+   */
+  function pruneToPanes(map: Map<string, unknown>, panes: ComparisonPane[]) {
+    const live = new Set(panes.map(paneKey));
+    [...map.keys()].forEach((key) => {
+      if (!live.has(key)) map.delete(key);
+    });
+  }
+
   function driveSlices(drivers: PaneSlice[], panes: PaneSlice[]) {
     drivers.forEach((driver) => {
       const target = partnerOf(driver, panes);
@@ -131,6 +160,7 @@ export function useComparisonSync() {
   watch(
     paneSlices,
     (panes) => {
+      pruneToPanes(echoes, panes);
       if (!comparison.active || !comparison.links.slice) {
         previousSlices = snapshot(panes);
         return;
@@ -227,8 +257,14 @@ export function useComparisonSync() {
       copyWindowLevel(viewID, dataID, currentImageID);
   });
 
+  // Re-entering a comparison layout re-applies the link: the current study's
+  // window may well have been retuned in a normal layout meanwhile.
   watch(
-    [() => comparison.links.windowLevel, () => comparison.pairKey],
+    [
+      () => comparison.links.windowLevel,
+      () => comparison.pairKey,
+      () => comparison.active,
+    ],
     ([linked]) => {
       const { currentImageID, priorImageID } = comparison;
       if (!linked || !comparison.active || !currentImageID || !priorImageID)
@@ -269,6 +305,7 @@ export function useComparisonSync() {
   watch(
     paneCameras,
     (cameras) => {
+      pruneToPanes(cameraEchoes, cameras);
       if (!comparison.active || !comparison.links.camera) {
         previousCameras = cameraSnapshot(cameras);
         return;

@@ -15,9 +15,17 @@ const spec = computed(() =>
   comparisonPaneSpec(viewStore.getView(viewId.value)?.name)
 );
 
+// The banner has to describe the image actually on screen. A pane's study is
+// bound by a watcher, so between picking another study and that flush the role
+// alone would caption the wrong image.
 const study = computed(() => {
   if (!spec.value) return null;
-  return spec.value.role === 'current' ? comparison.current : comparison.prior;
+  const byRole =
+    spec.value.role === 'current' ? comparison.current : comparison.prior;
+  const bound = viewStore.getView(viewId.value)?.dataID;
+  if (bound && bound !== byRole?.imageID)
+    return comparison.describeStudy(bound);
+  return byRole;
 });
 
 const visible = computed(() => comparison.active && !!study.value);

@@ -254,9 +254,17 @@ export const useComparisonStore = defineStore('comparison', () => {
       !!id && available.some((study) => study.imageID === id);
 
     if (!stillLoaded(currentImageID.value)) {
-      // Whatever the reader was already looking at becomes the current study.
-      const beingRead = viewStore.getView(viewStore.activeView)?.dataID;
-      const newest = available.find((study) => !study.isCine) ?? available[0];
+      // Whatever the reader was already looking at becomes the current study —
+      // except the prior, which clicking its pane must not promote: closing the
+      // current study should not silently make the comparison a self-comparison.
+      const activeData = viewStore.getView(viewStore.activeView)?.dataID;
+      const beingRead =
+        activeData === priorImageID.value ? undefined : activeData;
+      const pool = available.filter(
+        (study) => study.imageID !== priorImageID.value
+      );
+      const fallback = pool.length ? pool : available;
+      const newest = fallback.find((study) => !study.isCine) ?? fallback[0];
       currentImageID.value = stillLoaded(beingRead)
         ? beingRead
         : newest.imageID;
