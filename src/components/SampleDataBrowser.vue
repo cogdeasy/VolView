@@ -57,6 +57,8 @@ export default defineComponent({
       }
     });
 
+    const worklistStore = useWorklistStore();
+
     const dicomStore = useDICOMStore();
     dicomStore.$onAction(({ name, args, after }) => {
       if (name === 'deleteVolume') {
@@ -87,7 +89,7 @@ export default defineComponent({
         if (selection) {
           loaded.idToURL[selection] = sample.url;
           loaded.urlToID[sample.url] = selection;
-          useWorklistStore().noteSampleImported(sample.name, selection);
+          worklistStore.noteSampleImported(sample.name, selection);
         }
       } catch (error) {
         status.progress[sample.name].state = ProgressState.Error;
@@ -106,7 +108,11 @@ export default defineComponent({
           status.progress[sample.name]?.state === ProgressState.Done;
         const isError =
           status.progress[sample.name]?.state === ProgressState.Error;
-        const isLoaded = !!loaded.urlToID[sample.url];
+        // The worklist downloads the same samples, so its record counts too:
+        // a study opened from there must not be offered for download again.
+        const isLoaded =
+          !!loaded.urlToID[sample.url] ||
+          worklistStore.isSampleLoaded(sample.name);
         const progress =
           isDone || isLoaded
             ? 100

@@ -167,40 +167,49 @@ export const useWorklistStore = defineStore('worklist', () => {
     return imageStore.idList.includes(marker);
   }
 
+  /**
+   * Whether a sample's data is already loaded, whichever entry point fetched
+   * it. The sample browser reads this too, so the two lists agree on what has
+   * been downloaded.
+   */
+  function isSampleLoaded(sampleName: string): boolean {
+    const marker = importedSamples[sampleName];
+    return !!marker && isImportLoaded(marker);
+  }
+
   /** Rows for downloadable sample datasets: real pixels, invented patients. */
   const sampleStudies = computed<WorklistStudy[]>(() => {
     if (dataBrowserStore.hideSampleData) return [];
     // A sample is only struck off while the data it produced is still loaded;
     // closing that data puts the sample row back.
-    return SAMPLE_DATA.filter((sample) => {
-      const marker = importedSamples[sample.name];
-      return !marker || !isImportLoaded(marker);
-    }).flatMap((sample) => {
-      const meta = SAMPLE_WORKLIST_METADATA[sample.name];
-      if (!meta) return [];
-      const key = `sample:${sample.name}`;
-      // The dataset's own artwork stands in for the first series' thumbnail;
-      // the rest have none until the study is downloaded.
-      const series = meta.series.map((entry, index) => ({
-        ...entry,
-        key: `${key}:${index}`,
-        ...(index === 0 ? { thumbnail: sample.image } : {}),
-      }));
-      return [
-        {
-          ...meta,
-          key,
-          origin: 'sample' as const,
-          studyDate: daysAgoToDicomDate(meta.daysAgo),
-          studyTime: meta.time,
-          readStatus: readStatusOverrides[key] ?? meta.readStatus,
-          volumeKeys: [],
-          sample,
-          series,
-          ...seriesTotals(series),
-        },
-      ];
-    });
+    return SAMPLE_DATA.filter((sample) => !isSampleLoaded(sample.name)).flatMap(
+      (sample) => {
+        const meta = SAMPLE_WORKLIST_METADATA[sample.name];
+        if (!meta) return [];
+        const key = `sample:${sample.name}`;
+        // The dataset's own artwork stands in for the first series' thumbnail;
+        // the rest have none until the study is downloaded.
+        const series = meta.series.map((entry, index) => ({
+          ...entry,
+          key: `${key}:${index}`,
+          ...(index === 0 ? { thumbnail: sample.image } : {}),
+        }));
+        return [
+          {
+            ...meta,
+            key,
+            origin: 'sample' as const,
+            studyDate: daysAgoToDicomDate(meta.daysAgo),
+            studyTime: meta.time,
+            readStatus: readStatusOverrides[key] ?? meta.readStatus,
+            volumeKeys: [],
+            sample,
+            series,
+            ...seriesTotals(series),
+          },
+        ];
+      }
+    );
   });
 
   /** Fabricated rows, so the worklist reads like a real reading list. */
@@ -382,6 +391,7 @@ export const useWorklistStore = defineStore('worklist', () => {
 
   /** Opens the sample dataset offered as a stand-in for a synthetic row. */
   async function openDemoSubstitute(sample: SampleDataset) {
+    if (openingKey.value) return;
     const study = demoEntry.value;
     demoEntry.value = null;
     if (!study) return;
@@ -410,6 +420,7 @@ export const useWorklistStore = defineStore('worklist', () => {
     setFilter,
     setReadStatus,
     noteSampleImported,
+    isSampleLoaded,
     show,
     hide,
     dismissForExternalLoad,

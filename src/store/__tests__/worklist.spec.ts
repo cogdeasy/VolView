@@ -231,6 +231,8 @@ describe('Worklist store', () => {
     expect(worklist.studies.some((entry) => entry.key === sample.key)).toBe(
       false
     );
+    // The sample browser reads the same record, so it stops offering it too.
+    expect(worklist.isSampleLoaded(sample.sample!.name)).toBe(true);
   });
 
   it('keeps a sample struck off while any of its series is loaded', async () => {

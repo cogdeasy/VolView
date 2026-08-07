@@ -179,13 +179,13 @@ export default defineComponent({
     // DICOMweb imports bypass this — they call importDataSources directly —
     // but they are only reachable from the data panel, which means the
     // worklist is already closed.
-    let launchConfigLoad = Boolean(urlParams.config);
+    let launchConfigLoad = false;
     watch(
       () => loadDataStore.loadingCount,
       (count, previous) => {
         if (count <= previous) return;
         // The launch-time config load brings no studies with it, so it leaves
-        // the worklist up; it is the first load of the session.
+        // the worklist up.
         if (launchConfigLoad) {
           launchConfigLoad = false;
           return;
@@ -206,6 +206,10 @@ export default defineComponent({
 
     onMounted(async () => {
       await authReady;
+      // Set immediately before the load, which raises the count synchronously,
+      // so the exemption belongs to the config load itself rather than to
+      // whatever import happened to start first.
+      launchConfigLoad = Boolean(urlParams.config);
       await loadUrls(urlParams);
       // Feature entry points subscribe to this (see launchLoad.ts).
       await signalLaunchLoadComplete();
