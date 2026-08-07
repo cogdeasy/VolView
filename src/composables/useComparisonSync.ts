@@ -679,23 +679,33 @@ export function useComparisonSync() {
   const cameraEchoes = new Map<string, string>();
   let previousCameras = new Map<string, string>();
 
-  // Any field is enough to say a camera exists: a config restored from a
-  // manifest carries whatever that manifest held, and reading the sighting
-  // off `parallelScale` alone would leave such a pane forever first-seen and
-  // so forever unable to drive.
+  // Enough of a camera to say something with: a config restored from a
+  // manifest carries whatever that manifest held, and a lone `parallelScale`
+  // is still a zoom the partner can be put on.
   const hasCamera = (camera: PaneCamera) =>
     camera.parallelScale != null || !!camera.focalPoint || !!camera.position;
 
-  // A pane counts as seen only once its camera exists. `usePersistCameraConfig`
-  // writes a view's camera a tick or more after the pane appears, so recording
-  // an empty camera as a sighting would let the arrival of the *prior's*
-  // auto-fit read as the reader moving it, and the first thing a comparison
-  // did would be to pull the study under the reader's eyes onto the old
-  // study's framing.
+  // A camera the pane could have been moved to, rather than one assembled from
+  // whatever has been written so far: `usePersistCameraConfig` writes all three
+  // fields together, so anything short of that came from the pair itself,
+  // copying the zoom of a pane whose partner had no camera to pan.
+  const hasFullCamera = (camera: PaneCamera) =>
+    camera.parallelScale != null && !!camera.focalPoint && !!camera.position;
+
+  // A pane counts as seen only once it holds a camera of its own.
+  // `usePersistCameraConfig` writes a view's camera a tick or more after the
+  // pane appears, so recording an empty camera as a sighting would let the
+  // arrival of the *prior's* auto-fit read as the reader moving it, and the
+  // first thing a comparison did would be to pull the study under the reader's
+  // eyes onto the old study's framing. The pair's own partial write counts for
+  // no more than an empty one: it is the zoom of the study being read, put
+  // there by the link, and taking it for a sighting would spend the first-sight
+  // rule before the pane's own auto-fit — seconds later, on a slow prior —
+  // ever arrives.
   const cameraSnapshot = (cameras: PaneCamera[]) =>
     new Map(
       cameras
-        .filter(hasCamera)
+        .filter(hasFullCamera)
         .map((camera) => [paneKey(camera), cameraKey(camera)])
     );
 
@@ -817,7 +827,7 @@ export function useComparisonSync() {
       const appeared = cameras.filter(
         (camera) =>
           camera.role !== 'current' &&
-          hasCamera(camera) &&
+          hasFullCamera(camera) &&
           previousCameras.get(paneKey(camera)) === undefined
       );
 

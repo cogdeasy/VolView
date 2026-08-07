@@ -625,4 +625,33 @@ describe('useComparisonSync — camera link', () => {
     expect(prior?.focalPoint).toEqual([10, 20, 5]);
     expect(prior?.position).toEqual([10, 20, -95]);
   });
+
+  it('keeps the current study framed when the prior is auto-fitted seconds later', async () => {
+    const { currentViewID, priorViewID } = openPair();
+    const cameraStore = useViewCameraStore();
+
+    cameraStore.updateConfig(currentViewID, 'current', {
+      parallelScale: 40,
+      focalPoint: [10, 20, 0],
+      position: [10, 20, -100],
+    });
+    // Everything the pair does about that camera settles before the prior
+    // study finishes downloading: the copy, and the realignment it schedules.
+    await nextTick();
+    await nextTick();
+    await nextTick();
+
+    cameraStore.updateConfig(priorViewID, 'prior', {
+      parallelScale: 120,
+      focalPoint: [0, 0, 5],
+      position: [0, 0, -95],
+    });
+    await nextTick();
+    await nextTick();
+
+    const current = cameraStore.getConfig(currentViewID, 'current');
+    expect(current?.parallelScale).toBe(40);
+    expect(current?.focalPoint).toEqual([10, 20, 0]);
+    expect(cameraStore.getConfig(priorViewID, 'prior')?.parallelScale).toBe(40);
+  });
 });
