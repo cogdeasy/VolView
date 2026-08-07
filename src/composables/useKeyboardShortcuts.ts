@@ -91,7 +91,12 @@ export function resetAllActionKeys() {
 }
 
 export function isCustomizedActionKey(action: Action) {
-  return actionToKey.value[action] !== defaultBindings.value[action];
+  // Canonicalized on both sides: a default such as `Shift` is not stored in
+  // canonical form, so re-recording the same key must not read as a change.
+  return (
+    canonicalizeBinding(actionToKey.value[action]) !==
+    canonicalizeBinding(defaultBindings.value[action])
+  );
 }
 
 export function shouldIgnoreKeyboardShortcuts(

@@ -31,22 +31,28 @@ watch(
 
 const messageStore = useMessageStore();
 // Tracked by id, not by list length: dismissing a notification must not speak
-// the one before it again.
-const announced = new Set<string>();
+// the one before it again. Watchers are batched, so a failed operation that
+// raises several messages in one tick is walked in order rather than reduced
+// to its last message.
+let announced: string[] = [];
 watch(
-  () => messageStore.msgList[messageStore.msgList.length - 1],
-  (id) => {
-    if (!id || announced.has(id)) return;
-    announced.add(id);
-
-    const latest = messageStore.byID[id];
-    if (!latest) return;
-    if (latest.type === MessageType.Error) {
-      announcements.announceUrgent(`Error: ${latest.title}`);
-    } else if (latest.type === MessageType.Warning) {
-      announcements.announce(`Warning: ${latest.title}`);
-    }
-  }
+  () => messageStore.msgList,
+  (ids) => {
+    ids
+      .filter((id) => !announced.includes(id))
+      .forEach((id) => {
+        const message = messageStore.byID[id];
+        if (!message) return;
+        if (message.type === MessageType.Error) {
+          announcements.announceUrgent(`Error: ${message.title}`);
+        } else if (message.type === MessageType.Warning) {
+          announcements.announce(`Warning: ${message.title}`);
+        }
+      });
+    // Dropping ids that are gone keeps this from growing for the session.
+    announced = [...ids];
+  },
+  { deep: true }
 );
 
 const politeText = computed(() => polite.value);
