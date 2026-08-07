@@ -34,6 +34,18 @@ export function useHangingProtocolAutoApply() {
   };
 
   /**
+   * The study on screen: the image every pane is bound to, or nothing while
+   * the panes disagree. Watching this rather than the active view's image is
+   * what catches a series being opened as a study after it was already put
+   * into a pane by hand — the bindings change, the current image does not.
+   */
+  const openStudyID = computed(() => {
+    const imageID = currentImageID.value;
+    if (!imageID) return null;
+    return isStudyOpen(imageID) ? imageID : null;
+  });
+
+  /**
    * Images this tab has hung, as opposed to ones it only reported on, kept by
    * the store because a protocol can also be hung by hand from the indicator
    * or the manager. `currentImageID` follows the active view's data, so it
@@ -50,6 +62,22 @@ export function useHangingProtocolAutoApply() {
    */
   const finalized = new Set<string>();
 
+  /**
+   * Hangs a study, and runs the pixel-data phase itself when the image is
+   * already loaded: the watcher that normally waits for loading to finish
+   * only fires on a change, and a study can open long after its series
+   * arrived — reopened from the data panel, or hung by the switch going on.
+   */
+  const hangNow = (imageID: string) => {
+    // Only a study a protocol actually hung counts as hung: with automatic
+    // hanging off, or with nothing matching, the views were left alone and
+    // the study must still be hangable later.
+    if (!store.applyForImage(imageID)) return;
+    if (getIsImageLoading(imageID)) return;
+    finalized.add(imageID);
+    store.applyLoadedImageSettings(imageID);
+  };
+
   // Loading the same series again is a new study opening, so it hangs again.
   // The store drops its own mark for the same reason.
   onImageDeleted((deletedIDs) => {
@@ -57,8 +85,8 @@ export function useHangingProtocolAutoApply() {
   });
 
   watch(
-    currentImageID,
-    (imageID) => {
+    [currentImageID, openStudyID],
+    ([imageID]) => {
       if (!imageID) return;
       // A study restored from a saved session keeps the presentation the
       // reader saved with it.
@@ -72,10 +100,7 @@ export function useHangingProtocolAutoApply() {
       // One pane's series: leave the layout, and the indicator, describing
       // what hung the study on screen.
       if (!isStudyOpen(imageID)) return;
-      // Only a study a protocol actually hung counts as hung: with automatic
-      // hanging off, or with nothing matching, the views were left alone and
-      // the study must still be hangable later.
-      store.applyForImage(imageID);
+      hangNow(imageID);
     },
     { immediate: true }
   );
@@ -96,12 +121,7 @@ export function useHangingProtocolAutoApply() {
         store.reportForImage(imageID);
         return;
       }
-      if (!store.applyForImage(imageID)) return;
-      // The image is already loaded, so the phase that waits on pixel data
-      // will not run again on its own.
-      if (isImageLoading.value) return;
-      finalized.add(imageID);
-      store.applyLoadedImageSettings(imageID);
+      hangNow(imageID);
     }
   );
 
