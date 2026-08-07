@@ -219,6 +219,41 @@ describe('useComparisonSync — pane bindings', () => {
     expect(viewStore.getView(priorViewID)?.dataID).toBe('prior');
   });
 
+  it.each([
+    ['current', 'the study being read'],
+    ['prior', 'the older study'],
+  ])(
+    'leaves the roles alone when %s — %s — is opened in all views',
+    async (opened) => {
+      const viewStore = useViewStore();
+      const comparison = useComparisonStore();
+      seatImage('current', 8);
+      seatImage('prior', 8);
+      viewStore.setNamedLayoutsFromConfig(ComparisonLayouts);
+      viewStore.switchToNamedLayout(ComparisonLayoutNames.pair);
+      comparison.setCurrentImageID('current');
+      comparison.setPriorImageID('prior');
+      scope.run(() => useComparisonSync());
+      const viewIDOf = (name: string) =>
+        viewStore.visibleViews.find((view) => view?.name === name)!.id;
+      const currentViewID = viewIDOf(ComparisonViewNames.currentAxial);
+      const priorViewID = viewIDOf(ComparisonViewNames.priorAxial);
+      await nextTick();
+
+      // Re-opening a study the pair already holds is not a choice about either
+      // role: both sides stay where the reader put them.
+      viewStore.setDataForAllViews(opened);
+      await nextTick();
+      await nextTick();
+      await nextTick();
+
+      expect(comparison.currentImageID).toBe('current');
+      expect(comparison.priorImageID).toBe('prior');
+      expect(viewStore.getView(currentViewID)?.dataID).toBe('current');
+      expect(viewStore.getView(priorViewID)?.dataID).toBe('prior');
+    }
+  );
+
   it('refuses a cine dropped on a pane, as the study pickers do', async () => {
     const viewStore = useViewStore();
     const comparison = useComparisonStore();

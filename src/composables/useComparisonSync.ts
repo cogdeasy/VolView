@@ -51,6 +51,18 @@ export function useComparisonSync() {
   // from somewhere else can be told apart from one of our own.
   const boundByPair = new Map<string, Maybe<string>>();
 
+  // Which views each study was bound to since the last pass, so one choice
+  // made about the whole layout can be told from a drop on a single pane.
+  // "Open in all views" names every view; a drag names the one dropped on,
+  // and in an axial pair the two leave the panes looking identical.
+  const boundSince = new Map<string, Set<string>>();
+  viewStore.ViewDataChangeEvent.on((viewID, dataID) => {
+    if (!dataID) return;
+    const views = boundSince.get(dataID) ?? new Set<string>();
+    views.add(viewID);
+    boundSince.set(dataID, views);
+  });
+
   viewStore.LayoutViewReplacedEvent.on((oldViewID, newViewID) => {
     if (claimedViewIDs.delete(oldViewID)) claimedViewIDs.add(newViewID);
     // The replacement inherits the slot's dataset, so it inherits the record
@@ -69,6 +81,16 @@ export function useComparisonSync() {
   });
 
   function bindPanes() {
+    try {
+      bindPanesOnce();
+    } finally {
+      // Cleared after this pass's own writes, so the pair never reads them
+      // back as the reader binding a pane.
+      boundSince.clear();
+    }
+  }
+
+  function bindPanesOnce() {
     const { panes } = comparison;
     const shownIn = new Map(
       panes.map((pane) => [pane.viewID, viewStore.getView(pane.viewID)?.dataID])
@@ -102,12 +124,35 @@ export function useComparisonSync() {
     // old one. It goes to the role the reader reads from, and the panes that
     // came with it are marked as dealt with so the loop below hands them back
     // to the study their role holds.
-    const sameStudyEverywhere =
-      diverged.length > 1 &&
-      new Set(diverged.map((pane) => shownIn.get(pane.viewID))).size === 1;
-    const adopted = sameStudyEverywhere
-      ? (diverged.find((pane) => pane.role === 'current') ?? diverged[0])
-      : diverged[0];
+    //
+    // Whether the layout as a whole was handed one study is read off the
+    // bindings, not off what the panes ended up showing: re-opening a study
+    // already in the pair leaves its own side undisturbed, so only the other
+    // side diverges, and in an axial pair that is indistinguishable from a
+    // drop on that one pane.
+    const [divergedStudy, ...otherStudies] = new Set(
+      diverged.map((pane) => shownIn.get(pane.viewID)!)
+    );
+    const wholeLayoutStudy =
+      divergedStudy &&
+      !otherStudies.length &&
+      panes.every((pane) => boundSince.get(divergedStudy)?.has(pane.viewID))
+        ? divergedStudy
+        : null;
+    // A study the pair already holds is no choice at all: re-opening either
+    // side means to go on reading it, not to trade the two studies over.
+    const alreadyPaired =
+      wholeLayoutStudy === comparison.currentImageID ||
+      wholeLayoutStudy === comparison.priorImageID;
+    const sameStudyEverywhere = !!wholeLayoutStudy && !alreadyPaired;
+
+    let adopted: Maybe<ComparisonPane>;
+    if (sameStudyEverywhere)
+      adopted = diverged.find((pane) => pane.role === 'current') ?? diverged[0];
+    // A study already in the pair, handed to every pane at once, leaves the
+    // roles as they are; the loop below puts each pane back on its own side.
+    else if (wholeLayoutStudy) adopted = null;
+    else [adopted] = diverged;
 
     // Otherwise one role at a time. A pane handed the study already on the
     // other side is a swap, not a collapse — the store's setters move the
