@@ -4,13 +4,11 @@ import { storeToRefs } from 'pinia';
 import { ACTION_GROUPS, ActionGroup } from '@/src/constants';
 import { useCommands, type Command } from '@/src/composables/useCommands';
 import { useDialogStore } from '@/src/store/dialogs';
-import { useAnnouncementStore } from '@/src/store/announcements';
 import { fuzzyRank } from '@/src/utils/fuzzyMatch';
 import ShortcutKey from '@/src/components/ShortcutKey.vue';
 
 const dialogStore = useDialogStore();
 const { commandPaletteOpen } = storeToRefs(dialogStore);
-const announcements = useAnnouncementStore();
 const { commands, shortcutForCommand } = useCommands();
 
 const query = ref('');
@@ -82,6 +80,12 @@ watch(commandPaletteOpen, async (open) => {
   searchField.value?.focus();
 });
 
+// v-dialog mounts its content lazily and behind a transition, so the input may
+// not exist yet on the tick above; focus it as soon as it does appear.
+watch(searchField, (field) => {
+  if (field && commandPaletteOpen.value) field.focus();
+});
+
 function scrollHighlightedIntoView() {
   nextTick(() => {
     const el = listElement.value?.querySelector('[data-active="true"]');
@@ -105,7 +109,8 @@ function jumpTo(index: number) {
 function runCommand(command: Command | undefined) {
   if (!command) return;
   commandPaletteOpen.value = false;
-  announcements.announce(command.title);
+  // The commands announce their own outcome ("Layout Axial Only"), which is
+  // more use than repeating the title the user just picked from the list.
   command.run();
 }
 

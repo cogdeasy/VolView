@@ -68,13 +68,6 @@ export const bindingConflicts = computed(() =>
   findBindingConflicts(actionToKey.value)
 );
 
-export function setActionKey(action: Action, binding: string) {
-  const canonical = canonicalizeBinding(binding);
-  if (!canonical) return;
-  actionToKey.value = { ...actionToKey.value, [action]: canonical };
-  overrides.value = { ...overrides.value, [action]: canonical };
-}
-
 export function resetActionKey(action: Action) {
   actionToKey.value = {
     ...actionToKey.value,
@@ -83,6 +76,21 @@ export function resetActionKey(action: Action) {
   const rest = { ...overrides.value };
   delete rest[action];
   overrides.value = rest;
+}
+
+export function setActionKey(action: Action, binding: string) {
+  const canonical = canonicalizeBinding(binding);
+  if (!canonical) return;
+
+  // Recording the key an action already has is not a customization: persisting
+  // it would shadow a later change to the shipped or deployment default.
+  if (canonical === canonicalizeBinding(defaultBindings.value[action])) {
+    resetActionKey(action);
+    return;
+  }
+
+  actionToKey.value = { ...actionToKey.value, [action]: canonical };
+  overrides.value = { ...overrides.value, [action]: canonical };
 }
 
 export function resetAllActionKeys() {
@@ -119,6 +127,11 @@ function isHoldAction(action: Action) {
 
 function isDestructiveAction(action: Action) {
   return 'destructive' in ACTIONS[action] && ACTIONS[action].destructive;
+}
+
+/** Actions that step a value, and so may run again while the key is held. */
+function isRepeatableAction(action: Action) {
+  return 'repeatable' in ACTIONS[action] && ACTIONS[action].repeatable;
 }
 
 /** Widgets that activate on Space or Enter. */
@@ -200,12 +213,15 @@ export function findActionForEvent(
 export function useKeyboardShortcuts() {
   useEventListener(window, 'keydown', (event: KeyboardEvent) => {
     if (recordingShortcutFor.value) return;
-    if (event.repeat && event.ctrlKey) return;
 
     const action = findActionForEvent(event);
     if (!action) return;
 
+    // Held keys scroll slices, but must not flip the grayscale ramp or step
+    // through the tools dozens of times.
     event.preventDefault();
+    if (event.repeat && !isRepeatableAction(action)) return;
+
     ACTION_TO_FUNC[action]();
   });
 }

@@ -53,6 +53,8 @@ interface ActionInfo {
   hold?: boolean;
   /** Discards data, so it never fires from a text field. */
   destructive?: boolean;
+  /** Steps a value, so holding the key repeats it at the OS repeat rate. */
+  repeatable?: boolean;
 }
 
 export const ACTIONS = {
@@ -94,10 +96,12 @@ export const ACTIONS = {
   decreaseBrushSize: {
     readable: 'Decrease brush size',
     group: 'tools',
+    repeatable: true,
   },
   increaseBrushSize: {
     readable: 'Increase brush size',
     group: 'tools',
+    repeatable: true,
   },
   rectangle: {
     readable: 'Activate Rectangle tool',
@@ -143,11 +147,13 @@ export const ACTIONS = {
     readable: 'Next slice',
     group: 'navigation',
     keywords: 'scroll down frame',
+    repeatable: true,
   },
   previousSlice: {
     readable: 'Previous slice',
     group: 'navigation',
     keywords: 'scroll up frame',
+    repeatable: true,
   },
   firstSlice: {
     readable: 'Jump to first slice',

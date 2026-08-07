@@ -138,7 +138,9 @@ const jumpToSlice = (position: number) => () => {
   const next = Math.round(min + (max - min) * position);
   target.set(next);
   announce(
-    `${target.kind === 'cine' ? 'Frame' : 'Slice'} ${next + 1} of ${max + 1}`
+    `${target.kind === 'cine' ? 'Frame' : 'Slice'} ${next - min + 1} of ${
+      max - min + 1
+    }`
   );
 };
 
@@ -153,10 +155,14 @@ const changeSeries = (offset: number) => () => {
     return;
   }
 
+  // An active image that is not one of the cyclable series - a segment group,
+  // say - has no position in the list, so step in from the end the user is
+  // heading towards rather than always landing on the first series.
   const index = selections.indexOf(currentImageID.value ?? '');
+  const outside = offset > 0 ? -1 : selections.length;
+  const from = index === -1 ? outside : index;
   const nextIndex =
-    (((index === -1 ? 0 : index + offset) % selections.length) +
-      selections.length) %
+    (((from + offset) % selections.length) + selections.length) %
     selections.length;
   viewStore.setDataForAllViews(selections[nextIndex]);
   announce(`Series ${nextIndex + 1} of ${selections.length}`);

@@ -31,9 +31,9 @@ watch(
 
 const messageStore = useMessageStore();
 // Tracked by id, not by list length: dismissing a notification must not speak
-// the one before it again. Watchers are batched, so a failed operation that
-// raises several messages in one tick is walked in order rather than reduced
-// to its last message.
+// the one before it again. A failed operation that raises several messages in
+// one tick announces each of them; the store joins them into one live-region
+// update so none is overwritten before it is read.
 let announced: string[] = [];
 watch(
   () => messageStore.msgList,
