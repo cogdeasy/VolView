@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import PhilipsEmblem from '@/src/components/icons/PhilipsEmblem.vue';
+import PhilipsWordmark from '@/src/components/icons/PhilipsWordmark.vue';
 import { Brand } from '@/src/branding';
 import { useBrandLogoColor } from '@/src/composables/useBrandLogoColor';
 
@@ -15,12 +15,18 @@ const logoColor = useBrandLogoColor();
 </script>
 
 <template>
-  <div class="philips-logo" :style="{ color: logoColor }">
-    <philips-emblem :size="30" />
-    <span class="philips-logo__wordmark">{{ Brand.company }}</span>
+  <div
+    class="philips-logo"
+    role="img"
+    :aria-label="Brand.productName"
+    :style="{ color: logoColor }"
+  >
+    <philips-wordmark :size="20" aria-hidden="true" />
     <template v-if="!productNameHidden">
       <span class="philips-logo__rule" />
-      <span class="philips-logo__product">{{ Brand.productShortName }}</span>
+      <span class="philips-logo__product" aria-hidden="true">{{
+        Brand.productShortName
+      }}</span>
     </template>
   </div>
 </template>
@@ -30,15 +36,8 @@ const logoColor = useBrandLogoColor();
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   line-height: 1;
-}
-
-.philips-logo__wordmark {
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
 }
 
 .philips-logo__rule {
@@ -46,7 +45,7 @@ const logoColor = useBrandLogoColor();
   height: 24px;
   background-color: currentColor;
   opacity: 0.4;
-  margin: 0 4px;
+  margin: 0 2px;
 }
 
 .philips-logo__product {

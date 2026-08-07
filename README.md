@@ -29,6 +29,11 @@ module, [`src/branding.ts`](src/branding.ts). Editing that file (plus the logo
 components in `src/components/icons/` and the favicons in `public/`) re-skins the
 whole application.
 
+The Philips shield and wordmark are trademarks of Koninklijke Philips N.V. They
+are drawn as single-color paths (`PhilipsShield.vue`, `PhilipsWordmark.vue`) that
+inherit `currentColor`, so the lockup renders in Philips Blue on light surfaces
+and white on dark ones.
+
 # Origins and Citation
 
 Philips Volume Viewer is derived from [VolView](https://github.com/Kitware/VolView), the open-source radiological viewer developed by Kitware, Inc. The cinematic rendering technique it uses is described in:
