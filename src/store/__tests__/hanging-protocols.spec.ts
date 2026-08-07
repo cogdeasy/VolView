@@ -62,6 +62,27 @@ describe('restoring the shipped protocols', () => {
   });
 });
 
+describe('hanging a study by hand', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    localStorage.clear();
+  });
+
+  it('records the study, so the phases that wait on pixel data still run', () => {
+    const store = useHangingProtocolStore();
+
+    store.applyManually(BUILT_IN_PROTOCOLS[0].id, 'image-1');
+
+    expect(store.hungImages.has('image-1')).toBe(true);
+    expect(store.manualApply).toEqual({ imageID: 'image-1', tick: 1 });
+
+    store.applyManually(BUILT_IN_PROTOCOLS[1].id, 'image-1');
+
+    // A second hand-pick of the same study is its own event.
+    expect(store.manualApply?.tick).toBe(2);
+  });
+});
+
 describe('remembered study overrides', () => {
   it('re-pins a study that already had an override', () => {
     const overrides = rememberOverride({ '1.2.3': 'a' }, '1.2.3', 'b');

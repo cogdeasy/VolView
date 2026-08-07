@@ -143,6 +143,18 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
    * view configs were saved by the reader and must not be re-hung.
    */
   const restoredImages = ref(new Set<string>());
+  /**
+   * Images a protocol has actually hung in this tab, however it was chosen.
+   * The phases that need pixel data run later, and only for these: a study the
+   * store merely reported on is showing whatever the reader arranged.
+   */
+  const hungImages = ref(new Set<string>());
+  /**
+   * The last study the reader hung by hand, with a counter so that hanging the
+   * same study twice is still two events. Watched by the auto-apply composable,
+   * which owns the timing of the deferred phases.
+   */
+  const manualApply = ref<Maybe<{ imageID: string; tick: number }>>(null);
   /** Whether the protocol manager dialog is open. */
   const managerOpen = ref(false);
 
@@ -188,6 +200,11 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
 
   // --- applying --- //
 
+  interface ApplyOptions {
+    /** Leave alone any window the reader has already adjusted by hand. */
+    keepReaderWindow?: boolean;
+  }
+
   /**
    * Slice and oblique views window; a volume view has no windowing config, and
    * writing one only leaves a stray entry in the saved session.
@@ -198,7 +215,8 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
   function applyWindowLevel(
     protocol: HangingProtocol,
     viewIDs: string[],
-    imageID: string
+    imageID: string,
+    options?: ApplyOptions
   ) {
     const windowingStore = useWindowingStore();
     const spec = protocol.windowLevel;
@@ -207,6 +225,15 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     // sync can be off, and a handful of views makes the redundancy cheap.
     // `userTriggered` is left alone: a protocol window is not a reader edit.
     viewIDs.forEach((viewID) => {
+      // A window the reader set by hand outranks the protocol's. This only
+      // comes up in the deferred phases: a study can stream for a minute, and
+      // a window adjusted while it does must survive the data arriving.
+      if (
+        options?.keepReaderWindow &&
+        windowingStore.getConfig(viewID, imageID)?.userTriggered
+      ) {
+        return;
+      }
       if (spec.kind === 'dicom') {
         windowingStore.resetConfig(viewID, imageID);
         return;
@@ -293,9 +320,10 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
   function applyToViews(
     protocol: HangingProtocol,
     views: { id: string; type: string }[],
-    imageID: string
+    imageID: string,
+    options?: ApplyOptions
   ) {
-    applyWindowLevel(protocol, windowedViewIDs(views), imageID);
+    applyWindowLevel(protocol, windowedViewIDs(views), imageID, options);
     applyVolumeColoring(
       protocol,
       views.filter((view) => view.type === '3D').map((view) => view.id),
@@ -370,7 +398,9 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
   function applyLoadedImageSettings(imageID: Maybe<string>) {
     const protocol = appliedProtocol.value;
     if (!protocol || !imageID) return;
-    applyToViews(protocol, viewsShowing(imageID), imageID);
+    applyToViews(protocol, viewsShowing(imageID), imageID, {
+      keepReaderWindow: true,
+    });
   }
 
   /**
@@ -380,7 +410,12 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
   function applyAppliedWindowLevel(imageID: Maybe<string>) {
     const protocol = appliedProtocol.value;
     if (!protocol || !imageID) return;
-    applyWindowLevel(protocol, windowedViewIDs(viewsShowing(imageID)), imageID);
+    applyWindowLevel(
+      protocol,
+      windowedViewIDs(viewsShowing(imageID)),
+      imageID,
+      { keepReaderWindow: true }
+    );
   }
 
   /** Whether the histogram-derived ranges an auto window needs are ready. */
@@ -468,6 +503,7 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     }
 
     applyProtocol(selection.protocol, imageID);
+    if (imageID) hungImages.value.add(imageID);
     applied.value = {
       protocolId: selection.protocol.id,
       reason: selection.reason,
@@ -535,6 +571,15 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     }
 
     applyProtocol(protocol, imageID);
+    if (imageID) {
+      hungImages.value.add(imageID);
+      // A study picked mid-load still owes its volume preset, slice position
+      // and window; announcing the apply is what gets those phases scheduled.
+      manualApply.value = {
+        imageID,
+        tick: (manualApply.value?.tick ?? 0) + 1,
+      };
+    }
     applied.value = {
       protocolId,
       reason: 'override',
@@ -758,7 +803,10 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
   // series is loaded again. Dropping the mark with the image keeps a later,
   // ordinary load of that series hanging normally.
   onImageDeleted((deletedIDs) => {
-    deletedIDs.forEach((id) => restoredImages.value.delete(id));
+    deletedIDs.forEach((id) => {
+      restoredImages.value.delete(id);
+      hungImages.value.delete(id);
+    });
   });
 
   return {
@@ -769,6 +817,8 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     focusRequest,
     applied,
     appliedProtocol,
+    hungImages,
+    manualApply,
     indicatorDismissed,
     managerOpen,
     getProtocol,

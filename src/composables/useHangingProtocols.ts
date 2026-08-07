@@ -17,13 +17,15 @@ export function useHangingProtocolAutoApply() {
   const { currentImageID, isImageLoading } = useCurrentImage('global');
 
   /**
-   * Images this tab has hung, as opposed to ones it only reported on.
-   * `currentImageID` follows the active view's data, so it also changes when
-   * the reader drops an image into a pane or focuses a pane bound to something
-   * else; re-hanging then would throw away the arrangement they just made by
-   * hand. Only a study in here may have its settings written again later.
+   * Images this tab has hung, as opposed to ones it only reported on, kept by
+   * the store because a protocol can also be hung by hand from the indicator
+   * or the manager. `currentImageID` follows the active view's data, so it
+   * also changes when the reader drops an image into a pane or focuses a pane
+   * bound to something else; re-hanging then would throw away the arrangement
+   * they just made by hand. Only a study in here may have its settings written
+   * again later.
    */
-  const hung = new Set<string>();
+  const hung = store.hungImages;
   /**
    * Images whose deferred, pixel-data phase has run. Kept apart from `hung`
    * because a study can be left mid-load: the reader opens A, switches to B
@@ -32,11 +34,9 @@ export function useHangingProtocolAutoApply() {
   const finalized = new Set<string>();
 
   // Loading the same series again is a new study opening, so it hangs again.
+  // The store drops its own mark for the same reason.
   onImageDeleted((deletedIDs) => {
-    deletedIDs.forEach((id) => {
-      hung.delete(id);
-      finalized.delete(id);
-    });
+    deletedIDs.forEach((id) => finalized.delete(id));
   });
 
   watch(
@@ -55,7 +55,7 @@ export function useHangingProtocolAutoApply() {
       // Only a study a protocol actually hung counts as hung: with automatic
       // hanging off, or with nothing matching, the views were left alone and
       // the study must still be hangable later.
-      if (store.applyForImage(imageID)) hung.add(imageID);
+      store.applyForImage(imageID);
     },
     { immediate: true }
   );
@@ -77,10 +77,28 @@ export function useHangingProtocolAutoApply() {
         return;
       }
       if (!store.applyForImage(imageID)) return;
-      hung.add(imageID);
       // The image is already loaded, so the phase that waits on pixel data
       // will not run again on its own.
       if (isImageLoading.value) return;
+      finalized.add(imageID);
+      store.applyLoadedImageSettings(imageID);
+    }
+  );
+
+  // Hanging a study by hand goes through the same two phases as hanging it
+  // automatically: picking a protocol from the indicator while the study is
+  // still streaming must not cost it its volume preset, slice position and
+  // window.
+  watch(
+    () => store.manualApply,
+    (manual) => {
+      if (!manual) return;
+      const { imageID } = manual;
+      if (isImageLoading.value && imageID === currentImageID.value) {
+        // The load-finished watcher below will pick it up.
+        finalized.delete(imageID);
+        return;
+      }
       finalized.add(imageID);
       store.applyLoadedImageSettings(imageID);
     }
