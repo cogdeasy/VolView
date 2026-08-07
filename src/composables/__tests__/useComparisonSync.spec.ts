@@ -129,6 +129,32 @@ describe('useComparisonSync — slice ranges', () => {
     expect(sliceStore.getConfig(priorViewID, 'prior').slice).toBe(2);
   });
 
+  it('re-maps a prior slice that was clamped to a half-arrived volume', async () => {
+    seatImage('current', 8);
+    seatImage('prior', 4);
+    const { currentViewID, priorViewID } = openPair();
+    const sliceStore = useViewSliceStore();
+    sliceStore.updateConfig(currentViewID, 'current', {
+      slice: 6,
+      min: 0,
+      max: 7,
+    });
+    await nextTick();
+    await nextTick();
+
+    // Half the prior has arrived, so the position the current study asks for
+    // is beyond the study and the mapping clamps to its end.
+    expect(sliceStore.getConfig(priorViewID, 'prior').slice).toBe(3);
+
+    useImageCacheStore().updateVTKImageData('prior', imageOf(8));
+    await nextTick();
+    await nextTick();
+
+    // The rest of the volume lands: the position is now reachable, and the
+    // pane holds anatomy rather than the end of what had downloaded.
+    expect(sliceStore.getConfig(priorViewID, 'prior').slice).toBe(6);
+  });
+
   it('keeps a scroll made while the same study was still arriving', async () => {
     seatImage('current', 8);
     seatImage('prior', 2);

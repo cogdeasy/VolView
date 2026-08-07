@@ -72,12 +72,6 @@ export function useComparisonSync() {
       boundByPair.set(newViewID, boundByPair.get(oldViewID));
       boundByPair.delete(oldViewID);
     }
-    // A replaced view keeps its window configs, which nothing updates again:
-    // a restore record left pointing at one would be reading a window no one
-    // is looking at.
-    windowingRestores.forEach((restore) => {
-      if (restore.viewID === oldViewID) restore.viewID = newViewID;
-    });
   });
 
   function bindPanes() {
@@ -212,6 +206,7 @@ export function useComparisonSync() {
     }
     claimedViewIDs.clear();
     boundByPair.clear();
+    boundSince.clear();
   });
 
   // --- slice position --- //
@@ -407,12 +402,13 @@ export function useComparisonSync() {
 
       previousSlices = snapshot(panes);
       driveSlices(drivers, panes);
-      // A pane the growth moved is put back where the current study says it
-      // belongs, rather than being left wherever the download landed it. A
-      // pane the reader moved in the same breath drove the pair itself, and
-      // realigning would undo them.
-      if (grew.some(carriedByGrowth) && !drivers.length)
-        nextTick(realignFromCurrent);
+      // Any pane whose study grew is re-derived from the current one, not
+      // only one the growth visibly moved: a slice the pair mapped while the
+      // volume was still arriving was clamped to the slices it had then, and
+      // that clamped position stands unchanged as the rest lands. A pane the
+      // reader moved in the same breath drove the pair itself, and realigning
+      // would undo them.
+      if (grew.length && !drivers.length) nextTick(realignFromCurrent);
     },
     { immediate: true }
   );
@@ -461,6 +457,16 @@ export function useComparisonSync() {
     wrote: Pick<WindowLevelConfig, 'width' | 'level'>;
   }
   const windowingRestores = new Map<string, WindowingRestore>();
+
+  // A replaced view keeps its window configs, which nothing updates again: a
+  // restore record left pointing at one would be reading a window no one is
+  // looking at. Subscribed here rather than beside the binding handler so the
+  // record it reads is in scope by the time the handler can be reached.
+  viewStore.LayoutViewReplacedEvent.on((oldViewID, newViewID) => {
+    windowingRestores.forEach((restore) => {
+      if (restore.viewID === oldViewID) restore.viewID = newViewID;
+    });
+  });
 
   const viewShowing = (imageID: string) =>
     comparison.panes.find((pane) => pane.imageID === imageID)?.viewID ??
