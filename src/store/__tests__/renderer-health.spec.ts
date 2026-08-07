@@ -149,6 +149,17 @@ describe('Renderer health store', () => {
     expect(health.failureLeftWithView).toBe(false);
   });
 
+  it('does not treat views unmounted by a rebuild as failures walking out', () => {
+    const health = useRendererHealthStore();
+    health.registerView('Axial');
+    health.reportContextLost();
+    health.requestRecovery();
+
+    health.unregisterView('Axial');
+
+    expect(health.failureLeftWithView).toBe(false);
+  });
+
   it('does not flag a healthy view leaving as an unresolved failure', () => {
     const health = useRendererHealthStore();
     health.registerView('Axial');

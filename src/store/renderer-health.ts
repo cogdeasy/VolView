@@ -126,7 +126,13 @@ export const useRendererHealthStore = defineStore('renderer-health', () => {
   }
 
   function unregisterView(viewId: string) {
-    if (viewHealth[viewId] && !viewHealth[viewId].healthy) {
+    // A rebuild unmounts every view while they are still marked unhealthy;
+    // that is the recovery running, not a failure walking out with its view.
+    if (
+      status.value !== 'recovering' &&
+      viewHealth[viewId] &&
+      !viewHealth[viewId].healthy
+    ) {
       failureLeftWithView.value = true;
     }
     delete viewHealth[viewId];

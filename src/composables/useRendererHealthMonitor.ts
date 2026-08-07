@@ -1,5 +1,5 @@
 import { onScopeDispose, watch } from 'vue';
-import { useIntervalFn } from '@vueuse/core';
+import { useDocumentVisibility, useIntervalFn } from '@vueuse/core';
 import { captureMessage } from '@sentry/vue';
 import { Messages } from '@/src/constants';
 import { useMessageStore } from '@/src/store/messages';
@@ -45,6 +45,7 @@ const RENDERER_MESSAGE_TITLES: string[] = [
 export function useRendererHealthMonitor(api: VtkRenderWindowParentApi) {
   const health = useRendererHealthStore();
   const messageStore = useMessageStore();
+  const visibility = useDocumentVisibility();
   const rwView = api.renderWindowView as RootRenderWindowView;
   const canvas = rwView.getCanvas();
 
@@ -119,6 +120,9 @@ export function useRendererHealthMonitor(api: VtkRenderWindowParentApi) {
         confirmTimer.pause();
         return;
       }
+      // A hidden tab is not allowed to paint, so the absence of frames says
+      // nothing about the rebuilt renderer and must not be held against it.
+      if (visibility.value === 'hidden') return;
       if (frameCounter.total > framesAtMount && contextUsable()) {
         confirmTimer.pause();
         health.confirmRecovery();
@@ -130,6 +134,15 @@ export function useRendererHealthMonitor(api: VtkRenderWindowParentApi) {
     RECOVERY_CONFIRM_INTERVAL,
     { immediate: false }
   );
+
+  // Timers are throttled in background tabs, so the deadline can be long past
+  // by the time the reader comes back: give the rebuild its full window from
+  // the moment the tab can actually draw again.
+  watch(visibility, (visible) => {
+    if (visible === 'visible' && health.recovering) {
+      confirmDeadline = Date.now() + RECOVERY_CONFIRM_TIMEOUT;
+    }
+  });
 
   // Single place that mirrors renderer state into the notification tray,
   // whichever detector raised the failure. Failure and recovery are often
