@@ -35,8 +35,9 @@ const cssVars = useWorklistTheme();
         </div>
       </div>
       <v-text-field
-        v-model="filters.search"
+        :model-value="filters.search"
         placeholder="Search patient, ID, accession, description"
+        @update:model-value="worklist.setFilter('search', $event)"
         prepend-inner-icon="mdi-magnify"
         density="compact"
         variant="solo-filled"

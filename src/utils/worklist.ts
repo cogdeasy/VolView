@@ -123,7 +123,7 @@ export function formatAgeSex(study: WorklistStudy): string {
   return [age, sex].filter(Boolean).join(' / ');
 }
 
-/** Sortable numeric stamp; studies with no date sort last in ascending order. */
+/** Sortable numeric stamp; studies with no date sort first in ascending order. */
 export function studyTimestamp(study: WorklistStudy): number {
   const date = parseDicomDate(study.studyDate);
   if (!date) return Number.NEGATIVE_INFINITY;
@@ -200,6 +200,12 @@ const READ_STATUS_ORDER: Record<ReadStatus, number> = {
   read: 2,
 };
 
+/** Ordering comparison; subtraction would yield NaN for two -Infinity stamps. */
+function compareNumbers(a: number, b: number): number {
+  if (a < b) return -1;
+  return a > b ? 1 : 0;
+}
+
 function compareBySortKey(
   a: WorklistStudy,
   b: WorklistStudy,
@@ -207,11 +213,17 @@ function compareBySortKey(
 ): number {
   switch (key) {
     case 'studyDateTime':
-      return studyTimestamp(a) - studyTimestamp(b);
+      return compareNumbers(studyTimestamp(a), studyTimestamp(b));
     case 'priority':
-      return PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
+      return compareNumbers(
+        PRIORITY_ORDER[a.priority],
+        PRIORITY_ORDER[b.priority]
+      );
     case 'readStatus':
-      return READ_STATUS_ORDER[a.readStatus] - READ_STATUS_ORDER[b.readStatus];
+      return compareNumbers(
+        READ_STATUS_ORDER[a.readStatus],
+        READ_STATUS_ORDER[b.readStatus]
+      );
     case 'patientName':
       return patientSortKey(a.patientName).localeCompare(
         patientSortKey(b.patientName)

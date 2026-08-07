@@ -38,8 +38,9 @@ const readStatusItems = computed(() =>
 <template>
   <div class="filter-bar">
     <v-select
-      v-model="filters.modalities"
+      :model-value="filters.modalities"
       :items="modalityOptions"
+      @update:model-value="worklist.setFilter('modalities', $event)"
       label="Modality"
       multiple
       chips
@@ -52,8 +53,9 @@ const readStatusItems = computed(() =>
       data-testid="worklist-filter-modality"
     />
     <v-select
-      v-model="filters.dateRange"
+      :model-value="filters.dateRange"
       :items="dateRangeItems"
+      @update:model-value="worklist.setFilter('dateRange', $event)"
       label="Study date"
       density="compact"
       variant="outlined"
@@ -62,8 +64,9 @@ const readStatusItems = computed(() =>
       data-testid="worklist-filter-date"
     />
     <v-select
-      v-model="filters.priorities"
+      :model-value="filters.priorities"
       :items="priorityItems"
+      @update:model-value="worklist.setFilter('priorities', $event)"
       label="Priority"
       multiple
       chips
@@ -75,8 +78,9 @@ const readStatusItems = computed(() =>
       data-testid="worklist-filter-priority"
     />
     <v-select
-      v-model="filters.readStatuses"
+      :model-value="filters.readStatuses"
       :items="readStatusItems"
+      @update:model-value="worklist.setFilter('readStatuses', $event)"
       label="Read status"
       multiple
       chips

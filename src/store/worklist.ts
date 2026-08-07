@@ -75,8 +75,8 @@ export const useWorklistStore = defineStore('worklist', () => {
 
   /** Study key -> status, for statuses the user has moved on. */
   const readStatusOverrides = reactive<Record<string, ReadStatus>>({});
-  /** Sample names already imported; their real DICOM rows replace them. */
-  const importedSamples = reactive<Set<string>>(new Set());
+  /** Sample name -> StudyInstanceUID of the DICOM row that replaced it. */
+  const importedSamples = reactive<Record<string, string>>({});
 
   const openingKey = ref<string | null>(null);
   const openingProgress = ref(0);
@@ -108,8 +108,12 @@ export const useWorklistStore = defineStore('worklist', () => {
       const study = dicomStore.studyInfo[studyKey];
       const patientKey = dicomStore.studyPatient[studyKey];
       const patient = dicomStore.patientInfo[patientKey];
-      const volumeKeys = [...(dicomStore.studyVolumes[studyKey] ?? [])].sort();
-      const volumes = volumeKeys.map((key) => dicomStore.volumeInfo[key]);
+      const volumes = [...(dicomStore.studyVolumes[studyKey] ?? [])]
+        .map((key) => dicomStore.volumeInfo[key])
+        .sort(
+          (a, b) => Number(a.SeriesNumber ?? 0) - Number(b.SeriesNumber ?? 0)
+        );
+      const volumeKeys = volumes.map((volume) => volume.VolumeID);
       return {
         key: `loaded:${studyKey}`,
         origin: 'loaded' as const,
@@ -148,9 +152,12 @@ export const useWorklistStore = defineStore('worklist', () => {
   /** Rows for downloadable sample datasets: real pixels, invented patients. */
   const sampleStudies = computed<WorklistStudy[]>(() => {
     if (dataBrowserStore.hideSampleData) return [];
-    return SAMPLE_DATA.filter(
-      (sample) => !importedSamples.has(sample.name)
-    ).flatMap((sample) => {
+    // A sample is only struck off while the study it produced is still loaded;
+    // closing that study puts the sample row back.
+    return SAMPLE_DATA.filter((sample) => {
+      const studyKey = importedSamples[sample.name];
+      return !studyKey || !dicomStore.studyInfo[studyKey];
+    }).flatMap((sample) => {
       const meta = SAMPLE_WORKLIST_METADATA[sample.name];
       if (!meta) return [];
       const key = `sample:${sample.name}`;
@@ -210,10 +217,10 @@ export const useWorklistStore = defineStore('worklist', () => {
 
   const filtersActive = computed(() => isFilterActive(filters));
 
+  // Resolved against every study, not the filtered view, so refining a search
+  // does not yank the preview out from under the reader.
   const selectedStudy = computed(
-    () =>
-      visibleStudies.value.find((study) => study.key === selectedKey.value) ??
-      null
+    () => studies.value.find((study) => study.key === selectedKey.value) ?? null
   );
 
   const unreadCount = computed(
@@ -245,6 +252,17 @@ export const useWorklistStore = defineStore('worklist', () => {
 
   function resetFilters() {
     Object.assign(filters, defaultFilters());
+  }
+
+  /**
+   * Vuetify's clearable controls emit null when cleared; the filter model only
+   * ever holds the empty form of its type.
+   */
+  function setFilter<K extends keyof WorklistFilters>(
+    key: K,
+    value: WorklistFilters[K] | null | undefined
+  ) {
+    filters[key] = value ?? defaultFilters()[key];
   }
 
   function setReadStatus(key: string, status: ReadStatus) {
@@ -284,14 +302,14 @@ export const useWorklistStore = defineStore('worklist', () => {
           openingProgress.value = Number.isFinite(percent) ? percent * 100 : 0;
         },
       });
-      importedSamples.add(sample.name);
+      const studyKey = volumeKey ? dicomStore.volumeStudy[volumeKey] : '';
+      if (studyKey) importedSamples[sample.name] = studyKey;
       // Only the row that actually owns the data changes status; a synthetic
       // row that borrowed a sample has still not been read.
       if (study.sample === sample) {
         markOpened(study.key, study.readStatus);
         // The sample row is now replaced by the real DICOM row; the reading
         // it just started has to follow it.
-        const studyKey = volumeKey && dicomStore.volumeStudy[volumeKey];
         if (studyKey) markOpened(`loaded:${studyKey}`, 'unread');
       }
       hide();
@@ -353,6 +371,7 @@ export const useWorklistStore = defineStore('worklist', () => {
     select,
     setSort,
     resetFilters,
+    setFilter,
     setReadStatus,
     show,
     hide,

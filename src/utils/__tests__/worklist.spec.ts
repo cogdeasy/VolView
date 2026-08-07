@@ -207,6 +207,18 @@ describe('worklist sorting', () => {
     ).to.equal('b');
   });
 
+  it('orders undated studies stably instead of comparing NaN', () => {
+    const undated = [
+      makeStudy({ key: 'y', studyDate: '', studyTime: '' }),
+      makeStudy({ key: 'x', studyDate: '', studyTime: '' }),
+    ];
+    expect(
+      sortStudies(undated, { key: 'studyDateTime', direction: 'desc' }).map(
+        (study) => study.key
+      )
+    ).to.deep.equal(['x', 'y']);
+  });
+
   it('does not mutate the input', () => {
     const input = [...studies];
     sortStudies(input, { key: 'patientName', direction: 'desc' });

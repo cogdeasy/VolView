@@ -19,9 +19,11 @@ const { selectedStudy, openingKey, openingProgress } = storeToRefs(worklist);
 /** Volume key -> data URI, for series whose pixel data is already in memory. */
 const thumbnails = reactive<Record<string, string>>({});
 
+// Also keyed on the size of the image cache, so a series that is still
+// streaming in gets its thumbnail as soon as its pixel data lands.
 watch(
-  selectedStudy,
-  (study) => {
+  [selectedStudy, () => imageCacheStore.imageIds.length],
+  ([study]) => {
     if (!study) return;
     study.series.forEach(async (series) => {
       if (series.thumbnail || thumbnails[series.key]) return;

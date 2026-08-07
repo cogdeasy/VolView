@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 import { nextTick } from 'vue';
+import { useDataBrowserStore } from '@/src/store/data-browser';
 import { useDICOMStore } from '@/src/store/datasets-dicom';
 import { useWorklistStore } from '@/src/store/worklist';
 
@@ -140,6 +141,51 @@ describe('Worklist store', () => {
     expect(worklist.demoEntry?.key).toBe(synthetic.key);
     worklist.dismissDemoEntry();
     expect(worklist.demoEntry).toBeNull();
+  });
+
+  it('restores a sample row once the study it produced is closed', async () => {
+    const worklist = useWorklistStore();
+    useDataBrowserStore().hideSampleData = false;
+    const sample = worklist.studies.find((entry) => entry.origin === 'sample')!;
+
+    // The mocked loader resolves to 'volume-1'; register the study it stands for.
+    addLoadedVolume('volume-1');
+    await worklist.openStudy(sample);
+    await nextTick();
+    expect(worklist.studies.some((entry) => entry.key === sample.key)).toBe(
+      false
+    );
+
+    useDICOMStore().deleteVolume('volume-1');
+    await nextTick();
+    expect(worklist.studies.some((entry) => entry.key === sample.key)).toBe(
+      true
+    );
+  });
+
+  it('treats a cleared search or filter as empty rather than null', () => {
+    const worklist = useWorklistStore();
+    worklist.setFilter('search', 'chest');
+    worklist.setFilter('modalities', ['CT']);
+
+    // Vuetify's clearable controls emit null.
+    worklist.setFilter('search', null);
+    worklist.setFilter('modalities', null);
+
+    expect(worklist.filters.search).toBe('');
+    expect(worklist.filters.modalities).toEqual([]);
+    expect(worklist.filtersActive).toBe(false);
+    expect(worklist.visibleStudies).toHaveLength(worklist.studies.length);
+  });
+
+  it('keeps the selected study while filters hide it', () => {
+    const worklist = useWorklistStore();
+    const [first] = worklist.studies;
+    worklist.select(first.key);
+    worklist.setFilter('search', 'zzz-no-such-patient');
+
+    expect(worklist.visibleStudies).toHaveLength(0);
+    expect(worklist.selectedStudy?.key).toBe(first.key);
   });
 
   it('applies search and sort to the visible rows', () => {
