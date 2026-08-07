@@ -119,6 +119,13 @@ export interface AppliedProtocolInfo {
   criteria: CriterionResult[];
   explanation: string;
   studyInstanceUID: string;
+  /**
+   * The image this report is about. Not always the one in the active pane:
+   * the indicator keeps describing whatever hung the panes while the reader
+   * focuses another series, and acting on the focused image instead would
+   * un-pin, or re-hang, a study the reader is not being told about.
+   */
+  imageID: string | null;
 }
 
 export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
@@ -522,6 +529,7 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
         'This study was restored from a saved session, so its saved layout ' +
         'and window are in use instead of a protocol.',
       studyInstanceUID: getStudyUID(imageID),
+      imageID,
     };
     indicatorDismissed.value = false;
     return true;
@@ -574,6 +582,7 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
         criteria: [],
         explanation: explainSelection(selection),
         studyInstanceUID: studyUID,
+        imageID: imageID ?? null,
       };
       indicatorDismissed.value = false;
       return null;
@@ -586,6 +595,7 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
       criteria: selection.criteria,
       explanation: explainSelection(selection),
       studyInstanceUID: studyUID,
+      imageID: imageID ?? null,
     };
     if (imageID) hungImages.value.set(imageID, report);
     applied.value = report;
@@ -639,6 +649,7 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
       criteria: selection.criteria,
       explanation: explainSelection(selection),
       studyInstanceUID: studyUID,
+      imageID: imageID ?? null,
     };
     indicatorDismissed.value = false;
   }
@@ -670,6 +681,7 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
         studyUID && protocol.enabled ? ' and will be reused for this study' : ''
       }.`,
       studyInstanceUID: studyUID,
+      imageID: imageID ?? null,
     };
     if (imageID) {
       hungImages.value.set(imageID, report);

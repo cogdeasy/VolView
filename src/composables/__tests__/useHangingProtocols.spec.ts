@@ -97,6 +97,7 @@ describe('hanging a study as it opens', () => {
       criteria: [],
       explanation: '',
       studyInstanceUID: 'study-1',
+      imageID: 'image-1',
     });
     views.setDataForView(views.layoutViews[0].id, 'image-1');
     views.setDataForView(views.layoutViews[1].id, 'image-2');

@@ -27,8 +27,18 @@ const summary = computed(() => {
     : 'Viewer defaults';
 });
 
+/**
+ * The study the pill is describing, which is not always the series in the
+ * active pane: with a comparison on screen the pill keeps naming whatever hung
+ * the panes. Acting on the focused series instead would un-pin, and re-hang, a
+ * study the reader was never told about.
+ */
+const subjectImageID = computed(
+  () => applied.value?.imageID ?? currentImageID.value
+);
+
 const switchTo = (protocolId: string) => {
-  store.applyManually(protocolId, currentImageID.value);
+  store.applyManually(protocolId, subjectImageID.value);
   showWhy.value = false;
 };
 
@@ -40,8 +50,8 @@ const pinned = computed(() => {
 
 /** Drops the pin and hangs the study with whatever matching picks instead. */
 const unpin = () => {
-  store.clearOverride(currentImageID.value);
-  store.applyForImage(currentImageID.value, { force: true });
+  store.clearOverride(subjectImageID.value);
+  store.applyForImage(subjectImageID.value, { force: true });
   showWhy.value = false;
 };
 </script>
