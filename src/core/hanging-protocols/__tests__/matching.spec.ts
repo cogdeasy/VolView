@@ -183,6 +183,15 @@ describe('hanging protocol matching', () => {
       ).matched
     ).toBe(true);
   });
+
+  it('does not count a blank rule matching ignores', () => {
+    const blank = { studyDescription: '  ', bodyPart: ['', ' '] };
+    expect(countRules(blank)).toBe(0);
+    // A protocol with no effective rule matches nothing, whatever it declares.
+    expect(
+      evaluateProtocol(makeProtocol('blank', blank), makeContext()).matched
+    ).toBe(false);
+  });
 });
 
 describe('protocol precedence', () => {

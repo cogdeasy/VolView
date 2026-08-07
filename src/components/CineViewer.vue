@@ -82,6 +82,7 @@
           <cine-viewer-overlay
             :view-id="viewId"
             :image-id="currentImageID"
+            :show-labels="showViewLabels"
           ></cine-viewer-overlay>
           <vtk-base-slice-representation
             ref="baseSliceRep"
@@ -145,6 +146,7 @@ import { useResetViewsEvents } from '@/src/components/tools/ResetViews.vue';
 import { onVTKEvent } from '@/src/composables/onVTKEvent';
 import { get2DViewingVectors } from '@/src/utils/getViewingVectors';
 import type { LPSAxis } from '@/src/types/lps';
+import { useHangingProtocolStore } from '@/src/store/hanging-protocols';
 
 type Props = {
   viewId: string;
@@ -172,6 +174,9 @@ useResetViewsEvents().onClick(resetCamera);
 
 useWebGLWatchdog(vtkView);
 useViewAnimationListener(vtkView, viewId, '2D');
+
+const hangingProtocolStore = useHangingProtocolStore();
+const showViewLabels = computed(() => hangingProtocolStore.overlays.viewLabels);
 
 const { currentTool } = storeToRefs(useToolStore());
 

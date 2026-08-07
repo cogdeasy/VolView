@@ -248,15 +248,22 @@ const matchesPattern = (pattern: string | undefined, actual: string) => {
  * decides which criteria to report, so a `minSeriesCount` of 0 counts while an
  * empty list or an empty pattern does not.
  */
-export const countRules = (rules: MatchRules) =>
-  [
-    !!rules.modality?.length,
-    !!rules.bodyPart?.length,
-    !!rules.studyDescription,
-    !!rules.seriesDescription,
+export const countRules = (rules: MatchRules) => {
+  // Blank is not a rule, however it is spelled: matching ignores a
+  // whitespace-only pattern and whitespace-only list entries alike.
+  const hasValue = (values: string[] | undefined) =>
+    !!values?.some((value) => value.trim() !== '');
+  const hasPattern = (pattern: string | undefined) =>
+    !!pattern && pattern.trim() !== '';
+  return [
+    hasValue(rules.modality),
+    hasValue(rules.bodyPart),
+    hasPattern(rules.studyDescription),
+    hasPattern(rules.seriesDescription),
     rules.minSeriesCount !== undefined,
     rules.maxSeriesCount !== undefined,
   ].filter(Boolean).length;
+};
 
 export function evaluateProtocol(
   protocol: HangingProtocol,

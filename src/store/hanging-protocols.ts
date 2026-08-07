@@ -17,6 +17,7 @@ import { getImageData } from '@/src/composables/useCurrentImage';
 import { PresetNameList } from '@/src/vtk/ColorMaps';
 import {
   emptyStudyContext,
+  focusedModule as focusedModuleSchema,
   hangingProtocol,
   type AutoRangeKey,
   type FocusedModule,
@@ -139,6 +140,18 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
    * same protocol both move the reader back to it.
    */
   const focusRequest = ref(0);
+  /**
+   * The side panel the reader actually has open, published by the module
+   * panel. `focusedModule` is only ever what the last protocol asked for, so
+   * capturing the current view needs this instead. Panels a protocol cannot
+   * name leave it alone: the capture then keeps the last one it can express.
+   */
+  const openModule = ref<Maybe<FocusedModule>>(null);
+
+  function noteOpenModule(name: string) {
+    const parsed = focusedModuleSchema.safeParse(name);
+    if (parsed.success) openModule.value = parsed.data;
+  }
 
   const applied = ref<Maybe<AppliedProtocolInfo>>(null);
   const indicatorDismissed = ref(false);
@@ -768,7 +781,7 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
       },
       slicePolicy: 'middle',
       overlays: { ...overlays.value },
-      focusedModule: focusedModule.value ?? 'Data',
+      focusedModule: openModule.value ?? focusedModule.value ?? 'Data',
       match: {
         ...(context.modality ? { modality: [context.modality] } : {}),
         ...(context.bodyPart ? { bodyPart: [context.bodyPart] } : {}),
@@ -802,6 +815,12 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
       // with no indicator left to explain them.
       resetPresentationChrome();
     }
+    // Nothing hangs the studies it hung any more. Ids are stable, so a
+    // restored or imported protocol could otherwise take the same id back and
+    // silently re-claim them, deferred settings and all.
+    [...hungImages.value.entries()]
+      .filter(([, info]) => info.protocolId === id)
+      .forEach(([imageID]) => hungImages.value.delete(imageID));
     // Drop the studies that were pinned to it, so they hang by rule again.
     settings.value.overrides = Object.fromEntries(
       Object.entries(settings.value.overrides).filter(
@@ -906,6 +925,8 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     overlays,
     focusedModule,
     focusRequest,
+    openModule,
+    noteOpenModule,
     applied,
     appliedProtocol,
     hungImages,

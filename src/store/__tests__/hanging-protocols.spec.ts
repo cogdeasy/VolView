@@ -146,6 +146,37 @@ describe('hanging a study by hand', () => {
     store.reportForImage('image-1');
     expect(store.applied?.protocolId).toBeNull();
   });
+
+  it('does not let a deleted protocol re-claim the study when it comes back', () => {
+    const store = useHangingProtocolStore();
+    const picked = BUILT_IN_PROTOCOLS[0];
+
+    store.applyManually(picked.id, 'image-1');
+    store.removeProtocol(picked.id);
+    // Ids are stable, so restoring puts the same id back in the list.
+    store.restoreBuiltIns();
+
+    expect(store.hungImages.has('image-1')).toBe(false);
+  });
+});
+
+describe('capturing the current view', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    localStorage.clear();
+  });
+
+  it('records the panel the reader has open, not the applied one', () => {
+    const store = useHangingProtocolStore();
+    // What the module panel publishes as the reader moves between tabs.
+    store.noteOpenModule('Annotations');
+    // A panel no protocol can name leaves the last one it can express.
+    store.noteOpenModule('Remote');
+
+    expect(store.captureCurrentState('Mine', null).focusedModule).toBe(
+      'Annotations'
+    );
+  });
 });
 
 describe('remembered study overrides', () => {

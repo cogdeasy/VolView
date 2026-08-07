@@ -124,6 +124,12 @@ export default defineComponent({
       { immediate: true }
     );
 
+    // "Save current layout as protocol" has to record the panel the reader is
+    // on, and this ref is the only place that knows it.
+    watch(selectedModule, (name) => hangingProtocolStore.noteOpenModule(name), {
+      immediate: true,
+    });
+
     const serverStore = useServerStore();
 
     // Jobs tab appears only after a provider registers.
