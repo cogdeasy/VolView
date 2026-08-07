@@ -172,10 +172,10 @@ export default defineComponent({
     }
 
     // An import started from outside the worklist (drag and drop, the file
-    // dialog) takes the reader to the viewer. Keyed on an import starting, so
-    // series landing one by one cannot close a worklist the reader opened
-    // while the import runs. Counted rather than watched as a boolean, so an
-    // import that begins while another one is still running still counts.
+    // dialog, a processing result) takes the reader to the viewer. Keyed on an
+    // import starting, so series landing one by one cannot close a worklist the
+    // reader opened while the import runs. Counted rather than watched as a
+    // boolean, so an import that begins while another is still running counts.
     // DICOMweb imports bypass this — they call importDataSources directly —
     // but they are only reachable from the data panel, which means the
     // worklist is already closed.
@@ -210,7 +210,13 @@ export default defineComponent({
       // so the exemption belongs to the config load itself rather than to
       // whatever import happened to start first.
       launchConfigLoad = Boolean(urlParams.config);
-      await loadUrls(urlParams);
+      try {
+        await loadUrls(urlParams);
+      } finally {
+        // Disarmed once the launch load is over, so a later import can never
+        // inherit an exemption the config load did not consume.
+        launchConfigLoad = false;
+      }
       // Feature entry points subscribe to this (see launchLoad.ts).
       await signalLaunchLoadComplete();
     });

@@ -14,7 +14,11 @@ const { demoEntry } = storeToRefs(worklist);
 const substitutes = computed(() => {
   if (dataBrowserStore.hideSampleData) return [];
   const modality = demoEntry.value?.modality;
-  return [...SAMPLE_DATA].sort((a, b) => {
+  // A sample that is already loaded has its own row in the worklist; offering
+  // it here would only re-download data the session already holds.
+  return SAMPLE_DATA.filter(
+    (sample) => !worklist.isSampleLoaded(sample.name)
+  ).sort((a, b) => {
     const aMatch = modality && a.name.toUpperCase().includes(modality) ? 0 : 1;
     const bMatch = modality && b.name.toUpperCase().includes(modality) ? 0 : 1;
     return aMatch - bMatch;
