@@ -226,15 +226,20 @@ const matchesPattern = (pattern: string | undefined, actual: string) => {
   return { expected: `/${pattern}/i`, matched };
 };
 
+/**
+ * How many rules the protocol declares. Counted the same way `evaluateProtocol`
+ * decides which criteria to report, so a `minSeriesCount` of 0 counts while an
+ * empty list or an empty pattern does not.
+ */
 export const countRules = (rules: MatchRules) =>
   [
-    rules.modality?.length,
-    rules.bodyPart?.length,
-    rules.studyDescription,
-    rules.seriesDescription,
-    rules.minSeriesCount,
-    rules.maxSeriesCount,
-  ].filter((rule) => rule !== undefined && rule !== '' && rule !== 0).length;
+    !!rules.modality?.length,
+    !!rules.bodyPart?.length,
+    !!rules.studyDescription,
+    !!rules.seriesDescription,
+    rules.minSeriesCount !== undefined,
+    rules.maxSeriesCount !== undefined,
+  ].filter(Boolean).length;
 
 export function evaluateProtocol(
   protocol: HangingProtocol,

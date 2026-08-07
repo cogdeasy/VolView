@@ -75,8 +75,22 @@ watch(
   { immediate: true }
 );
 
+/** Set while a click is waiting on the reader to confirm losing their edits. */
+const pendingSelection = ref<string | null>(null);
+
 const select = (id: string) => {
+  if (id === selectedId.value) return;
+  // Switching re-clones the draft, so unsaved edits would go without a word.
+  if (dirty.value) {
+    pendingSelection.value = id;
+    return;
+  }
   selectedId.value = id;
+};
+
+const discardAndSelect = () => {
+  selectedId.value = pendingSelection.value;
+  pendingSelection.value = null;
 };
 
 const save = () => {
@@ -163,8 +177,10 @@ const onImportFile = async (event: Event) => {
   }
 };
 
+// A disabled protocol is skipped by selection, so calling it a match while
+// authoring would be a lie.
 const matchesCurrentStudy = (protocol: HangingProtocol) =>
-  evaluateProtocol(protocol, studyContext.value).matched;
+  protocol.enabled && evaluateProtocol(protocol, studyContext.value).matched;
 </script>
 
 <template>
@@ -403,6 +419,34 @@ const matchesCurrentStudy = (protocol: HangingProtocol) =>
         </v-col>
       </v-row>
     </v-card-text>
+
+    <v-dialog
+      :model-value="!!pendingSelection"
+      max-width="420"
+      @update:model-value="pendingSelection = null"
+    >
+      <v-card>
+        <v-card-title>Discard unsaved changes?</v-card-title>
+        <v-card-text class="text-body-2">
+          {{ draft?.name }} has edits that have not been saved. Opening another
+          protocol will discard them.
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="pendingSelection = null">
+            Keep editing
+          </v-btn>
+          <v-btn
+            color="primary"
+            variant="flat"
+            data-testid="protocol-discard-changes"
+            @click="discardAndSelect"
+          >
+            Discard
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-card>
 </template>
 

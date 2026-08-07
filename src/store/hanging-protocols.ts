@@ -9,6 +9,7 @@ import { useImageStatsStore } from '@/src/store/image-stats';
 import useViewSliceStore from '@/src/store/view-configs/slicing';
 import useVolumeColoringStore from '@/src/store/view-configs/volume-coloring';
 import { isDicomImage } from '@/src/utils/dataSelection';
+import { onImageDeleted } from '@/src/composables/onImageDeleted';
 import { layoutToConfig } from '@/src/utils/layoutParsing';
 import { DefaultNamedLayouts } from '@/src/config';
 import { findNamedLayout } from '@/src/core/hanging-protocols/describe';
@@ -187,6 +188,13 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
 
   // --- applying --- //
 
+  /**
+   * Slice and oblique views window; a volume view has no windowing config, and
+   * writing one only leaves a stray entry in the saved session.
+   */
+  const windowedViewIDs = (views: { id: string; type: string }[]) =>
+    views.filter((view) => view.type !== '3D').map((view) => view.id);
+
   function applyWindowLevel(
     protocol: HangingProtocol,
     viewIDs: string[],
@@ -294,11 +302,7 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
         .filter((view) => view.type === '3D')
         .map((view) => view.id);
 
-      applyWindowLevel(
-        protocol,
-        views.map((view) => view.id),
-        imageID
-      );
+      applyWindowLevel(protocol, windowedViewIDs(views), imageID);
       applyVolumeColoring(protocol, threeDViewIDs, imageID);
       applySlicePolicy(protocol, twoDViewIDs, imageID);
     }
@@ -327,11 +331,7 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     if (!protocol || !imageID) return;
 
     const views = useViewStore().visibleViews;
-    applyWindowLevel(
-      protocol,
-      views.map((view) => view.id),
-      imageID
-    );
+    applyWindowLevel(protocol, windowedViewIDs(views), imageID);
     applyVolumeColoring(
       protocol,
       views.filter((view) => view.type === '3D').map((view) => view.id),
@@ -340,6 +340,20 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     applySlicePolicy(
       protocol,
       views.filter((view) => view.type === '2D').map((view) => view.id),
+      imageID
+    );
+  }
+
+  /**
+   * Re-runs only the window, for when the histogram arrives after the image
+   * has already been finalized.
+   */
+  function applyAppliedWindowLevel(imageID: Maybe<string>) {
+    const protocol = appliedProtocol.value;
+    if (!protocol || !imageID) return;
+    applyWindowLevel(
+      protocol,
+      windowedViewIDs(useViewStore().visibleViews),
       imageID
     );
   }
@@ -428,6 +442,31 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     };
     indicatorDismissed.value = false;
     return selection.protocol;
+  }
+
+  /**
+   * Points the indicator at the protocol this study would get, without
+   * touching the views. Used when the reader comes back to a study that was
+   * already hung: the arrangement they have made since is theirs to keep.
+   */
+  function reportForImage(imageID: Maybe<string>) {
+    if (!settings.value.autoApply) return;
+    const studyUID = getStudyUID(imageID);
+    const selection = selectProtocol(
+      protocols.value,
+      getStudyContext(imageID),
+      {
+        overrideId: studyUID ? settings.value.overrides[studyUID] : null,
+        defaultId: settings.value.defaultProtocolId,
+      }
+    );
+    applied.value = {
+      protocolId: selection.protocol?.id ?? null,
+      reason: selection.reason,
+      criteria: selection.criteria,
+      explanation: explainSelection(selection),
+      studyInstanceUID: studyUID,
+    };
   }
 
   /** Reader picked a protocol by hand; remember it for this study. */
@@ -644,6 +683,13 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     return added;
   }
 
+  // An image id is derived from the series, so it comes back if the same
+  // series is loaded again. Dropping the mark with the image keeps a later,
+  // ordinary load of that series hanging normally.
+  onImageDeleted((deletedIDs) => {
+    deletedIDs.forEach((id) => restoredImages.value.delete(id));
+  });
+
   return {
     protocols,
     settings,
@@ -659,10 +705,12 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     getStudyUID,
     applyProtocol,
     applyLoadedImageSettings,
+    applyAppliedWindowLevel,
     autoRangesReady,
     noteRestoredPresentation,
     reportRestoredPresentation,
     applyForImage,
+    reportForImage,
     applyManually,
     clearOverride,
     captureCurrentState,

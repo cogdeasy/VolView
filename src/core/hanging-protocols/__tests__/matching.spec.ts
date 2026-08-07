@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   checkPattern,
+  countRules,
   evaluateProtocol,
   explainSelection,
   selectProtocol,
@@ -160,6 +161,17 @@ describe('hanging protocol matching', () => {
     expect(
       evaluateProtocol(protocol, makeContext({ seriesCount: 9 })).matched
     ).toBe(false);
+  });
+
+  it('counts a series-count rule of zero', () => {
+    expect(countRules({ maxSeriesCount: 0 })).toBe(1);
+    expect(countRules({ modality: [], studyDescription: '' })).toBe(0);
+    expect(
+      evaluateProtocol(
+        makeProtocol('single', { maxSeriesCount: 0 }),
+        makeContext({ seriesCount: 0 })
+      ).matched
+    ).toBe(true);
   });
 });
 
