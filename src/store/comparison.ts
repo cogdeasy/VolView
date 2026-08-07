@@ -8,6 +8,7 @@ import { useDICOMStore, getDisplayName } from '@/src/store/datasets-dicom';
 import { useImageStore } from '@/src/store/datasets-images';
 import { useImageCacheStore } from '@/src/store/image-cache';
 import { isDicomImage } from '@/src/utils/dataSelection';
+import { onImageDeleted } from '@/src/composables/onImageDeleted';
 import { clampValue } from '@/src/utils';
 import {
   comparisonPaneSpec,
@@ -18,7 +19,6 @@ import {
   assessAlignment,
   formatDicomDate,
   formatStudyInterval,
-  maxSlice,
   parseDicomDate,
   type AlignmentAssessment,
 } from '@/src/utils/comparison';
@@ -82,7 +82,7 @@ export const useComparisonStore = defineStore('comparison', () => {
         imageID,
         patientName: patient?.PatientName || UNKNOWN_PATIENT,
         studyDescription: study?.StudyDescription || 'Study',
-        seriesDescription: getDisplayName(volume),
+        seriesDescription: volume ? getDisplayName(volume) : imageID,
         modality: volume?.Modality ?? '',
         studyDate,
         displayDate: formatDicomDate(studyDate),
@@ -297,11 +297,20 @@ export const useComparisonStore = defineStore('comparison', () => {
       )?.imageID ?? null;
   }
 
-  function sliceRangeFor(imageID: Maybe<string>, axis: LPSAxis): number {
-    const metadata = metadataFor(imageID);
-    if (!metadata) return 0;
-    return maxSlice(metadata, axis);
-  }
+  // A study that is gone can no longer be a side of the pair, and its nudge
+  // has nothing left to align.
+  onImageDeleted((deletedIDs) => {
+    const deleted = new Set(deletedIDs);
+    if (currentImageID.value && deleted.has(currentImageID.value))
+      currentImageID.value = null;
+    if (priorImageID.value && deleted.has(priorImageID.value))
+      priorImageID.value = null;
+    Object.keys(sliceOffsetByPair)
+      .filter((key) => key.split('|').some((id) => deleted.has(id)))
+      .forEach((key) => {
+        delete sliceOffsetByPair[key];
+      });
+  });
 
   // Keep the pair pointing at loaded data while the reader is comparing.
   watch(
@@ -333,7 +342,6 @@ export const useComparisonStore = defineStore('comparison', () => {
     describeStudy,
     metadataFor,
     alignmentForAxis,
-    sliceRangeFor,
     setSliceOffset,
     nudgeSliceOffset,
     setCurrentImageID,

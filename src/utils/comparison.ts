@@ -210,18 +210,6 @@ export function priorSliceToCurrentSlice(
 }
 
 /**
- * Patient-coordinate shift the manual nudge represents on the prior study,
- * used to move a counterpart annotation with the reader's correction.
- */
-export function offsetToPhysicalShift(
-  prior: ImageMetadata,
-  axis: LPSAxis,
-  offset: number
-): number {
-  return offset * slicePitch(prior, axis);
-}
-
-/**
  * Copies the two in-plane components of `source` onto `target`, leaving the
  * component along the view normal untouched. Used to carry pan and zoom
  * between studies without disturbing each pane's own slice plane.
@@ -261,7 +249,14 @@ export function parseDicomDate(value: string | undefined): Date | null {
   const month = Number(trimmed.slice(4, 6));
   const day = Number(trimmed.slice(6, 8));
   const date = new Date(Date.UTC(year, month - 1, day));
-  if (Number.isNaN(date.getTime())) return null;
+  // Date.UTC rolls a nonsensical date over rather than rejecting it, and a
+  // confidently wrong study interval is worse than an unknown one.
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  )
+    return null;
   return date;
 }
 

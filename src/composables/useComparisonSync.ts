@@ -13,6 +13,7 @@ import {
 } from '@/src/utils/comparison';
 import type { ComparisonPane } from '@/src/store/comparison';
 import type { CameraConfig } from '@/src/store/view-configs/types';
+import type { Maybe } from '@/src/types';
 
 interface PaneSlice extends ComparisonPane {
   slice: number;
@@ -102,12 +103,16 @@ export function useComparisonSync() {
     );
   }
 
+  // A pane is identified by view *and* study: picking another study in the
+  // comparison bar makes the previous bookkeeping for that slot meaningless.
+  const paneKey = (pane: ComparisonPane) => `${pane.viewID}|${pane.imageID}`;
+
   // Slices we wrote ourselves, so an echo is not mistaken for a user scroll.
   const echoes = new Map<string, number>();
   let previousSlices = new Map<string, number>();
 
   const snapshot = (panes: PaneSlice[]) =>
-    new Map(panes.map((pane) => [pane.viewID, pane.slice]));
+    new Map(panes.map((pane) => [paneKey(pane), pane.slice]));
 
   function driveSlices(drivers: PaneSlice[], panes: PaneSlice[]) {
     drivers.forEach((driver) => {
@@ -115,8 +120,10 @@ export function useComparisonSync() {
       if (!target) return;
       const slice = mapSliceTo(driver, target);
       if (slice == null || slice === target.slice) return;
-      echoes.set(target.viewID, slice);
-      previousSlices.set(target.viewID, slice);
+      // Only the echo marker is recorded: baselining the write here as well
+      // would leave the marker unconsumed, and it would later swallow a
+      // genuine scroll back onto the same slice.
+      echoes.set(paneKey(target), slice);
       sliceStore.updateConfig(target.viewID, target.imageID, { slice });
     });
   }
@@ -129,17 +136,27 @@ export function useComparisonSync() {
         return;
       }
 
-      const drivers = panes.filter((pane) => {
-        const before = previousSlices.get(pane.viewID);
+      const changed = panes.filter((pane) => {
+        const before = previousSlices.get(paneKey(pane));
         if (before === undefined || before === pane.slice) return false;
         // An echo is consumed once: the reader may well scroll back to a
         // slice we once wrote ourselves.
-        if (echoes.get(pane.viewID) === pane.slice) {
-          echoes.delete(pane.viewID);
+        if (echoes.get(paneKey(pane)) === pane.slice) {
+          echoes.delete(paneKey(pane));
           return false;
         }
         return true;
       });
+
+      // Both panes of an axis can change in one tick; the current study wins,
+      // so the outcome never depends on iteration order.
+      const drivers = changed.filter(
+        (pane) =>
+          pane.role === 'current' ||
+          !changed.some(
+            (other) => other.axis === pane.axis && other.role === 'current'
+          )
+      );
 
       previousSlices = snapshot(panes);
       driveSlices(drivers, panes);
@@ -173,12 +190,19 @@ export function useComparisonSync() {
 
   let windowingEcho = false;
 
-  function copyWindowLevel(fromImageID: string, toImageID: string) {
-    const source = viewStore
-      .getAllViews()
-      .find((view) => view.dataID === fromImageID);
-    if (!source) return;
-    const { width, level } = windowingStore.getConfig(source.id, fromImageID);
+  function copyWindowLevel(
+    fromViewID: Maybe<string>,
+    fromImageID: string,
+    toImageID: string
+  ) {
+    const sourceViewID =
+      fromViewID ??
+      viewStore.getAllViews().find((view) => view.dataID === fromImageID)?.id;
+    if (!sourceViewID) return;
+    const { width, level } = windowingStore.getConfig(
+      sourceViewID,
+      fromImageID
+    );
     windowingEcho = true;
     try {
       viewStore
@@ -192,13 +216,15 @@ export function useComparisonSync() {
     }
   }
 
-  windowingStore.WindowingUpdateEvent.on((_viewID, dataID) => {
+  windowingStore.WindowingUpdateEvent.on((viewID, dataID) => {
     if (windowingEcho) return;
     if (!comparison.active || !comparison.links.windowLevel) return;
     const { currentImageID, priorImageID } = comparison;
     if (!currentImageID || !priorImageID) return;
-    if (dataID === currentImageID) copyWindowLevel(dataID, priorImageID);
-    else if (dataID === priorImageID) copyWindowLevel(dataID, currentImageID);
+    if (dataID === currentImageID)
+      copyWindowLevel(viewID, dataID, priorImageID);
+    else if (dataID === priorImageID)
+      copyWindowLevel(viewID, dataID, currentImageID);
   });
 
   watch(
@@ -207,7 +233,7 @@ export function useComparisonSync() {
       const { currentImageID, priorImageID } = comparison;
       if (!linked || !comparison.active || !currentImageID || !priorImageID)
         return;
-      copyWindowLevel(currentImageID, priorImageID);
+      copyWindowLevel(null, currentImageID, priorImageID);
     }
   );
 
@@ -238,7 +264,7 @@ export function useComparisonSync() {
   let previousCameras = new Map<string, string>();
 
   const cameraSnapshot = (cameras: PaneCamera[]) =>
-    new Map(cameras.map((camera) => [camera.viewID, cameraKey(camera)]));
+    new Map(cameras.map((camera) => [paneKey(camera), cameraKey(camera)]));
 
   watch(
     paneCameras,
@@ -248,16 +274,24 @@ export function useComparisonSync() {
         return;
       }
 
-      const drivers = cameras.filter((camera) => {
+      const changed = cameras.filter((camera) => {
         const key = cameraKey(camera);
-        const before = previousCameras.get(camera.viewID);
+        const before = previousCameras.get(paneKey(camera));
         if (before === undefined || before === key) return false;
-        if (cameraEchoes.get(camera.viewID) === key) {
-          cameraEchoes.delete(camera.viewID);
+        if (cameraEchoes.get(paneKey(camera)) === key) {
+          cameraEchoes.delete(paneKey(camera));
           return false;
         }
         return true;
       });
+
+      const drivers = changed.filter(
+        (camera) =>
+          camera.role === 'current' ||
+          !changed.some(
+            (other) => other.axis === camera.axis && other.role === 'current'
+          )
+      );
 
       previousCameras = cameraSnapshot(cameras);
 
@@ -297,8 +331,7 @@ export function useComparisonSync() {
         } as PaneCamera);
         if (next === cameraKey(target)) return;
 
-        cameraEchoes.set(target.viewID, next);
-        previousCameras.set(target.viewID, next);
+        cameraEchoes.set(paneKey(target), next);
         cameraStore.updateConfig(target.viewID, target.imageID, patch);
       });
     },

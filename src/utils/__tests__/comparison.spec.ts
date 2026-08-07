@@ -192,6 +192,13 @@ describe('study dates', () => {
     expect(formatDicomDate('garbage')).toBeNull();
   });
 
+  it('rejects dates that do not exist rather than rolling them over', () => {
+    expect(formatDicomDate('20241332')).toBeNull();
+    expect(formatDicomDate('20240230')).toBeNull();
+    expect(formatDicomDate('20240229')).toBe('2024-02-29');
+    expect(formatStudyInterval('20240314', '20241332')).toBeNull();
+  });
+
   it('describes the interval between studies', () => {
     expect(formatStudyInterval('20240314', '20230914')).toBe(
       '6 months earlier'

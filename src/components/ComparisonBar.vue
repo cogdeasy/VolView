@@ -167,7 +167,13 @@ const needsSecondStudy = computed(() => comparison.candidates.length < 2);
       <v-divider vertical class="mx-1" />
 
       <div class="nudge">
-        <span class="nudge-label">Align priors</span>
+        <span class="nudge-label">
+          Align priors
+          <v-tooltip activator="parent" location="bottom" max-width="320">
+            Manual slice offset applied to the prior study, in prior slices.
+            Registration is out of scope, so misalignment is corrected by hand.
+          </v-tooltip>
+        </span>
         <v-btn
           icon="mdi-minus"
           variant="text"
@@ -205,10 +211,6 @@ const needsSecondStudy = computed(() => comparison.candidates.length < 2);
         >
           Reset
         </v-btn>
-        <v-tooltip activator="parent" location="bottom" max-width="320">
-          Manual slice offset applied to the prior study, in prior slices.
-          Registration is out of scope, so misalignment is corrected by hand.
-        </v-tooltip>
       </div>
     </template>
   </div>
