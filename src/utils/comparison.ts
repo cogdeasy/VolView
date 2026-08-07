@@ -18,6 +18,12 @@ const WORLD_COMPONENT: Record<LPSAxis, number> = {
 const ORIENTATION_TOLERANCE = 1e-2;
 
 /**
+ * A slice step has to move the patient coordinate this share of a voxel before
+ * that coordinate is a usable stand-in for the slice plane.
+ */
+const MIN_PITCH_FRACTION = 0.1;
+
+/**
  * How the reader's slice cursor is carried from one study to the other.
  *
  * - `physical`: by patient coordinate, so a lesion stays put even when the two
@@ -120,6 +126,25 @@ export function assessAlignment(
       reason:
         'The studies were acquired with different image orientations, so ' +
         'patient coordinates are not comparable.',
+    };
+  }
+
+  // A slice is reduced to one patient coordinate, which only tracks the slice
+  // plane while the slice normal leans along that axis. A volume acquired far
+  // enough off it would map every position onto the same slice.
+  const tooOblique = [current, prior].some((metadata) => {
+    const spacing = metadata.spacing[metadata.lpsOrientation[axis]];
+    return (
+      Math.abs(slicePitch(metadata, axis)) <
+      Math.abs(spacing) * MIN_PITCH_FRACTION
+    );
+  });
+  if (tooOblique) {
+    return {
+      mode: 'index',
+      reason:
+        'The slices are too oblique to this axis for a patient coordinate ' +
+        'to identify them.',
     };
   }
 

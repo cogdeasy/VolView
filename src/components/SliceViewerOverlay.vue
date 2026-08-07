@@ -50,7 +50,9 @@ const isLockedOrientationView = computed(() =>
 );
 
 // Comparison panes carry their own study banner, so the annotations move down
-// out from under it and drop the now-duplicated series name.
+// out from under it and drop the now-duplicated series name. Their orientation
+// belongs to the layout: switching one would rename the view and quietly drop
+// the pane out of the pair.
 const comparison = useComparisonStore();
 const viewStore = useViewStore();
 const isComparisonPane = computed(
@@ -98,7 +100,11 @@ const isComparisonPane = computed(
       </div>
     </template>
     <template #bottom-right>
-      <div v-if="!isLockedOrientationView" class="annotation-cell" @click.stop>
+      <div
+        v-if="!isLockedOrientationView && !isComparisonPane"
+        class="annotation-cell"
+        @click.stop
+      >
         <ViewTypeSwitcher :view-id="viewId" :image-id="imageId" />
       </div>
     </template>

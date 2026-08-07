@@ -152,6 +152,20 @@ describe('assessAlignment', () => {
     expect(assessment.reason).toMatch(/orientation/i);
   });
 
+  it('rejects studies whose slices barely move the patient coordinate', () => {
+    const current = makeMetadata();
+    const prior = makeMetadata();
+    // A slice normal lying in the axial plane: stepping through slices no
+    // longer moves the patient's S coordinate, so it cannot identify them.
+    const flattened = mat4.clone(prior.indexToWorld);
+    flattened[10] = 1e-3;
+    prior.indexToWorld = flattened;
+
+    const assessment = assessAlignment(current, prior, 'Axial');
+    expect(assessment.mode).toBe('index');
+    expect(assessment.reason).toMatch(/oblique/i);
+  });
+
   it('rejects studies covering disjoint anatomy', () => {
     const current = makeMetadata({ dimensions: [20, 20, 20] });
     const prior = makeMetadata({

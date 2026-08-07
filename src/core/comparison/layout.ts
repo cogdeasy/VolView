@@ -43,12 +43,6 @@ export function comparisonPaneSpec(
   return PANE_BY_VIEW_NAME[viewName] ?? null;
 }
 
-export function isComparisonLayoutName(name: Maybe<string>): boolean {
-  return (
-    name === ComparisonLayoutNames.pair || name === ComparisonLayoutNames.quad
-  );
-}
-
 export const ComparisonLayouts: Record<string, LayoutConfig> = {
   [ComparisonLayoutNames.pair]: {
     direction: 'row',

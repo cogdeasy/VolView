@@ -149,11 +149,16 @@ export function useComparisonSync() {
       if (!target) return;
       const slice = mapSliceTo(driver, target);
       if (slice == null || slice === target.slice) return;
+      sliceStore.updateConfig(target.viewID, target.imageID, { slice });
       // Only the echo marker is recorded: baselining the write here as well
       // would leave the marker unconsumed, and it would later swallow a
-      // genuine scroll back onto the same slice.
-      echoes.set(paneKey(target), slice);
-      sliceStore.updateConfig(target.viewID, target.imageID, { slice });
+      // genuine scroll back onto the same slice. The marker is what the store
+      // kept, not what was asked for, since the config clamps to its own
+      // range and an unmatched marker outlives the write.
+      echoes.set(
+        paneKey(target),
+        sliceStore.getConfig(target.viewID, target.imageID).slice
+      );
     });
   }
 
@@ -314,7 +319,12 @@ export function useComparisonSync() {
       const changed = cameras.filter((camera) => {
         const key = cameraKey(camera);
         const before = previousCameras.get(paneKey(camera));
-        if (before === undefined || before === key) return false;
+        // A pane seen for the first time — a new pair, a study switch — may
+        // only drive from the current side, so a comparison opens with the
+        // prior on the current's zoom instead of on its own auto-fit.
+        if (before === undefined)
+          return camera.role === 'current' && camera.parallelScale != null;
+        if (before === key) return false;
         if (cameraEchoes.get(paneKey(camera)) === key) {
           cameraEchoes.delete(paneKey(camera));
           return false;

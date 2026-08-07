@@ -7,6 +7,10 @@ import { useComparisonStore } from '@/src/store/comparison';
 import { useDatasetStore } from '@/src/store/datasets';
 import { useImageStore } from '@/src/store/datasets-images';
 import { useViewStore } from '@/src/store/views';
+import {
+  ComparisonLayoutNames,
+  ComparisonLayouts,
+} from '@/src/core/comparison/layout';
 
 const seatImage = (id: string) => {
   const image = vtkImageData.newInstance();
@@ -28,6 +32,33 @@ const readImageIn = (dataID: string) => {
   viewStore.setDataForView(viewID, dataID);
   viewStore.setActiveView(viewID);
 };
+
+describe('comparison store — mode detection', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+  });
+
+  it('follows the panes on screen, not the remembered layout name', () => {
+    const comparison = useComparisonStore();
+    const viewStore = useViewStore();
+    viewStore.setNamedLayoutsFromConfig(ComparisonLayouts);
+    expect(comparison.isComparisonLayout).toBe(false);
+
+    viewStore.switchToNamedLayout(ComparisonLayoutNames.pair);
+    expect(comparison.isComparisonLayout).toBe(true);
+
+    // A restored session brings the named views back without the layout name.
+    viewStore.currentLayoutName = 'Four Up';
+    expect(comparison.isComparisonLayout).toBe(true);
+  });
+
+  it('is off when the layout name is the only thing left of a comparison', () => {
+    const comparison = useComparisonStore();
+    const viewStore = useViewStore();
+    viewStore.currentLayoutName = ComparisonLayoutNames.pair;
+    expect(comparison.isComparisonLayout).toBe(false);
+  });
+});
 
 describe('comparison store — pair selection', () => {
   beforeEach(() => {

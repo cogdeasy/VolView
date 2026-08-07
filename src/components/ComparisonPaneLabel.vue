@@ -15,35 +15,43 @@ const spec = computed(() =>
   comparisonPaneSpec(viewStore.getView(viewId.value)?.name)
 );
 
+const roleStudy = computed(() => {
+  if (!spec.value) return null;
+  return spec.value.role === 'current' ? comparison.current : comparison.prior;
+});
+
 // The banner has to describe the image actually on screen. A pane's study is
 // bound by a watcher, so between picking another study and that flush the role
 // alone would caption the wrong image.
-const study = computed(() => {
+const boundStudy = computed(() => {
   if (!spec.value) return null;
-  const byRole =
-    spec.value.role === 'current' ? comparison.current : comparison.prior;
   const bound = viewStore.getView(viewId.value)?.dataID;
-  if (bound && bound !== byRole?.imageID)
+  if (bound && bound !== roleStudy.value?.imageID)
     return comparison.describeStudy(bound);
-  return byRole;
+  return roleStudy.value;
 });
 
-const visible = computed(() => comparison.active && !!study.value);
+const visible = computed(() => comparison.active && !!boundStudy.value);
 
+// An image outside the pair is on neither side of it, so the role and the
+// interval it carries are withheld rather than asserted about a study they
+// were not measured against.
 const roleLabel = computed(() => {
+  if (boundStudy.value !== roleStudy.value) return 'Not in comparison';
   if (spec.value?.role !== 'prior') return 'Current';
   const interval = comparison.priorInterval;
   return interval ? `Prior — ${interval}` : 'Prior';
 });
 
-const accent = computed(() =>
-  spec.value?.role === 'prior'
+const accent = computed(() => {
+  if (boundStudy.value !== roleStudy.value) return BrandColors.priorStudy;
+  return spec.value?.role === 'prior'
     ? BrandColors.priorStudy
-    : BrandColors.currentStudy
-);
+    : BrandColors.currentStudy;
+});
 
 const details = computed(() => {
-  const info = study.value;
+  const info = boundStudy.value;
   if (!info) return [];
   return [
     info.patientName,

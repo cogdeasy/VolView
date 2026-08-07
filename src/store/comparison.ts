@@ -12,7 +12,6 @@ import { onImageDeleted } from '@/src/composables/onImageDeleted';
 import { clampValue } from '@/src/utils';
 import {
   comparisonPaneSpec,
-  isComparisonLayoutName,
   type ComparisonRole,
 } from '@/src/core/comparison/layout';
 import {
@@ -118,8 +117,11 @@ export const useComparisonStore = defineStore('comparison', () => {
       .sort((a, b) => b.studyDate.localeCompare(a.studyDate));
   });
 
+  // Comparison mode follows the panes on screen rather than the remembered
+  // layout name: loading a saved session restores the named views without
+  // restoring `currentLayoutName`, so the name outlives what is displayed.
   const isComparisonLayout = computed(() =>
-    isComparisonLayoutName(viewStore.currentLayoutName)
+    viewStore.visibleViews.some((view) => !!comparisonPaneSpec(view?.name))
   );
 
   const current = computed(() =>

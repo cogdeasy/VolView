@@ -19,10 +19,16 @@ const studyTitle = (study: StudyDescriptor) =>
     study.patientName,
   ].join(' · ');
 
+// Cine series render in their own player rather than a slice view, so a pane
+// showing one carries no banner and follows nothing. They stay listed, and
+// unpickable, rather than disappearing from a list of what is loaded.
 const options = computed(() =>
   comparison.candidates.map((study) => ({
     title: studyTitle(study),
     value: study.imageID,
+    props: study.isCine
+      ? { disabled: true, subtitle: 'Cine series cannot be compared' }
+      : undefined,
   }))
 );
 
