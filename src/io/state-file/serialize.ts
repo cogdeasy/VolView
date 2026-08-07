@@ -7,10 +7,13 @@ import { useFindingsStore } from '@/src/store/findings';
 import { Tools } from '@/src/store/tools/types';
 import { useViewStore } from '@/src/store/views';
 import {
+  FindingRecord,
+  FindingTypeRecord,
   Manifest,
   ManifestSchema,
   ParentToLayers,
   SegmentGroup,
+  type FindingsState,
 } from '@/src/io/state-file/schema';
 
 import { retypeFile } from '@/src/io';
@@ -53,7 +56,55 @@ const coreManifestSchema = ManifestSchema.pick({
   datasetFilePath: true,
 });
 
-/** Deletes the key-image members belonging to a findings root being dropped. */
+/**
+ * Prunes the findings root record by record, the way segment groups are: a
+ * finding is the user's own authored content, so a malformed one must not cost
+ * the impression, the taxonomy and the other findings as well.
+ */
+function pruneFindings(
+  raw: unknown,
+  zip: JSZip,
+  omitted: string[]
+): FindingsState | undefined {
+  if (!isRecord(raw)) {
+    omitted.push('findings: invalid optional state');
+    return undefined;
+  }
+
+  const findings = (Array.isArray(raw.findings) ? raw.findings : []).flatMap(
+    (entry, index) => {
+      const parsed = FindingRecord.safeParse(entry);
+      if (parsed.success) return [parsed.data];
+      const name =
+        isRecord(entry) && typeof entry.title === 'string' && entry.title
+          ? entry.title
+          : `findings[${index}]`;
+      omitted.push(`${name}: invalid finding record`);
+      removeKeyImages({ findings: [entry] }, zip);
+      return [];
+    }
+  );
+
+  const types = (Array.isArray(raw.types) ? raw.types : []).flatMap(
+    (entry, index) => {
+      const parsed = FindingTypeRecord.safeParse(entry);
+      if (parsed.success) return [parsed.data];
+      omitted.push(`finding type ${index}: invalid record`);
+      return [];
+    }
+  );
+
+  const impression = typeof raw.impression === 'string' ? raw.impression : '';
+  if (raw.impression !== undefined && typeof raw.impression !== 'string')
+    omitted.push('findings impression: invalid state');
+
+  // Nothing survived, so the root stays absent rather than empty.
+  if (findings.length === 0 && types.length === 0 && !impression)
+    return undefined;
+  return { impression, types, findings };
+}
+
+/** Deletes the key-image members belonging to findings being dropped. */
 function removeKeyImages(findings: unknown, zip: JSZip) {
   if (!isRecord(findings) || !Array.isArray(findings.findings)) return;
   findings.findings.forEach((finding) => {
@@ -260,9 +311,13 @@ export function normalizeManifest(manifest: Manifest, zip: JSZip) {
   // field valid in isolation is valid in the full manifest — and the output
   // is assembled from the parsed pieces, so nothing is validated (or
   // deep-copied) twice.
+  const findings =
+    candidate.findings === undefined
+      ? undefined
+      : pruneFindings(candidate.findings, zip, omitted);
+
   const optionalRoots = [
     'tools',
-    'findings',
     'activeView',
     'isActiveViewMaximized',
     'viewByID',
@@ -276,9 +331,6 @@ export function normalizeManifest(manifest: Manifest, zip: JSZip) {
     const parsed = ManifestSchema.shape[key].safeParse(candidate[key]);
     if (!parsed.success) {
       omitted.push(`${key}: invalid optional state`);
-      // Dropped findings leave their key-image PNGs behind, the same dead
-      // bytes an orphaned segment group would.
-      if (key === 'findings') removeKeyImages(candidate[key], zip);
       return [];
     }
     return [[key, parsed.data] as const];
@@ -288,6 +340,7 @@ export function normalizeManifest(manifest: Manifest, zip: JSZip) {
     ...core,
     segmentGroups: validGroups,
     ...(validLayers ? { parentToLayers: validLayers } : {}),
+    ...(findings ? { findings } : {}),
     ...Object.fromEntries(optionalEntries),
   } as Manifest;
   return { manifest: normalized, omitted };

@@ -153,7 +153,54 @@ describe('state-file serialization resilience', () => {
 
     expect(normalized.manifest).not.toHaveProperty('findings');
     expect(zip.file('findings/keyImages/finding-1.png')).toBeNull();
-    expect(normalized.omitted).toContain('findings: invalid optional state');
+    expect(normalized.omitted).toContain('findings[0]: invalid finding record');
+  });
+
+  it('keeps the other findings when one record is malformed', () => {
+    const zip = new JSZip();
+    zip.file('findings/bad.png', 'bytes');
+    zip.file('findings/good.png', 'bytes');
+    const good = {
+      id: 'finding-2',
+      imageID: 'dataset-1',
+      title: 'Apical lesion',
+      typeID: 'mass',
+      bodySite: 'Left ventricle',
+      laterality: 'left',
+      category: 'Mild',
+      description: '',
+      measurements: [],
+      slice: 3,
+      frameOfReference: { planeOrigin: [0, 0, 0], planeNormal: [0, 0, 1] },
+      createdAt: '2026-01-01T00:00:00.000Z',
+      keyImage: {
+        path: 'findings/good.png',
+        viewName: 'Axial',
+        slice: 3,
+        capturedAt: '2026-01-01T00:00:00.000Z',
+      },
+    };
+    const manifest = {
+      version: MANIFEST_VERSION,
+      datasets: [{ id: 'dataset-1', dataSourceId: 1 }],
+      dataSources: [{ id: 1, type: 'uri', uri: '/dataset-1' }],
+      findings: {
+        impression: 'Normal study.',
+        types: [],
+        findings: [
+          { id: 'finding-1', keyImage: { path: 'findings/bad.png' } },
+          good,
+        ],
+      },
+    } as unknown as Manifest;
+
+    const normalized = normalizeManifest(manifest, zip);
+
+    expect(normalized.manifest.findings?.findings).toEqual([good]);
+    expect(normalized.manifest.findings?.impression).toBe('Normal study.');
+    expect(zip.file('findings/bad.png')).toBeNull();
+    expect(zip.file('findings/good.png')).not.toBeNull();
+    expect(normalized.omitted).toContain('findings[0]: invalid finding record');
   });
 
   it('omits the complete view layout when viewByID is invalid', () => {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { refDebounced } from '@vueuse/core';
 import { storeToRefs } from 'pinia';
 import { useTheme } from 'vuetify';
@@ -36,10 +36,21 @@ const documentTheme = computed<'dark' | 'light'>(() =>
 // Debounced because every srcdoc change reloads the frame and its inline
 // key images; the exports re-render from live state regardless. Only rendered
 // while the dialog is open, so editing findings costs nothing.
+
+// The generation time is stamped once per opening, so it does not tick while
+// the report is edited. An export stamps its own.
+const openedAt = ref('');
+watch(reportOpen, (open) => {
+  if (open) openedAt.value = new Date().toLocaleString();
+});
+
 const previewHtml = refDebounced(
   computed(() =>
     reportOpen.value
-      ? renderReportHtml(report.value, { theme: documentTheme.value })
+      ? renderReportHtml(
+          { ...report.value, generatedAt: openedAt.value },
+          { theme: documentTheme.value }
+        )
       : ''
   ),
   PREVIEW_DEBOUNCE_MS
@@ -97,6 +108,10 @@ function printReport() {
   frame.style.width = '0';
   frame.style.height = '0';
   frame.style.border = '0';
+  // Same containment as the preview, minus what printing needs: same-origin so
+  // this window can drive print(), modals so the frame may open the dialog.
+  // Scripts stay off, so a gap in the report's escaping cannot execute.
+  frame.setAttribute('sandbox', 'allow-same-origin allow-modals');
   frame.srcdoc = renderReportHtml(buildReport(), {
     theme: 'light',
     forPrint: true,

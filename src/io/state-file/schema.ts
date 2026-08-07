@@ -465,7 +465,7 @@ const FindingCategoryScale = z.enum([
   'none',
 ] as const satisfies readonly FindingCategoryScale[]);
 
-const FindingType = z.object({
+export const FindingTypeRecord = z.object({
   id: z.string(),
   label: z.string(),
   modalities: z.string().array(),
@@ -488,7 +488,7 @@ const FindingKeyImage = z.object({
   capturedAt: z.string(),
 });
 
-const Finding = z.object({
+export const FindingRecord = z.object({
   id: z.string().optional(),
   imageID: z.string(),
   title: z.string(),
@@ -512,8 +512,8 @@ const Finding = z.object({
 export const Findings = z.object({
   impression: z.string().optional(),
   // Built-in taxonomy entries come from code; only user edits are saved.
-  types: FindingType.array().optional(),
-  findings: Finding.array().optional(),
+  types: FindingTypeRecord.array().optional(),
+  findings: FindingRecord.array().optional(),
 });
 
 export type FindingsState = z.infer<typeof Findings>;
