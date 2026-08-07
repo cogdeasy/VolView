@@ -1,19 +1,14 @@
 <script setup lang="ts">
 import { computed, toRefs } from 'vue';
 import { useComparisonStore } from '@/src/store/comparison';
-import { useViewStore } from '@/src/store/views';
-import { comparisonPaneSpec } from '@/src/core/comparison/layout';
 import { BrandColors } from '@/src/branding';
 
 const props = defineProps<{ viewId: string }>();
 const { viewId } = toRefs(props);
 
 const comparison = useComparisonStore();
-const viewStore = useViewStore();
 
-const spec = computed(() =>
-  comparisonPaneSpec(viewStore.getView(viewId.value)?.name)
-);
+const spec = computed(() => comparison.paneSpecFor(viewId.value));
 
 const roleStudy = computed(() => {
   if (!spec.value) return null;

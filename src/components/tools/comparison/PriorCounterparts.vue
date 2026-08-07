@@ -7,10 +7,8 @@ import { onVTKEvent } from '@/src/composables/onVTKEvent';
 import { vtkFieldRef } from '@/src/core/vtk/vtkFieldRef';
 import { worldToSVG } from '@/src/utils/vtk-helpers';
 import { useComparisonStore } from '@/src/store/comparison';
-import { useViewStore } from '@/src/store/views';
 import { useRulerStore } from '@/src/store/tools/rulers';
 import { useSliceConfig } from '@/src/composables/useSliceConfig';
-import { comparisonPaneSpec } from '@/src/core/comparison/layout';
 import { frameOfReferenceToImageSliceAndAxis } from '@/src/utils/frameOfReference';
 import {
   currentSliceToPriorSlice,
@@ -28,12 +26,9 @@ const view = inject(VtkViewContext);
 if (!view) throw new Error('No VtkView');
 
 const comparison = useComparisonStore();
-const viewStore = useViewStore();
 const rulerStore = useRulerStore();
 
-const spec = computed(() =>
-  comparisonPaneSpec(viewStore.getView(viewId.value)?.name)
-);
+const spec = computed(() => comparison.paneSpecFor(viewId.value));
 
 const isPriorPane = computed(
   () =>

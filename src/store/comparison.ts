@@ -162,6 +162,26 @@ export const useComparisonStore = defineStore('comparison', () => {
   );
 
   /**
+   * The role and axis a view is a comparison pane for, or null.
+   *
+   * The name says which axis the pane is for; the view says which axis it
+   * actually shows. They agree in every layout the app builds, but a restored
+   * manifest is taken at its word, and a pane whose name and orientation
+   * disagree would have its slices mapped — and its counterparts drawn — along
+   * an axis nobody is looking at. Better no pane than a wrong one, which is a
+   * judgement everything that decorates a pane has to share: the pair, the
+   * caption and the counterpart markers all resolve a pane through here.
+   */
+  function paneSpecFor(viewID: Maybe<string>) {
+    const view = viewStore.getView(viewID);
+    const spec = comparisonPaneSpec(view?.name);
+    if (!view || !spec) return null;
+    if (view.type !== '2D' || view.options.orientation !== spec.axis)
+      return null;
+    return spec;
+  }
+
+  /**
    * Layout slots that participate in the comparison, with their study.
    *
    * The layout's own views, not the ones on screen: maximizing a pane hides
@@ -172,15 +192,8 @@ export const useComparisonStore = defineStore('comparison', () => {
   const panes = computed<ComparisonPane[]>(() => {
     if (!active.value) return [];
     return viewStore.layoutViews.flatMap((view) => {
-      const spec = comparisonPaneSpec(view?.name);
+      const spec = paneSpecFor(view?.id);
       if (!view || !spec) return [];
-      // The name says which axis the pane is for; the view says which axis it
-      // actually shows. They agree in every layout the app builds, but a
-      // restored manifest is taken at its word, and a pane whose name and
-      // orientation disagree would have its slices mapped along an axis
-      // nobody is looking at. Better no pane than a wrong one.
-      if (view.type !== '2D' || view.options.orientation !== spec.axis)
-        return [];
       const imageID =
         spec.role === 'current' ? currentImageID.value : priorImageID.value;
       if (!imageID) return [];
@@ -200,7 +213,7 @@ export const useComparisonStore = defineStore('comparison', () => {
    */
   function paneStudyFor(viewID: Maybe<string>): StudyDescriptor | null {
     const view = viewStore.getView(viewID);
-    const spec = comparisonPaneSpec(view?.name);
+    const spec = paneSpecFor(viewID);
     if (!spec) return null;
     const roleStudy = spec.role === 'current' ? current.value : prior.value;
     if (view?.dataID && view.dataID !== roleStudy?.imageID)
@@ -453,6 +466,7 @@ export const useComparisonStore = defineStore('comparison', () => {
     sliceOffsetFor,
     allLinked,
     describeStudy,
+    paneSpecFor,
     paneStudyFor,
     metadataFor,
     alignmentForAxis,

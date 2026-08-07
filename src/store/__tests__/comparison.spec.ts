@@ -213,6 +213,31 @@ describe('comparison store — pair selection', () => {
     expect(comparison.alignment).toBeNull();
   });
 
+  it('captions no pane the pair itself refuses', () => {
+    const comparison = useComparisonStore();
+    const viewStore = useViewStore();
+    viewStore.setNamedLayoutsFromConfig(ComparisonLayouts);
+    viewStore.switchToNamedLayout(ComparisonLayoutNames.pair);
+    comparison.setCurrentImageID('img-a');
+    comparison.setPriorImageID('img-b');
+    const priorViewID = viewStore.visibleViews.find(
+      (view) => view.name === ComparisonViewNames.priorAxial
+    )!.id;
+    expect(comparison.paneStudyFor(priorViewID)?.imageID).toBe('img-b');
+
+    // The same contradiction the pair refuses: a caption, or a counterpart
+    // marker, drawn for the axis the name claims would describe a plane the
+    // pane is not showing.
+    const priorView = viewStore.getView(priorViewID)!;
+    if (priorView.type === '2D') priorView.options.orientation = 'Sagittal';
+
+    expect(comparison.panes.map((pane) => pane.viewID)).not.toContain(
+      priorViewID
+    );
+    expect(comparison.paneStudyFor(priorViewID)).toBeNull();
+    expect(comparison.paneSpecFor(priorViewID)).toBeNull();
+  });
+
   it('forgets a deleted study and the nudge that aligned it', () => {
     const comparison = useComparisonStore();
     comparison.setCurrentImageID('img-a');
