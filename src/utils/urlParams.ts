@@ -101,7 +101,9 @@ export const withDefaultUrls = (
   params: ParsedUrlParams,
   defaults: { urls?: string; names?: string }
 ): ParsedUrlParams => {
-  if (rawParams.urls || !defaults.urls) return params;
+  // Presence, not truthiness: `?urls=` extracts as '' and a bare `?urls` as
+  // `true`, and both still name the tab's intent.
+  if ('urls' in rawParams || !defaults.urls) return params;
 
   const fallback = normalizeUrlParams({
     urls: defaults.urls,

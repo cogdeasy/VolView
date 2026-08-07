@@ -121,6 +121,11 @@ describe('withDefaultUrls', () => {
     expect(result.urls).toBeUndefined();
   });
 
+  it('shows nothing for an empty urls=, which still names an intent', () => {
+    const result = withDefaultUrls(...parse({ urls: '' }), defaults);
+    expect(result.urls).toBeUndefined();
+  });
+
   it('drops a lone names=, which labels the urls= it arrived with', () => {
     const result = withDefaultUrls(...parse({ names: 'Patient Study' }), {
       urls: defaults.urls,
