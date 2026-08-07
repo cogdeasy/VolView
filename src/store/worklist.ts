@@ -75,7 +75,7 @@ export const useWorklistStore = defineStore('worklist', () => {
 
   /** Study key -> status, for statuses the user has moved on. */
   const readStatusOverrides = reactive<Record<string, ReadStatus>>({});
-  /** Sample name -> StudyInstanceUID of the DICOM row that replaced it. */
+  /** Sample name -> data selection produced by downloading it. */
   const importedSamples = reactive<Record<string, string>>({});
 
   const openingKey = ref<string | null>(null);
@@ -149,14 +149,24 @@ export const useWorklistStore = defineStore('worklist', () => {
     })
   );
 
+  /**
+   * Whether a data selection is still loaded: DICOM samples resolve through
+   * the study hierarchy, plain image samples (.mha and friends) do not.
+   */
+  function isSelectionLoaded(selection: string): boolean {
+    const studyKey = dicomStore.volumeStudy[selection];
+    if (studyKey) return !!dicomStore.studyInfo[studyKey];
+    return imageStore.idList.includes(selection);
+  }
+
   /** Rows for downloadable sample datasets: real pixels, invented patients. */
   const sampleStudies = computed<WorklistStudy[]>(() => {
     if (dataBrowserStore.hideSampleData) return [];
-    // A sample is only struck off while the study it produced is still loaded;
-    // closing that study puts the sample row back.
+    // A sample is only struck off while the data it produced is still loaded;
+    // closing that data puts the sample row back.
     return SAMPLE_DATA.filter((sample) => {
-      const studyKey = importedSamples[sample.name];
-      return !studyKey || !dicomStore.studyInfo[studyKey];
+      const selection = importedSamples[sample.name];
+      return !selection || !isSelectionLoaded(selection);
     }).flatMap((sample) => {
       const meta = SAMPLE_WORKLIST_METADATA[sample.name];
       if (!meta) return [];
@@ -303,14 +313,18 @@ export const useWorklistStore = defineStore('worklist', () => {
         },
       });
       const studyKey = volumeKey ? dicomStore.volumeStudy[volumeKey] : '';
-      if (studyKey) importedSamples[sample.name] = studyKey;
+      if (volumeKey) importedSamples[sample.name] = volumeKey;
       // Only the row that actually owns the data changes status; a synthetic
       // row that borrowed a sample has still not been read.
       if (study.sample === sample) {
         markOpened(study.key, study.readStatus);
         // The sample row is now replaced by the real DICOM row; the reading
-        // it just started has to follow it.
-        if (studyKey) markOpened(`loaded:${studyKey}`, 'unread');
+        // it just started, and the preview, have to follow it.
+        if (studyKey) {
+          markOpened(`loaded:${studyKey}`, 'unread');
+          if (selectedKey.value === study.key)
+            selectedKey.value = `loaded:${studyKey}`;
+        }
       }
       hide();
     } catch (error) {

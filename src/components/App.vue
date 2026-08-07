@@ -164,18 +164,17 @@ export default defineComponent({
     const urlParams = readLaunchParams();
 
     // Launching with data goes straight to the viewer; the worklist must not
-    // flash in front of it while the URLs load.
-    if (urlParams.urls || urlParams.config) {
+    // flash in front of it while the URLs load. A config-only launch brings no
+    // studies with it, so it still lands on the worklist.
+    if (urlParams.urls) {
       worklistStore.dismissForExternalLoad();
     }
 
-    // Anything loaded from outside the worklist (drag and drop, the file
-    // dialog, DICOMweb) takes the reader to the viewer.
-    const datasetCount = computed(
-      () => imageStore.idList.length + Object.keys(dicomStore.volumeInfo).length
-    );
-    watch(datasetCount, (count, previousCount) => {
-      if (count > previousCount) worklistStore.dismissForExternalLoad();
+    // The first data loaded from outside the worklist (drag and drop, the file
+    // dialog, DICOMweb) takes the reader to the viewer. Later series arriving
+    // from the same import must not close a worklist opened in the meantime.
+    watch(hasData, (dataPresent, hadData) => {
+      if (dataPresent && !hadData) worklistStore.dismissForExternalLoad();
     });
 
     onMounted(async () => {

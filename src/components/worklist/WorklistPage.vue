@@ -55,14 +55,13 @@ const cssVars = useWorklistTheme();
         Open files
       </v-btn>
       <v-btn
-        v-if="hasData"
         variant="tonal"
         color="primary"
-        prepend-icon="mdi-arrow-left"
+        :prepend-icon="hasData ? 'mdi-arrow-left' : 'mdi-database-outline'"
         data-testid="worklist-back-to-viewer"
         @click="worklist.hide()"
       >
-        Back to viewer
+        {{ hasData ? 'Back to viewer' : 'Data browser' }}
       </v-btn>
     </header>
 

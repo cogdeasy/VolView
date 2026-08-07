@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 import { nextTick } from 'vue';
+import { loadSampleData } from '@/src/actions/loadSampleData';
 import { useDataBrowserStore } from '@/src/store/data-browser';
 import { useDICOMStore } from '@/src/store/datasets-dicom';
+import { useImageStore } from '@/src/store/datasets-images';
 import { useWorklistStore } from '@/src/store/worklist';
 
 vi.mock('@/src/actions/loadSampleData', () => ({
@@ -150,13 +152,38 @@ describe('Worklist store', () => {
 
     // The mocked loader resolves to 'volume-1'; register the study it stands for.
     addLoadedVolume('volume-1');
+    worklist.select(sample.key);
+    await worklist.openStudy(sample);
+    await nextTick();
+    expect(worklist.studies.some((entry) => entry.key === sample.key)).toBe(
+      false
+    );
+    // The preview follows the row that replaced the sample.
+    expect(worklist.selectedStudy?.origin).toBe('loaded');
+
+    useDICOMStore().deleteVolume('volume-1');
+    await nextTick();
+    expect(worklist.studies.some((entry) => entry.key === sample.key)).toBe(
+      true
+    );
+  });
+
+  it('hides a sample that imported as a plain image, and restores it', async () => {
+    const worklist = useWorklistStore();
+    const imageStore = useImageStore();
+    useDataBrowserStore().hideSampleData = false;
+    const sample = worklist.studies.find((entry) => entry.origin === 'sample')!;
+
+    // Non-DICOM samples import into the image store, not the DICOM hierarchy.
+    vi.mocked(loadSampleData).mockResolvedValueOnce('image-1');
+    imageStore.idList.push('image-1');
     await worklist.openStudy(sample);
     await nextTick();
     expect(worklist.studies.some((entry) => entry.key === sample.key)).toBe(
       false
     );
 
-    useDICOMStore().deleteVolume('volume-1');
+    imageStore.idList.splice(0, imageStore.idList.length);
     await nextTick();
     expect(worklist.studies.some((entry) => entry.key === sample.key)).toBe(
       true
