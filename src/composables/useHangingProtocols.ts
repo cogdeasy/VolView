@@ -121,6 +121,10 @@ export function useHangingProtocolAutoApply() {
         store.reportForImage(imageID);
         return;
       }
+      // The panes are holding more than this series: turning a switch on is no
+      // more a reason to take a comparison apart than opening a series into
+      // one pane is.
+      if (!isStudyOpen(imageID)) return;
       hangNow(imageID);
     }
   );

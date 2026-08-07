@@ -64,4 +64,22 @@ describe('hanging a study as it opens', () => {
 
     expect(store.applyForImage).toHaveBeenCalledWith('image-1');
   });
+
+  it('does not take a comparison apart when hanging is switched on', async () => {
+    const store = watchStore();
+    const views = useViewStore();
+    store.settings.autoApply = false;
+    await nextTick();
+
+    // Two series side by side, the reader's own arrangement.
+    views.setDataForView(views.layoutViews[0].id, 'image-1');
+    views.setDataForView(views.layoutViews[1].id, 'image-2');
+    currentImageID.value = 'image-1';
+    await nextTick();
+
+    store.settings.autoApply = true;
+    await nextTick();
+
+    expect(store.applyForImage).not.toHaveBeenCalled();
+  });
 });
