@@ -90,7 +90,7 @@ const counterparts = computed(() => {
       axis,
       located.slice,
       'physical',
-      comparison.sliceOffset
+      comparison.sliceOffsetFor(axis)
     );
     if (mapped !== priorSlice.value) return [];
 

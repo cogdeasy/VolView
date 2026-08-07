@@ -22,14 +22,9 @@ const roleStudy = computed(() => {
 
 // The banner has to describe the image actually on screen. A pane's study is
 // bound by a watcher, so between picking another study and that flush the role
-// alone would caption the wrong image.
-const boundStudy = computed(() => {
-  if (!spec.value) return null;
-  const bound = viewStore.getView(viewId.value)?.dataID;
-  if (bound && bound !== roleStudy.value?.imageID)
-    return comparison.describeStudy(bound);
-  return roleStudy.value;
-});
+// alone would caption the wrong image. The overlay reserves its space from the
+// same predicate, so the two cannot drift apart.
+const boundStudy = computed(() => comparison.paneStudyFor(viewId.value));
 
 const visible = computed(() => comparison.active && !!boundStudy.value);
 

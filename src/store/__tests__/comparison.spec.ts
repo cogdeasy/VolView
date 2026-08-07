@@ -11,6 +11,7 @@ import { useViewStore } from '@/src/store/views';
 import {
   ComparisonLayoutNames,
   ComparisonLayouts,
+  ComparisonViewNames,
 } from '@/src/core/comparison/layout';
 
 const seatImage = (id: string) => {
@@ -142,6 +143,27 @@ describe('comparison store — pair selection', () => {
     expect(comparison.priorImageID).toBe('img-b');
   });
 
+  it('corrects one pair without moving the other', () => {
+    const comparison = useComparisonStore();
+    const viewStore = useViewStore();
+    viewStore.setNamedLayoutsFromConfig(ComparisonLayouts);
+    viewStore.switchToNamedLayout(ComparisonLayoutNames.quad);
+    comparison.setCurrentImageID('img-a');
+    comparison.setPriorImageID('img-b');
+
+    const coronal = viewStore.visibleViews.find(
+      (view) => view?.name === ComparisonViewNames.currentCoronal
+    );
+    viewStore.setActiveView(coronal!.id);
+    comparison.nudgeSliceOffset(2);
+
+    expect(comparison.nudgeAxis).toBe('Coronal');
+    expect(comparison.sliceOffsetFor('Coronal')).toBe(2);
+    // The axial pair was aligned already, and a coronal correction is not a
+    // statement about it.
+    expect(comparison.sliceOffsetFor('Axial')).toBe(0);
+  });
+
   it('forgets a deleted study and the nudge that aligned it', () => {
     const comparison = useComparisonStore();
     comparison.setCurrentImageID('img-a');
@@ -176,5 +198,39 @@ describe('comparison store — cine series', () => {
     comparison.autoSelectStudies();
 
     expect(comparison.priorImageID).toBe('vol-prior');
+  });
+
+  it('leaves both roles empty in a workspace holding only cine series', () => {
+    const comparison = useComparisonStore();
+    seatDicomVolume('vol-cine', 'study-2019', '20190430', 'cine');
+
+    comparison.autoSelectStudies();
+
+    expect(comparison.currentImageID).toBeNull();
+    expect(comparison.priorImageID).toBeNull();
+  });
+});
+
+describe('comparison store — candidate order', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+  });
+
+  it('lists an undated image behind the dated studies', () => {
+    const comparison = useComparisonStore();
+    seatImage('img-imported');
+    seatDicomVolume('vol-2018', 'study-2018', '20181031', 'volume');
+    seatDicomVolume('vol-2019', 'study-2019', '20190430', 'volume');
+
+    expect(comparison.candidates.map((study) => study.imageID)).toEqual([
+      'vol-2019',
+      'vol-2018',
+      'img-imported',
+    ]);
+
+    comparison.autoSelectStudies();
+
+    expect(comparison.currentImageID).toBe('vol-2019');
+    expect(comparison.priorImageID).toBe('vol-2018');
   });
 });

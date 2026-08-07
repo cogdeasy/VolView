@@ -151,7 +151,9 @@ export function useComparisonSync() {
     if (!currentMetadata || !priorMetadata || !assessment) return null;
 
     const { mode } = assessment;
-    const offset = comparison.sliceOffset;
+    // The nudge is a count of prior slices along one axis, so each pair on
+    // screen carries its own: the axial correction is not a coronal one.
+    const offset = comparison.sliceOffsetFor(driver.axis);
     if (driver.role === 'current') {
       return currentSliceToPriorSlice(
         currentMetadata,
@@ -274,7 +276,10 @@ export function useComparisonSync() {
 
   watch(
     [
-      () => comparison.sliceOffset,
+      () =>
+        comparison.axesInUse
+          .map((axis) => comparison.sliceOffsetFor(axis))
+          .join(),
       () => comparison.links.slice,
       () => comparison.pairKey,
       // A layout switch hands the pair fresh view slots, which start at their
@@ -293,8 +298,12 @@ export function useComparisonSync() {
     fromImageID: string,
     toImageID: string
   ) {
+    // Falling back to any view holding the study would read whichever one the
+    // list happens to yield, including one kept off-layout; the pane the
+    // reader is looking at is the window worth propagating.
     const sourceViewID =
       fromViewID ??
+      comparison.panes.find((pane) => pane.imageID === fromImageID)?.viewID ??
       viewStore.getAllViews().find((view) => view.dataID === fromImageID)?.id;
     if (!sourceViewID) return;
     const { width, level } = windowingStore.getConfig(

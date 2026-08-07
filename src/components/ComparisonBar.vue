@@ -59,6 +59,12 @@ const alignmentLabel = computed(() =>
 );
 
 const needsSecondStudy = computed(() => comparison.candidates.length < 2);
+
+// A nudge is a number of slices along one anatomical axis, so with two pairs
+// on screen the control has to say which pair it is correcting.
+const nudgeScope = computed(() =>
+  comparison.axesInUse.length > 1 ? ` · ${comparison.nudgeAxis}` : ''
+);
 </script>
 
 <template>
@@ -174,10 +180,12 @@ const needsSecondStudy = computed(() => comparison.candidates.length < 2);
 
       <div class="nudge">
         <span class="nudge-label">
-          Align priors
+          Align priors{{ nudgeScope }}
           <v-tooltip activator="parent" location="bottom" max-width="320">
-            Manual slice offset applied to the prior study, in prior slices.
-            Registration is out of scope, so misalignment is corrected by hand.
+            Manual slice offset applied to the prior study, in prior slices, for
+            the {{ comparison.nudgeAxis.toLowerCase() }} pair — click a pane to
+            correct another one. Registration is out of scope, so misalignment
+            is corrected by hand.
           </v-tooltip>
         </span>
         <v-btn

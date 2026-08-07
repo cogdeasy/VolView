@@ -58,10 +58,11 @@ const isComparisonPane = computed(
   () => !!comparisonPaneSpec(viewStore.getView(viewId.value)?.name)
 );
 
-// Only a live pair draws the study banner, which is what the annotations make
-// room for and what makes the series name here a duplicate.
+// Space is reserved for the study banner on the banner's own terms, so the
+// annotations cannot be pushed down for a caption that is not drawn, nor the
+// series name suppressed as a duplicate of one.
 const hasPaneLabel = computed(
-  () => comparison.active && isComparisonPane.value
+  () => comparison.active && !!comparison.paneStudyFor(viewId.value)
 );
 </script>
 

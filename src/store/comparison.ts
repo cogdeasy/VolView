@@ -66,7 +66,11 @@ export const useComparisonStore = defineStore('comparison', () => {
     windowLevel: true,
     camera: true,
   });
-  /** Manual alignment nudge, in prior-study slices, kept per study pair. */
+  /**
+   * Manual alignment nudge, in prior-study slices, kept per study pair and
+   * per anatomical axis: a correction made on the axial pair is a number of
+   * axial slices and says nothing about the coronal one.
+   */
   const sliceOffsetByPair = reactive<Record<string, number>>({});
 
   function describeStudy(imageID: string): StudyDescriptor {
@@ -112,9 +116,13 @@ export const useComparisonStore = defineStore('comparison', () => {
       ...Object.keys(dicomStore.volumeInfo),
       ...imageStore.idList.filter((id) => !isDicomImage(id)),
     ];
-    return ids
-      .map(describeStudy)
-      .sort((a, b) => b.studyDate.localeCompare(a.studyDate));
+    return ids.map(describeStudy).sort((a, b) => {
+      // A study with no date is not a recent one: an imported image sorts
+      // behind everything dated rather than ahead of it.
+      if (!a.studyDate || !b.studyDate)
+        return Number(!a.studyDate) - Number(!b.studyDate);
+      return b.studyDate.localeCompare(a.studyDate);
+    });
   });
 
   // Comparison mode follows the panes on screen rather than the remembered
@@ -156,6 +164,22 @@ export const useComparisonStore = defineStore('comparison', () => {
     ...new Set(panes.value.map((pane) => pane.axis)),
   ]);
 
+  /**
+   * The study a comparison pane is captioned with: its role's study, or
+   * whatever the slot actually holds while a binding is still catching up.
+   * Null for a view that is not a comparison pane, which is what tells the
+   * banner and the overlay that makes room for it apart.
+   */
+  function paneStudyFor(viewID: Maybe<string>): StudyDescriptor | null {
+    const view = viewStore.getView(viewID);
+    const spec = comparisonPaneSpec(view?.name);
+    if (!spec) return null;
+    const roleStudy = spec.role === 'current' ? current.value : prior.value;
+    if (view?.dataID && view.dataID !== roleStudy?.imageID)
+      return describeStudy(view.dataID);
+    return roleStudy;
+  }
+
   function metadataFor(imageID: Maybe<string>): ImageMetadata | null {
     return imageCacheStore.getImageMetadata(imageID) ?? null;
   }
@@ -193,21 +217,39 @@ export const useComparisonStore = defineStore('comparison', () => {
       : null
   );
 
-  const sliceOffset = computed(() =>
-    pairKey.value ? (sliceOffsetByPair[pairKey.value] ?? 0) : 0
-  );
+  const offsetKey = (axis: LPSAxis) =>
+    pairKey.value ? `${pairKey.value}|${axis}` : null;
 
-  function setSliceOffset(offset: number) {
-    if (!pairKey.value) return;
-    sliceOffsetByPair[pairKey.value] = clampValue(
+  function sliceOffsetFor(axis: LPSAxis) {
+    const key = offsetKey(axis);
+    return key ? (sliceOffsetByPair[key] ?? 0) : 0;
+  }
+
+  /**
+   * The axis the nudge controls act on: the one the reader is working in,
+   * falling back to the first pair on screen.
+   */
+  const nudgeAxis = computed<LPSAxis>(() => {
+    const activeName = viewStore.getView(viewStore.activeView)?.name;
+    const activeAxis = comparisonPaneSpec(activeName)?.axis;
+    if (activeAxis && axesInUse.value.includes(activeAxis)) return activeAxis;
+    return axesInUse.value[0] ?? 'Axial';
+  });
+
+  const sliceOffset = computed(() => sliceOffsetFor(nudgeAxis.value));
+
+  function setSliceOffset(offset: number, axis: LPSAxis = nudgeAxis.value) {
+    const key = offsetKey(axis);
+    if (!key) return;
+    sliceOffsetByPair[key] = clampValue(
       Math.round(offset),
       -MAX_SLICE_OFFSET,
       MAX_SLICE_OFFSET
     );
   }
 
-  function nudgeSliceOffset(delta: number) {
-    setSliceOffset(sliceOffset.value + delta);
+  function nudgeSliceOffset(delta: number, axis: LPSAxis = nudgeAxis.value) {
+    setSliceOffset(sliceOffsetFor(axis) + delta, axis);
   }
 
   function setCurrentImageID(imageID: Maybe<string>) {
@@ -266,10 +308,21 @@ export const useComparisonStore = defineStore('comparison', () => {
         (study) => study.imageID !== priorImageID.value
       );
       const fallback = pool.length ? pool : available;
-      const newest = fallback.find((study) => !study.isCine) ?? fallback[0];
-      currentImageID.value = stillLoaded(beingRead)
-        ? beingRead
-        : newest.imageID;
+      // A cine series has no slices to align and the picker refuses to offer
+      // one, so it is no more a current study than it is a prior: a workspace
+      // holding nothing else leaves the role empty and the bar unarmed.
+      const readable =
+        stillLoaded(beingRead) &&
+        available.some((study) => study.imageID === beingRead && !study.isCine)
+          ? beingRead
+          : null;
+      currentImageID.value =
+        readable ?? fallback.find((study) => !study.isCine)?.imageID ?? null;
+    }
+
+    if (!currentImageID.value) {
+      priorImageID.value = null;
+      return;
     }
 
     if (
@@ -349,9 +402,12 @@ export const useComparisonStore = defineStore('comparison', () => {
     alignment,
     priorInterval,
     pairKey,
+    nudgeAxis,
     sliceOffset,
+    sliceOffsetFor,
     allLinked,
     describeStudy,
+    paneStudyFor,
     metadataFor,
     alignmentForAxis,
     setSliceOffset,
