@@ -9,6 +9,7 @@ import { useImageStatsStore } from '@/src/store/image-stats';
 import useViewSliceStore from '@/src/store/view-configs/slicing';
 import useVolumeColoringStore from '@/src/store/view-configs/volume-coloring';
 import { isDicomImage } from '@/src/utils/dataSelection';
+import { isCineImage } from '@/src/core/cine/isCineImage';
 import { onImageDeleted } from '@/src/composables/onImageDeleted';
 import { layoutToConfig } from '@/src/utils/layoutParsing';
 import { DefaultNamedLayouts } from '@/src/config';
@@ -393,6 +394,10 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     options?: ApplyOptions
   ) {
     applyWindowLevel(protocol, windowedViewIDs(views), imageID, options);
+    // A cine clip is scrubbed by frame and never volume rendered, whatever
+    // pane it lands in: a slice or coloring config written for one is read by
+    // nothing and is still saved into the session.
+    if (isCineImage(imageID)) return;
     applyVolumeColoring(
       protocol,
       views.filter((view) => view.type === '3D').map((view) => view.id),
