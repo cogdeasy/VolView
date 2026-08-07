@@ -15,6 +15,7 @@ import { frameOfReferenceToImageSliceAndAxis } from '@/src/utils/frameOfReferenc
 import {
   currentSliceToPriorSlice,
   placeOnSlicePlane,
+  sliceNormal,
   sliceToPhysicalPosition,
 } from '@/src/utils/comparison';
 import { BrandColors } from '@/src/branding';
@@ -75,6 +76,7 @@ const counterparts = computed(() => {
   if (!currentMetadata || !priorMetadata) return [];
 
   const { axis } = paneSpec;
+  const normal = sliceNormal(priorMetadata, axis);
 
   return currentStudyRulers.value.flatMap((ruler) => {
     const located = frameOfReferenceToImageSliceAndAxis(
@@ -101,8 +103,8 @@ const counterparts = computed(() => {
         color: ruler.color,
         label: ruler.labelName || ruler.name,
         points: [
-          placeOnSlicePlane(ruler.firstPoint, axis, planePosition),
-          placeOnSlicePlane(ruler.secondPoint, axis, planePosition),
+          placeOnSlicePlane(ruler.firstPoint, normal, planePosition),
+          placeOnSlicePlane(ruler.secondPoint, normal, planePosition),
         ] as Vector3[],
       },
     ];

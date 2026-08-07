@@ -11,6 +11,7 @@ import {
   currentSliceToPriorSlice,
   maxSlice,
   priorSliceToCurrentSlice,
+  sliceNormal,
 } from '@/src/utils/comparison';
 import type { ComparisonPane } from '@/src/store/comparison';
 import type {
@@ -74,6 +75,20 @@ export function useComparisonSync() {
     }
   });
 
+  // Four things can have happened to a pane since the last pass, and the three
+  // maps above exist to tell them apart:
+  //
+  //   the pair itself wrote the slot     `boundByPair` matches what it shows
+  //   one pane was handed a study        one slot diverges from that record
+  //   a new study went to every pane     `boundSince` names all of them
+  //   a study already paired went to all  ditto, and it is already in a role
+  //
+  // Only the first two are choices about a role. The last two arrive from
+  // "open in all views", which in an axial pair leaves the screen looking
+  // exactly like a drop on one pane, so the bindings rather than the panes
+  // have to be read. Every entry point is `bindPanes`, whose `finally`
+  // restores the invariant `bindPanesOnce` assumes: `boundSince` describes
+  // this pass alone.
   function bindPanes() {
     try {
       bindPanesOnce();
@@ -644,8 +659,10 @@ export function useComparisonSync() {
 
       // Pan is only meaningful across studies that share patient
       // coordinates; zoom always is.
+      const targetMetadata = comparison.metadataFor(target.imageID);
       const sharePatientSpace =
-        comparison.alignmentForAxis(driver.axis)?.mode === 'physical';
+        comparison.alignmentForAxis(driver.axis)?.mode === 'physical' &&
+        !!targetMetadata;
 
       const patch: Partial<CameraConfig> = {};
       if (driver.parallelScale != null)
@@ -660,15 +677,18 @@ export function useComparisonSync() {
         driver.position &&
         target.position
       ) {
+        // The two studies share direction cosines here, so either pane's
+        // slice normal describes the plane the pan has to stay in.
+        const normal = sliceNormal(targetMetadata, driver.axis);
         patch.focalPoint = copyInPlaneComponents(
           driver.focalPoint,
           target.focalPoint,
-          driver.axis
+          normal
         );
         patch.position = copyInPlaneComponents(
           driver.position,
           target.position,
-          driver.axis
+          normal
         );
       }
       if (!Object.keys(patch).length) return;

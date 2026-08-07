@@ -18,10 +18,13 @@ const WORLD_COMPONENT: Record<LPSAxis, number> = {
 const ORIENTATION_TOLERANCE = 1e-2;
 
 /**
- * A slice step has to move the patient coordinate this share of a voxel before
- * that coordinate is a usable stand-in for the slice plane.
+ * A slice step has to cover this share of a voxel for the slice plane to be
+ * identifiable by where it sits.
  */
 const MIN_PITCH_FRACTION = 0.1;
+
+const dot = (a: ArrayLike<number>, b: ArrayLike<number>) =>
+  a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 
 /**
  * How the reader's slice cursor is carried from one study to the other.
@@ -43,7 +46,38 @@ const isDegenerate = (metadata: ImageMetadata, axis: LPSAxis) =>
   metadata.dimensions[metadata.lpsOrientation[axis]] <= 1;
 
 /**
- * Patient-coordinate position of a slice along the given anatomical axis.
+ * Unit patient-space direction the volume's slices advance in for the given
+ * anatomical axis, pointing the way that axis' patient coordinate grows.
+ *
+ * A tilted acquisition — gantry tilt on a head CT is the everyday one — slides
+ * its slices along a direction that is not one of the patient axes, so a slice
+ * plane is identified by how far it sits along this normal rather than by any
+ * single patient coordinate.
+ */
+export function sliceNormal(metadata: ImageMetadata, axis: LPSAxis): Vector3 {
+  const component = WORLD_COMPONENT[axis];
+  const origin: Vector3 = [0, 0, 0];
+  const step: Vector3 = [0, 0, 0];
+  step[metadata.lpsOrientation[axis]] = 1;
+  vec3.transformMat4(origin, origin, metadata.indexToWorld);
+  vec3.transformMat4(step, step, metadata.indexToWorld);
+  vec3.subtract(step, step, origin);
+  if (vec3.length(step) < Number.EPSILON) {
+    const fallback: Vector3 = [0, 0, 0];
+    fallback[component] = 1;
+    return fallback;
+  }
+  vec3.normalize(step, step);
+  // Anchored to the anatomical direction rather than to index order, so the
+  // coordinate means the same thing for two studies acquired head-first and
+  // feet-first.
+  return step[component] < 0 ? (vec3.negate(step, step) as Vector3) : step;
+}
+
+/**
+ * Patient-coordinate position of a slice along the given anatomical axis:
+ * signed distance along the slice normal, so it identifies the slice plane
+ * whatever the volume's tilt.
  */
 export function sliceToPhysicalPosition(
   metadata: ImageMetadata,
@@ -53,7 +87,7 @@ export function sliceToPhysicalPosition(
   const indexPoint: Vector3 = [0, 0, 0];
   indexPoint[metadata.lpsOrientation[axis]] = slice;
   vec3.transformMat4(indexPoint, indexPoint, metadata.indexToWorld);
-  return indexPoint[WORLD_COMPONENT[axis]];
+  return dot(indexPoint, sliceNormal(metadata, axis));
 }
 
 /**
@@ -129,22 +163,22 @@ export function assessAlignment(
     };
   }
 
-  // A slice is reduced to one patient coordinate, which only tracks the slice
-  // plane while the slice normal leans along that axis. A volume acquired far
-  // enough off it would map every position onto the same slice.
-  const tooOblique = [current, prior].some((metadata) => {
+  // Tilt is handled exactly, by measuring along the slice normal. A volume
+  // whose slices barely advance at all is another matter: no position can
+  // tell them apart.
+  const degeneratePitch = [current, prior].some((metadata) => {
     const spacing = metadata.spacing[metadata.lpsOrientation[axis]];
     return (
       Math.abs(slicePitch(metadata, axis)) <
       Math.abs(spacing) * MIN_PITCH_FRACTION
     );
   });
-  if (tooOblique) {
+  if (degeneratePitch) {
     return {
       mode: 'index',
       reason:
-        'The slices are too oblique to this axis for a patient coordinate ' +
-        'to identify them.',
+        'Consecutive slices in one of the studies cover no patient distance, ' +
+        'so a position cannot identify them.',
     };
   }
 
@@ -242,34 +276,32 @@ export function priorSliceToCurrentSlice(
 }
 
 /**
- * Copies the two in-plane components of `source` onto `target`, leaving the
- * component along the view normal untouched. Used to carry pan and zoom
- * between studies without disturbing each pane's own slice plane.
- */
-export function copyInPlaneComponents(
-  source: ArrayLike<number>,
-  target: ArrayLike<number>,
-  axis: LPSAxis
-): Vector3 {
-  const normal = WORLD_COMPONENT[axis];
-  const result: Vector3 = [target[0], target[1], target[2]];
-  for (let i = 0; i < 3; i += 1) {
-    if (i !== normal) result[i] = source[i];
-  }
-  return result;
-}
-
-/**
  * Moves a world point onto a slice plane, keeping its in-plane position.
  */
 export function placeOnSlicePlane(
   point: ArrayLike<number>,
-  axis: LPSAxis,
+  normal: Vector3,
   planePosition: number
 ): Vector3 {
-  const result: Vector3 = [point[0], point[1], point[2]];
-  result[WORLD_COMPONENT[axis]] = planePosition;
-  return result;
+  const shift = planePosition - dot(point, normal);
+  return [
+    point[0] + shift * normal[0],
+    point[1] + shift * normal[1],
+    point[2] + shift * normal[2],
+  ];
+}
+
+/**
+ * Takes `source`'s position within the slice plane while keeping `target`'s
+ * own plane. Used to carry pan and zoom between studies without disturbing
+ * each pane's slice.
+ */
+export function copyInPlaneComponents(
+  source: ArrayLike<number>,
+  target: ArrayLike<number>,
+  normal: Vector3
+): Vector3 {
+  return placeOnSlicePlane(source, normal, dot(target, normal));
 }
 
 /** Parses a DICOM DA value (YYYYMMDD). */

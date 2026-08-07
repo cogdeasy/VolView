@@ -11,6 +11,7 @@ import {
   physicalPositionToSlice,
   placeOnSlicePlane,
   priorSliceToCurrentSlice,
+  sliceNormal,
   sliceToPhysicalPosition,
 } from '@/src/utils/comparison';
 import { getLPSDirections } from '../lps';
@@ -21,6 +22,8 @@ interface VolumeSpec {
   dimensions?: Vector3;
   /** Rotation about the S axis, in degrees, to break the frame of reference. */
   yaw?: number;
+  /** Rotation about the L axis, in degrees: gantry tilt. */
+  tilt?: number;
 }
 
 function makeMetadata({
@@ -28,13 +31,17 @@ function makeMetadata({
   origin = [0, 0, 0],
   dimensions = [20, 20, 20],
   yaw = 0,
+  tilt = 0,
 }: VolumeSpec = {}): ImageMetadata {
   const radians = (yaw * Math.PI) / 180;
-  const orientation = mat3.create();
-  mat3.fromRotation(orientation, radians);
+  const tiltRadians = (tilt * Math.PI) / 180;
 
   const rotation = mat4.create();
   mat4.fromRotation(rotation, radians, [0, 0, 1]);
+  mat4.rotateX(rotation, rotation, tiltRadians);
+
+  const orientation = mat3.create();
+  mat3.fromMat4(orientation, rotation);
 
   const indexToWorld = mat4.create();
   mat4.fromTranslation(indexToWorld, origin);
@@ -118,6 +125,29 @@ describe('comparison slice mapping', () => {
     ).toBe(0);
   });
 
+  it('maps tilted studies along the slice normal, not one patient axis', () => {
+    // Both gantry-tilted 30 degrees, the prior's table 10 mm posterior. Only
+    // 5 mm of that offset lies along the slice normal, and taking the S
+    // coordinate alone sees none of it.
+    const current = makeMetadata({ tilt: 30, dimensions: [20, 20, 20] });
+    const prior = makeMetadata({
+      tilt: 30,
+      origin: [0, 10, 0],
+      dimensions: [20, 20, 20],
+    });
+
+    expect(assessAlignment(current, prior, 'Axial').mode).toBe('physical');
+    expect(sliceToPhysicalPosition(current, 'Axial', 12)).toBeCloseTo(12);
+    expect(sliceToPhysicalPosition(prior, 'Axial', 0)).toBeCloseTo(-5);
+
+    expect(
+      currentSliceToPriorSlice(current, prior, 'Axial', 12, 'physical')
+    ).toBe(17);
+    expect(
+      priorSliceToCurrentSlice(current, prior, 'Axial', 17, 'physical')
+    ).toBe(12);
+  });
+
   it('falls back to normalized index when frames are incomparable', () => {
     const current = makeMetadata({ dimensions: [20, 20, 41] });
     const prior = makeMetadata({ dimensions: [20, 20, 21] });
@@ -152,18 +182,17 @@ describe('assessAlignment', () => {
     expect(assessment.reason).toMatch(/orientation/i);
   });
 
-  it('rejects studies whose slices barely move the patient coordinate', () => {
+  it('rejects studies whose slices sit on top of one another', () => {
     const current = makeMetadata();
     const prior = makeMetadata();
-    // A slice normal lying in the axial plane: stepping through slices no
-    // longer moves the patient's S coordinate, so it cannot identify them.
+    // Consecutive slices a micron apart: no position can tell them apart.
     const flattened = mat4.clone(prior.indexToWorld);
     flattened[10] = 1e-3;
     prior.indexToWorld = flattened;
 
     const assessment = assessAlignment(current, prior, 'Axial');
     expect(assessment.mode).toBe('index');
-    expect(assessment.reason).toMatch(/oblique/i);
+    expect(assessment.reason).toMatch(/no patient distance/i);
   });
 
   it('rejects studies covering disjoint anatomy', () => {
@@ -185,17 +214,42 @@ describe('assessAlignment', () => {
 });
 
 describe('world point helpers', () => {
+  const axialNormal = sliceNormal(makeMetadata(), 'Axial');
+  const sagittalNormal = sliceNormal(makeMetadata(), 'Sagittal');
+
   it('copies only the in-plane components', () => {
-    expect(copyInPlaneComponents([1, 2, 3], [7, 8, 9], 'Axial')).toEqual([
+    expect(copyInPlaneComponents([1, 2, 3], [7, 8, 9], axialNormal)).toEqual([
       1, 2, 9,
     ]);
-    expect(copyInPlaneComponents([1, 2, 3], [7, 8, 9], 'Sagittal')).toEqual([
-      7, 2, 3,
-    ]);
+    expect(copyInPlaneComponents([1, 2, 3], [7, 8, 9], sagittalNormal)).toEqual(
+      [7, 2, 3]
+    );
   });
 
   it('moves a point onto a slice plane', () => {
-    expect(placeOnSlicePlane([1, 2, 3], 'Axial', 42)).toEqual([1, 2, 42]);
+    expect(placeOnSlicePlane([1, 2, 3], axialNormal, 42)).toEqual([1, 2, 42]);
+  });
+
+  it('slides a point along a tilted slice normal rather than one axis', () => {
+    const tilted = makeMetadata({ tilt: 30 });
+    const normal = sliceNormal(tilted, 'Axial');
+    expect([...normal]).toEqual([
+      expect.closeTo(0),
+      expect.closeTo(-0.5),
+      expect.closeTo(Math.sqrt(3) / 2),
+    ]);
+
+    const placed = placeOnSlicePlane([1, 2, 3], normal, 10);
+    // On the plane, and moved there without wandering within it.
+    expect(vec3.dot(placed, normal)).toBeCloseTo(10);
+    const shift = vec3.subtract(vec3.create(), placed, [1, 2, 3]);
+    expect(vec3.length(vec3.cross(vec3.create(), shift, normal))).toBeCloseTo(
+      0
+    );
+
+    // Pan copied across a tilted pair keeps the target's own slice plane.
+    const copied = copyInPlaneComponents([1, 2, 3], [7, 8, 9], normal);
+    expect(vec3.dot(copied, normal)).toBeCloseTo(vec3.dot([7, 8, 9], normal));
   });
 });
 
