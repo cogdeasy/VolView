@@ -190,6 +190,8 @@ export type DensityTokens = {
   listRowHeight: string;
   /** App bar height. */
   appBarHeight: string;
+  /** Module switcher tab height. Must fit an icon stacked over a caption. */
+  tabHeight: string;
 };
 
 export const Density: Record<DensityName, DensityTokens> = {
@@ -202,6 +204,7 @@ export const Density: Record<DensityName, DensityTokens> = {
     blockPadding: Spacing.md,
     listRowHeight: '44px',
     appBarHeight: '52px',
+    tabHeight: '52px',
   },
   compact: {
     vuetify: 'compact',
@@ -212,6 +215,7 @@ export const Density: Record<DensityName, DensityTokens> = {
     blockPadding: Spacing.sm,
     listRowHeight: '34px',
     appBarHeight: '44px',
+    tabHeight: '44px',
   },
 };
 
@@ -279,17 +283,19 @@ export type SemanticPalette = {
  *  - dark theme: the untouched brand cyan with a near-black foreground
  *    (`#001824` on `#00A3E0` = 6.33:1). On a dark UI the bright fill is the
  *    right visual weight anyway.
- *  - light theme: a darkened cyan `#00647E`. Unlike the shallower `#00789F`,
- *    this one clears AA in *both* directions — white on it (6.72:1) for filled
- *    buttons and it-on-surface (5.30-6.72:1) for the `text`/`tonal` variants
- *    Vuetify renders with the color as the foreground.
+ *  - light theme: a darkened cyan `#005468`. Unlike the shallower `#00789F`,
+ *    this one clears AA in *both* directions — white on it (8.51:1) for filled
+ *    buttons, and it-on-surface for the `text`/`tonal` variants Vuetify renders
+ *    with the color as the foreground. `tonal` is the binding case: it tints
+ *    the fill with the color itself, so the pairing lands lower than on a plain
+ *    surface (5.48:1 on the sunken surface rather than 6.58:1).
  *
  * The undarkened `#00A3E0` stays available as `accent` for non-text graphics.
  */
 const AccessibleAccent = {
   onDarkFill: BrandColors.accent,
   onDarkForeground: '#001824',
-  onLightFill: '#00647E',
+  onLightFill: '#005468',
   onLightForeground: '#FFFFFF',
   /** Cyan tuned to clear 3:1 as a graphic on light surfaces. */
   lightGraphic: '#00789F',
@@ -434,5 +440,6 @@ export function densityCssVariables(
     '--pv-density-block-padding': tokens.blockPadding,
     '--pv-density-list-row-height': tokens.listRowHeight,
     '--pv-density-app-bar-height': tokens.appBarHeight,
+    '--pv-density-tab-height': tokens.tabHeight,
   };
 }

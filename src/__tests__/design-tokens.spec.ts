@@ -30,6 +30,9 @@ function blend(foreground: string, background: string, alpha: number) {
 /** Must match `medium-emphasis-opacity` in `src/plugins/vuetify.js`. */
 const MEDIUM_EMPHASIS_OPACITY = 0.7;
 
+/** Must match `activated-opacity`; it is the tint Vuetify's `tonal` uses. */
+const ACTIVATED_OPACITY = 0.12;
+
 type Pair = {
   label: string;
   foreground: string | ReturnType<typeof parseHexColor>;
@@ -152,6 +155,34 @@ describe('accent handling', () => {
       contrastRatioRounded(LightPalette.secondary, LightPalette.surface)
     ).toBeGreaterThanOrEqual(WCAG_AA_TEXT);
   });
+
+  // `variant="tonal"` tints the fill with the color itself, so the pairing is
+  // measurably tighter than the same color on a plain surface. This is the
+  // case that made the original cyan look disabled, so it is pinned here.
+  it.each(
+    (
+      [
+        ['dark', DarkPalette],
+        ['light', LightPalette],
+      ] as const
+    ).flatMap(([theme, palette]) =>
+      (['background', 'surface', 'surface-sunken'] as const).map(
+        (surface) => [theme, surface, palette] as const
+      )
+    )
+  )(
+    'keeps a tonal secondary control legible in %s on %s',
+    (_theme, surface, palette) => {
+      const fill = blend(
+        palette.secondary,
+        palette[surface],
+        ACTIVATED_OPACITY
+      );
+      expect(
+        contrastRatioRounded(palette.secondary, fill)
+      ).toBeGreaterThanOrEqual(WCAG_AA_TEXT);
+    }
+  );
 });
 
 describe('density tokens', () => {
@@ -170,6 +201,7 @@ describe('density tokens', () => {
       'blockPadding',
       'listRowHeight',
       'appBarHeight',
+      'tabHeight',
     ] as const;
     metrics.forEach((metric) => {
       expect(px(Density.compact[metric])).toBeLessThan(

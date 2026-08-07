@@ -27,7 +27,6 @@
           mandatory
           divided
           variant="outlined"
-          color="primary"
           data-testid="density-toggle"
         >
           <v-btn

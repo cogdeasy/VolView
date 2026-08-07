@@ -255,9 +255,31 @@ html,
   padding: var(--pv-density-block-padding) var(--pv-density-inline-padding);
 }
 
+/* The module switcher stacks an icon over a caption, so the tab needs its own
+   height token: Vuetify's density-derived button height is shorter than that
+   content and the label would spill over the active-tab slider. */
 .v-tab.v-tab {
   letter-spacing: var(--pv-letter-spacing-label);
   text-transform: none;
+  height: var(--pv-density-tab-height);
+  min-height: var(--pv-density-tab-height);
+}
+
+.v-tab.v-tab .v-btn__content {
+  height: 100%;
+  overflow: hidden;
+}
+
+.v-tab.v-tab .v-icon {
+  font-size: var(--pv-density-tool-icon-size);
+}
+
+/* A selected segmented button reads as a filled selection rather than a
+   tinted label: Vuetify's tint left the label at 3.87:1 on dark chrome, and
+   the selection pair is contrast-checked in both themes. */
+.v-btn-group .v-btn.v-btn--active {
+  background-color: rgb(var(--v-theme-selection-bg-color));
+  color: rgb(var(--v-theme-on-selection));
 }
 
 .v-list-item-title {
