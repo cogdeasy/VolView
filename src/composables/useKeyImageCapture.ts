@@ -25,8 +25,10 @@ export function useKeyImageCapture() {
    * capture source on the strength of being mounted and carries its own name.
    */
   function candidates(): CaptureCandidate[] {
-    const layoutOrder = viewStore
-      .getAllViews()
+    // Screen order, not creation order. A composite layout's panels are not
+    // slotted views, so they trail the ones that are.
+    const layoutOrder = viewStore.visibleViews
+      .filter((view: ViewInfo | undefined): view is ViewInfo => !!view)
       .map((view: ViewInfo) => view.id);
     const rank = (id: string) => {
       const index = layoutOrder.indexOf(id);

@@ -109,6 +109,12 @@ export function categoriesForScale(scale: FindingCategoryScale): string[] {
   return [];
 }
 
+/**
+ * The scale a finding is graded on before a type names one. The editor offers
+ * these values, so the report must label them the same way.
+ */
+export const DEFAULT_CATEGORY_SCALE: FindingCategoryScale = 'severity';
+
 export const CATEGORY_SCALE_LABELS: Record<FindingCategoryScale, string> = {
   severity: 'Severity',
   birads: 'BI-RADS',

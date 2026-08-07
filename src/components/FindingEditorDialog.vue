@@ -15,6 +15,7 @@ import {
   categoriesForScale,
   CATEGORY_SCALE_LABELS,
   COMMON_BODY_SITES,
+  DEFAULT_CATEGORY_SCALE,
   LATERALITY_LABELS,
   typesForModality,
 } from '@/src/core/findings/taxonomy';
@@ -65,7 +66,7 @@ const offeredTypes = computed(() => {
 });
 
 const categoryScale = computed<FindingCategoryScale>(
-  () => activeType.value?.categoryScale ?? 'severity'
+  () => activeType.value?.categoryScale ?? DEFAULT_CATEGORY_SCALE
 );
 
 const categories = computed(() => categoriesForScale(categoryScale.value));
@@ -79,7 +80,7 @@ function onTypeChange(typeID: string) {
       ? { bodySite: type.defaultBodySite }
       : {}),
     ...(finding.value?.category &&
-    !categoriesForScale(type?.categoryScale ?? 'none').includes(
+    !categoriesForScale(type?.categoryScale ?? DEFAULT_CATEGORY_SCALE).includes(
       finding.value.category
     )
       ? { category: '' }

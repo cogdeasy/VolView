@@ -9,6 +9,7 @@ import { summarizeFindingMeasurements } from '@/src/core/findings/summarize';
 import { centroid } from '@/src/core/findings/measurements';
 import {
   CATEGORY_SCALE_LABELS,
+  DEFAULT_CATEGORY_SCALE,
   LATERALITY_LABELS,
 } from '@/src/core/findings/taxonomy';
 import type {
@@ -98,7 +99,8 @@ export function useReportModel() {
         finding.laterality === 'unknown'
           ? ''
           : LATERALITY_LABELS[finding.laterality],
-      categoryLabel: CATEGORY_SCALE_LABELS[type?.categoryScale ?? 'none'],
+      categoryLabel:
+        CATEGORY_SCALE_LABELS[type?.categoryScale ?? DEFAULT_CATEGORY_SCALE],
       category: finding.category,
       description: finding.description,
       location,
