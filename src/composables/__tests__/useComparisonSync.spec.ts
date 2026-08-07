@@ -111,6 +111,44 @@ describe('useComparisonSync — slice ranges', () => {
   });
 });
 
+describe('useComparisonSync — pane bindings', () => {
+  let scope: EffectScope;
+
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    scope = effectScope(true);
+  });
+  afterEach(() => scope.stop());
+
+  it('follows a pane pointed at the study on the other side by swapping roles', async () => {
+    const viewStore = useViewStore();
+    const comparison = useComparisonStore();
+    seatImage('current', 8);
+    seatImage('prior', 8);
+    viewStore.setNamedLayoutsFromConfig(ComparisonLayouts);
+    viewStore.switchToNamedLayout(ComparisonLayoutNames.pair);
+    comparison.setCurrentImageID('current');
+    comparison.setPriorImageID('prior');
+    scope.run(() => useComparisonSync());
+    const viewIDOf = (name: string) =>
+      viewStore.visibleViews.find((view) => view?.name === name)!.id;
+    const currentViewID = viewIDOf(ComparisonViewNames.currentAxial);
+    const priorViewID = viewIDOf(ComparisonViewNames.priorAxial);
+    await nextTick();
+
+    // A restored session puts the older study in the pane auto-selection
+    // assigned to the newer one.
+    viewStore.setDataForView(currentViewID, 'prior');
+    await nextTick();
+    await nextTick();
+
+    expect(comparison.currentImageID).toBe('prior');
+    expect(comparison.priorImageID).toBe('current');
+    expect(viewStore.getView(currentViewID)?.dataID).toBe('prior');
+    expect(viewStore.getView(priorViewID)?.dataID).toBe('current');
+  });
+});
+
 describe('useComparisonSync — camera link', () => {
   let scope: EffectScope;
 
@@ -159,5 +197,34 @@ describe('useComparisonSync — camera link', () => {
     await nextTick();
 
     expect(cameraStore.getConfig(priorViewID, 'prior')?.parallelScale).toBe(40);
+  });
+
+  it('pans the prior onto the current whichever auto-fit lands first', async () => {
+    const { currentViewID, priorViewID } = openPair();
+    const cameraStore = useViewCameraStore();
+
+    // The current pane's auto-fit lands first, so the copy it drives has no
+    // camera on the prior side to pan.
+    cameraStore.updateConfig(currentViewID, 'current', {
+      parallelScale: 40,
+      focalPoint: [10, 20, 0],
+      position: [10, 20, -100],
+    });
+    await nextTick();
+
+    cameraStore.updateConfig(priorViewID, 'prior', {
+      parallelScale: 120,
+      focalPoint: [0, 0, 5],
+      position: [0, 0, -95],
+    });
+    await nextTick();
+    await nextTick();
+
+    const prior = cameraStore.getConfig(priorViewID, 'prior');
+    expect(prior?.parallelScale).toBe(40);
+    // In plane the prior follows the current; along the view axis it keeps
+    // its own slice.
+    expect(prior?.focalPoint).toEqual([10, 20, 5]);
+    expect(prior?.position).toEqual([10, 20, -95]);
   });
 });

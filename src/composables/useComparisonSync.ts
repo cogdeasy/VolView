@@ -59,39 +59,50 @@ export function useComparisonSync() {
   });
 
   function bindPanes() {
-    comparison.panes.forEach((pane) => {
-      claimedViewIDs.add(pane.viewID);
-      const shown = viewStore.getView(pane.viewID)?.dataID;
+    const { panes } = comparison;
+    const shownIn = new Map(
+      panes.map((pane) => [pane.viewID, viewStore.getView(pane.viewID)?.dataID])
+    );
+    panes.forEach((pane) => claimedViewIDs.add(pane.viewID));
+
+    // Something outside the comparison bar put another loaded study in this
+    // slot while the pair held it — a drag onto the pane, "show in all
+    // views", a restored session binding its views as each dataset arrives.
+    // That is a reader's choice about this side of the pair, so the role
+    // follows it rather than snapping back. What a slot happened to show
+    // before the pair claimed it is not such a choice: entering comparison
+    // must not adopt whatever slot two happened to hold.
+    const adopted = panes.find((pane) => {
+      const shown = shownIn.get(pane.viewID);
+      return (
+        !!shown &&
+        shown !== pane.imageID &&
+        boundByPair.has(pane.viewID) &&
+        shown !== boundByPair.get(pane.viewID) &&
+        comparison.candidates.some((study) => study.imageID === shown)
+      );
+    });
+
+    // One role at a time. A pane handed the study already on the other side
+    // is a swap, not a collapse — the store's setters move the displaced
+    // study across rather than letting one study fill both roles — and a
+    // session restored with the roles the reader saved arrives exactly so,
+    // one pane at a time as each study finishes loading. Changing a role
+    // re-runs this, which settles whatever the change left mismatched.
+    if (adopted) {
+      const shown = shownIn.get(adopted.viewID)!;
+      boundByPair.set(adopted.viewID, shown);
+      if (adopted.role === 'current') comparison.setCurrentImageID(shown);
+      else comparison.setPriorImageID(shown);
+      return;
+    }
+
+    panes.forEach((pane) => {
+      const shown = shownIn.get(pane.viewID);
       if (shown === pane.imageID) {
         boundByPair.set(pane.viewID, shown);
         return;
       }
-
-      // Something outside the comparison bar put another loaded study in this
-      // slot while the pair held it — a drag onto the pane, "show in all
-      // views", a restored session binding its views as each dataset arrives.
-      // That is a reader's choice about this side of the pair, so the role
-      // follows it rather than snapping back. What a slot happened to show
-      // before the pair claimed it is not such a choice, and handing a pane
-      // the study already on the other side would collapse the pair.
-      const other =
-        pane.role === 'current'
-          ? comparison.priorImageID
-          : comparison.currentImageID;
-      const chosenElsewhere =
-        !!shown &&
-        boundByPair.has(pane.viewID) &&
-        shown !== boundByPair.get(pane.viewID) &&
-        shown !== other &&
-        comparison.candidates.some((study) => study.imageID === shown);
-
-      if (chosenElsewhere) {
-        boundByPair.set(pane.viewID, shown);
-        if (pane.role === 'current') comparison.setCurrentImageID(shown);
-        else comparison.setPriorImageID(shown);
-        return;
-      }
-
       boundByPair.set(pane.viewID, pane.imageID);
       viewStore.setDataForView(pane.viewID, pane.imageID);
     });
@@ -549,8 +560,22 @@ export function useComparisonSync() {
           )
       );
 
+      // A pane whose camera arrives after its partner's has already been
+      // copied across took the zoom and none of the pan: there was no camera
+      // on this side to slide, and the first-sight rule then bars the prior
+      // from driving itself. Whichever order the two auto-fits land in, the
+      // late one is pulled onto the current study rather than left framing
+      // its own study's centre.
+      const appeared = cameras.filter(
+        (camera) =>
+          camera.role !== 'current' &&
+          hasCamera(camera) &&
+          previousCameras.get(paneKey(camera)) === undefined
+      );
+
       previousCameras = cameraSnapshot(cameras);
       driveCameras(drivers, cameras);
+      if (appeared.length) nextTick(realignCamerasFromCurrent);
     },
     { immediate: true, deep: true }
   );
