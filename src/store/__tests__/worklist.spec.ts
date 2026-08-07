@@ -6,6 +6,7 @@ import { SAMPLE_DATA } from '@/src/config';
 import { useDataBrowserStore } from '@/src/store/data-browser';
 import { useDICOMStore } from '@/src/store/datasets-dicom';
 import { useImageStore } from '@/src/store/datasets-images';
+import { useMessageStore } from '@/src/store/messages';
 import { useViewStore } from '@/src/store/views';
 import { useWorklistStore } from '@/src/store/worklist';
 
@@ -245,6 +246,25 @@ describe('Worklist store', () => {
     await worklist.openStudy(loaded!);
     expect(loadSampleData).not.toHaveBeenCalled();
     expect(setDataForAllViews).toHaveBeenLastCalledWith('image-1');
+  });
+
+  it('stays on the worklist when a sample loads nothing displayable', async () => {
+    const worklist = useWorklistStore();
+    const messageStore = useMessageStore();
+    useDataBrowserStore().hideSampleData = false;
+    const sample = worklist.studies.find((entry) => entry.origin === 'sample')!;
+
+    vi.mocked(loadSampleData).mockResolvedValueOnce(null);
+    await worklist.openStudy(sample);
+
+    expect(worklist.visible).toBe(true);
+    expect(messageStore.messages.map((message) => message.title)).toContain(
+      'Study contains no displayable data'
+    );
+    // Nothing was imported, so the row is still offered.
+    expect(worklist.studies.some((entry) => entry.key === sample.key)).toBe(
+      true
+    );
   });
 
   it('counts what the preview can actually show', () => {

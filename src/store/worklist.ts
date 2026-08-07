@@ -366,8 +366,14 @@ export const useWorklistStore = defineStore('worklist', () => {
           openingProgress.value = Number.isFinite(percent) ? percent * 100 : 0;
         },
       });
-      const studyKey = volumeKey ? dicomStore.volumeStudy[volumeKey] : '';
-      if (volumeKey) noteSampleImported(sample.name, volumeKey);
+      // An import that yielded nothing displayable leaves the reader on the
+      // worklist with an error, rather than on a viewer with no study in it.
+      if (!volumeKey) {
+        useMessageStore().addError('Study contains no displayable data');
+        return;
+      }
+      const studyKey = dicomStore.volumeStudy[volumeKey];
+      noteSampleImported(sample.name, volumeKey);
       // Only the row that actually owns the data changes status; a synthetic
       // row that borrowed a sample has still not been read.
       if (study.sample === sample) markOpened(study.key, study.readStatus);
