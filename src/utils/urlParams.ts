@@ -35,6 +35,10 @@ const parseUrlArray = (value: string | string[]): string[] => {
     return value.flatMap((v) => parseUrlArray(v));
   }
 
+  // A valueless `?urls` extracts as boolean `true`, which names nothing: yield
+  // no URLs rather than throwing and taking `save=`/`config=` down with it.
+  if (typeof value !== 'string') return [];
+
   const trimmed = value.trim();
 
   if (!trimmed) return [];

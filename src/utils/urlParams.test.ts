@@ -74,6 +74,15 @@ describe('normalizeUrlParams', () => {
     expect(result.urls).toEqual(['relative-path']);
   });
 
+  it('ignores a valueless urls, keeping the rest of the launch', () => {
+    const result = normalizeUrlParams({
+      urls: true,
+      save: 'https://example.com/save',
+    } as unknown as Parameters<typeof normalizeUrlParams>[0]);
+    expect(result.urls).toBeUndefined();
+    expect(result.save).toBe('https://example.com/save');
+  });
+
   it('handles save parameter', () => {
     const result = normalizeUrlParams({
       save: 'https://example.com/save',
