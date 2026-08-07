@@ -11,7 +11,7 @@ const mobile = display.xs;
 
 const keyboardStore = useKeyboardShortcutsStore();
 const openKeyboardShortcuts = () => {
-  keyboardStore.settingsOpen = true;
+  keyboardStore.openCheatSheet();
 };
 
 const versions = {

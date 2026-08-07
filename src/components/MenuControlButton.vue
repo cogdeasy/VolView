@@ -8,6 +8,8 @@ export default defineComponent({
   props: {
     icon: { type: String, required: true },
     name: { type: String, required: true },
+    ariaLabel: { type: String, default: '' },
+    pressed: { type: Boolean, default: undefined },
     size: { type: [Number, String], default: 40 },
     active: Boolean,
     disabled: Boolean,
@@ -57,6 +59,8 @@ export default defineComponent({
       <control-button
         :icon="icon"
         :name="name"
+        :aria-label="ariaLabel"
+        :pressed="pressed"
         :buttonClass="['tool-btn', active ? 'tool-btn-selected' : '']"
         :disabled="disabled"
         :size="size"

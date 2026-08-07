@@ -28,8 +28,10 @@
             class="image-container flex-grow-0"
             :style="{ maxWidth: `${imageSize}px` }"
           >
+            <!-- Decorative: the card text names the dataset. -->
             <v-img
               contain
+              alt=""
               :height="`${imageSize}px`"
               :width="`${imageSize}px`"
               :src="imageUrl"

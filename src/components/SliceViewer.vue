@@ -2,18 +2,31 @@
   <div
     class="vtk-container-wrapper"
     tabindex="0"
+    role="group"
+    :aria-label="`${viewInfo?.name ?? '2D'} view`"
+    :aria-describedby="`view-state-${viewId}`"
     @pointerenter="hover = true"
     @pointerleave="hover = false"
     @focusin="hover = true"
     @focusout="hover = false"
   >
     <div class="vtk-gutter mt-1">
-      <v-btn dark icon size="medium" variant="text" @click="resetCamera">
-        <v-icon size="medium" class="py-1">mdi-camera-flip-outline</v-icon>
+      <v-btn
+        dark
+        icon
+        size="medium"
+        variant="text"
+        :aria-label="`Reset camera in the ${viewInfo?.name ?? '2D'} view`"
+        @click="resetCamera"
+      >
+        <v-icon size="medium" class="py-1" aria-hidden="true">
+          mdi-camera-flip-outline
+        </v-icon>
         <v-tooltip
           location="right"
           activator="parent"
           transition="slide-x-transition"
+          :aria-hidden="true"
         >
           Reset Camera
         </v-tooltip>
@@ -25,6 +38,7 @@
         :max="sliceRange[1]"
         :step="1"
         :handle-height="20"
+        :aria-label="`Slice in the ${viewInfo?.name ?? '2D'} view`"
       />
     </div>
     <div class="vtk-container" data-testid="two-view-container">
@@ -191,7 +205,7 @@ import VtkSliceViewSlicingKeyManipulator from '@/src/components/vtk/VtkSliceView
 import VtkMouseInteractionManipulator from '@/src/components/vtk/VtkMouseInteractionManipulator.vue';
 import vtkMouseCameraTrackballPanManipulator from '@kitware/vtk.js/Interaction/Manipulators/MouseCameraTrackballPanManipulator';
 import vtkMouseCameraTrackballZoomToMouseManipulator from '@kitware/vtk.js/Interaction/Manipulators/MouseCameraTrackballZoomToMouseManipulator';
-import { useResetViewsEvents } from '@/src/components/tools/ResetViews.vue';
+import { useResetViewsEvents } from '@/src/components/tools/resetViewsEvent';
 import { onVTKEvent } from '@/src/composables/onVTKEvent';
 import { useViewStore } from '@/src/store/views';
 import { ViewInfo2D } from '@/src/types/views';

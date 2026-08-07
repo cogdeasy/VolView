@@ -2,6 +2,7 @@
   <drag-and-drop enabled @drop-files="loadFiles" id="app-container">
     <template v-slot="{ dragHover }">
       <v-app>
+        <a class="skip-link" href="#content-main">Skip to viewer</a>
         <app-bar @click:left-menu="leftSideBar = !leftSideBar"></app-bar>
         <v-navigation-drawer
           v-model="leftSideBar"
@@ -13,7 +14,7 @@
         >
           <module-panel @close="leftSideBar = false" />
         </v-navigation-drawer>
-        <v-main id="content-main">
+        <v-main id="content-main" tabindex="-1">
           <div class="fill-height d-flex flex-row flex-grow-1">
             <controls-strip :has-data="hasData"></controls-strip>
             <div class="d-flex flex-column flex-grow-1">
@@ -31,6 +32,8 @@
           </div>
         </v-main>
         <controls-modal />
+        <command-palette />
+        <live-announcer />
       </v-app>
       <persistent-overlay
         :disabled="!dragHover"
@@ -75,6 +78,8 @@ import ModulePanel from '@/src/components/ModulePanel.vue';
 import DragAndDrop from '@/src/components/DragAndDrop.vue';
 import PersistentOverlay from '@/src/components/PersistentOverlay.vue';
 import ControlsModal from '@/src/components/ControlsModal.vue';
+import CommandPalette from '@/src/components/CommandPalette.vue';
+import LiveAnnouncer from '@/src/components/LiveAnnouncer.vue';
 import { useImageStore } from '@/src/store/datasets-images';
 import { useServerStore } from '@/src/store/server';
 import { useGlobalErrorHook } from '@/src/composables/useGlobalErrorHook';
@@ -100,6 +105,8 @@ export default defineComponent({
     ModulePanel,
     PersistentOverlay,
     ControlsModal,
+    CommandPalette,
+    LiveAnnouncer,
     WelcomePage,
     AppBar,
     VtkRenderWindowParent,
@@ -198,6 +205,22 @@ export default defineComponent({
 </script>
 
 <style>
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 8px;
+  z-index: 3000;
+  padding: 8px 16px;
+  border-radius: 0 0 4px 4px;
+  background-color: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
 #content-main {
   /* disable v-content transition when we resize our app drawer */
   transition: initial;

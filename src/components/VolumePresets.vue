@@ -136,7 +136,12 @@ export default defineComponent({
             }"
             @click="select"
           >
-            <v-img :src="thumbnails[preset] || ''" cover aspect-ratio="1">
+            <v-img
+              :src="thumbnails[preset] || ''"
+              alt=""
+              cover
+              aspect-ratio="1"
+            >
               <persistent-overlay class="thumbnail-overlay">
                 <div class="thumbnail-overlay-text">
                   {{ preset.replace(/-/g, ' ') }}

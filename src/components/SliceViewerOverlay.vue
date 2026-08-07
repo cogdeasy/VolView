@@ -45,6 +45,32 @@ const LOCKED_ORIENTATION_SUFFIXES = [
 const isLockedOrientationView = computed(() =>
   LOCKED_ORIENTATION_SUFFIXES.some((suffix) => viewId.value.includes(suffix))
 );
+
+// A negative color window is how the app inverts the grayscale ramp.
+const inverted = computed(() => windowWidth.value < 0);
+
+/**
+ * Spoken equivalent of the burned-in overlay text.
+ *
+ * The rendered image itself is a canvas and conveys nothing to a screen
+ * reader; this description gives its state instead, and is referenced by the
+ * view container's aria-describedby.
+ */
+const accessibleDescription = computed(() => {
+  const parts = [metadata.value.name];
+  if (sliceConfig.value) {
+    parts.push(`slice ${slice.value + 1} of ${sliceRange.value[1] + 1}`);
+  }
+  if (wlConfig.value) {
+    parts.push(
+      `window ${Math.abs(windowWidth.value).toFixed(0)}`,
+      `level ${windowLevel.value.toFixed(0)}`
+    );
+    if (inverted.value) parts.push('grayscale inverted');
+  }
+  parts.push(`${topLabel.value} at the top`, `${leftLabel.value} at the left`);
+  return `${parts.join(', ')}.`;
+});
 </script>
 
 <template>
@@ -72,7 +98,9 @@ const isLockedOrientationView = computed(() =>
           </span>
         </div>
         <div v-if="wlConfig">
-          W/L: {{ windowWidth.toFixed(2) }} / {{ windowLevel.toFixed(2) }}
+          W/L: {{ Math.abs(windowWidth).toFixed(2) }} /
+          {{ windowLevel.toFixed(2) }}
+          <span v-if="inverted">(inverted)</span>
         </div>
       </div>
     </template>
@@ -87,6 +115,9 @@ const isLockedOrientationView = computed(() =>
       </div>
     </template>
   </view-overlay-grid>
+  <div :id="`view-state-${viewId}`" class="visually-hidden">
+    {{ accessibleDescription }}
+  </div>
 </template>
 
 <style scoped src="@/src/components/styles/vtk-view.css"></style>

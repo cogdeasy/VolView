@@ -424,6 +424,7 @@ export const useViewStore = defineStore('view', () => {
     visibleViews,
     viewIDs,
     activeView,
+    isActiveViewMaximized,
     viewByID,
     disabledViewTypes,
     availableViewsForSwitcher,

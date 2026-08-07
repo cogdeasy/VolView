@@ -142,33 +142,40 @@ export default defineComponent({
           v-for="patient in patients"
           :key="patient.key"
           :value="patient.key"
+          class="patient-panel"
         >
           <v-expansion-panel-title>
             <div class="patient-header">
-              <v-icon class="collection-header-icon">mdi-account</v-icon>
+              <v-icon class="collection-header-icon" aria-hidden="true">
+                mdi-account
+              </v-icon>
               <span class="patient-header-name" :title="patient.name">
                 {{ patient.name }}
               </span>
-              <v-spacer />
-              <v-menu offset-x>
-                <template v-slot:activator="{ props }">
-                  <v-btn
-                    v-bind="props"
-                    variant="text"
-                    icon="mdi-dots-vertical"
-                    size="small"
-                    class="mr-3"
-                    @click.stop
-                  />
-                </template>
-                <v-list density="compact">
-                  <v-list-item @click.stop="deletePatient(patient.key)">
-                    <v-list-item-title>Delete Patient</v-list-item-title>
-                  </v-list-item>
-                </v-list>
-              </v-menu>
             </div>
           </v-expansion-panel-title>
+          <!--
+            The panel title is itself a button, so the patient menu is a
+            sibling positioned over it rather than a nested control.
+          -->
+          <v-menu offset-x>
+            <template v-slot:activator="{ props }">
+              <v-btn
+                v-bind="props"
+                variant="text"
+                icon="mdi-dots-vertical"
+                size="small"
+                class="panel-title-action"
+                :aria-label="`Actions for ${patient.name}`"
+                @click.stop
+              />
+            </template>
+            <v-list density="compact">
+              <v-list-item @click.stop="deletePatient(patient.key)">
+                <v-list-item-title>Delete Patient</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
           <v-expansion-panel-text>
             <patient-browser :patient-key="patient.key" />
           </v-expansion-panel-text>
@@ -221,8 +228,19 @@ export default defineComponent({
   flex-flow: row;
   align-items: center;
   width: 100%;
-  /* 24px accomodates the open/close icon indicator */
-  max-width: calc(100% - 24px);
+  /* 24px accomodates the open/close icon indicator, 40px the actions menu */
+  max-width: calc(100% - 64px);
+}
+
+.patient-panel {
+  position: relative;
+}
+
+.panel-title-action {
+  position: absolute;
+  top: 6px;
+  right: 40px;
+  z-index: 1;
 }
 
 .patient-header-name {

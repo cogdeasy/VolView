@@ -16,7 +16,7 @@ import vtkPiecewiseFunctionProxy from '@kitware/vtk.js/Proxy/Core/PiecewiseFunct
 import vtkColorTransferFunction from '@kitware/vtk.js/Rendering/Core/ColorTransferFunction';
 import { onVTKEvent } from '@/src/composables/onVTKEvent';
 import useViewAnimationStore from '@/src/store/view-animation';
-import { useResetViewsEvents } from '@/src/components/tools/ResetViews.vue';
+import { useResetViewsEvents } from '@/src/components/tools/resetViewsEvent';
 import { useVolumeColoringInitializer } from '@/src/composables/useVolumeColoringInitializer';
 import { useResizeObserver } from '@/src/composables/useResizeObserver';
 import { useCurrentImage } from '@/src/composables/useCurrentImage';

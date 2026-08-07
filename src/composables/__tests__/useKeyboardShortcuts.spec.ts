@@ -1,5 +1,12 @@
-import { describe, expect, it } from 'vitest';
-import { shouldIgnoreKeyboardShortcuts } from '../useKeyboardShortcuts';
+import { afterEach, describe, expect, it } from 'vitest';
+import { nextTick } from 'vue';
+import {
+  actionToKey,
+  isCustomizedActionKey,
+  resetAllActionKeys,
+  setActionKey,
+  shouldIgnoreKeyboardShortcuts,
+} from '../useKeyboardShortcuts';
 
 describe('shouldIgnoreKeyboardShortcuts', () => {
   it('ignores shortcuts while an input is focused', () => {
@@ -21,5 +28,43 @@ describe('shouldIgnoreKeyboardShortcuts', () => {
   it('does not ignore shortcuts for non-editable controls', () => {
     const button = document.createElement('button');
     expect(shouldIgnoreKeyboardShortcuts(button)).toBe(false);
+  });
+});
+
+describe('shortcut overrides', () => {
+  const stored = () =>
+    JSON.parse(localStorage.getItem('volview.shortcut-overrides') ?? '{}');
+
+  afterEach(async () => {
+    resetAllActionKeys();
+    await nextTick();
+  });
+
+  it('persists a changed binding', async () => {
+    setActionKey('invertGrayscale', 'j');
+    await nextTick();
+
+    expect(actionToKey.value.invertGrayscale).toBe('j');
+    expect(isCustomizedActionKey('invertGrayscale')).toBe(true);
+    expect(stored()).toHaveProperty('invertGrayscale', 'j');
+  });
+
+  it('stores nothing when the recorded key is the default', async () => {
+    setActionKey('invertGrayscale', 'I');
+    await nextTick();
+
+    expect(isCustomizedActionKey('invertGrayscale')).toBe(false);
+    // Persisting it would shadow a later change to the default binding.
+    expect(stored()).not.toHaveProperty('invertGrayscale');
+  });
+
+  it('drops the override when a binding is changed back', async () => {
+    setActionKey('invertGrayscale', 'j');
+    await nextTick();
+    setActionKey('invertGrayscale', 'i');
+    await nextTick();
+
+    expect(actionToKey.value.invertGrayscale).toBe('i');
+    expect(stored()).not.toHaveProperty('invertGrayscale');
   });
 });

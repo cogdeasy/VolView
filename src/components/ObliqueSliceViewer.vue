@@ -1,5 +1,11 @@
 <template>
-  <div class="vtk-container-wrapper" tabindex="0">
+  <div
+    class="vtk-container-wrapper"
+    tabindex="0"
+    role="group"
+    aria-label="Oblique slice view"
+    :aria-describedby="`view-state-${viewId}`"
+  >
     <div class="vtk-gutter"></div>
     <div class="vtk-container">
       <div class="vtk-sub-container">
@@ -70,7 +76,7 @@
 </template>
 
 <script setup lang="ts">
-import { useResetViewsEvents } from '@/src/components/tools/ResetViews.vue';
+import { useResetViewsEvents } from '@/src/components/tools/resetViewsEvent';
 import ResliceCursorTool from '@/src/components/tools/ResliceCursorTool.vue';
 import VtkBaseObliqueSliceRepresentation from '@/src/components/vtk/VtkBaseObliqueSliceRepresentation.vue';
 import VtkImageOutlineRepresentation from '@/src/components/vtk/VtkImageOutlineRepresentation.vue';

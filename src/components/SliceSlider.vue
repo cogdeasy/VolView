@@ -2,6 +2,14 @@
   <div
     class="slice-slider"
     ref="handleContainer"
+    role="slider"
+    tabindex="0"
+    aria-orientation="vertical"
+    :aria-valuemin="min"
+    :aria-valuemax="max"
+    :aria-valuenow="modelValue"
+    :aria-valuetext="`${unit} ${modelValue - min + 1} of ${max - min + 1}`"
+    @keydown="onKeyDown"
     @pointerdown="onDragStart"
     @pointermove="onDragMove"
     @pointerup="onDragEnd"
@@ -55,6 +63,11 @@ export default {
       type: Number,
       default: 20,
     },
+    // What the value counts, spoken as e.g. "Slice 12 of 40".
+    unit: {
+      type: String,
+      default: 'Slice',
+    },
   },
 
   emits: ['update:modelValue'],
@@ -106,7 +119,11 @@ export default {
     },
 
     onDragStart(ev) {
+      // preventDefault suppresses the focus a pointer press would normally
+      // give the rail, so the slider takes focus itself and keeps owning the
+      // arrow keys after being clicked.
       ev.preventDefault();
+      this.$refs.handleContainer.focus();
 
       this.dragging = true;
       this.initialMousePosY = ev.pageY;
@@ -149,6 +166,34 @@ export default {
       this.$emit('update:modelValue', slice);
     },
 
+    // The slider owns the arrow keys while focused, so the global slice
+    // shortcuts must not also fire: hence stopPropagation.
+    onKeyDown(ev) {
+      const page = Math.max(this.step, Math.round((this.max - this.min) / 10));
+      const deltas = {
+        ArrowUp: this.step,
+        ArrowRight: this.step,
+        ArrowDown: -this.step,
+        ArrowLeft: -this.step,
+        PageUp: page,
+        PageDown: -page,
+      };
+
+      let next = null;
+      if (ev.key in deltas) next = this.modelValue + deltas[ev.key];
+      // Home/End follow the slider value, not the handle's screen position.
+      else if (ev.key === 'Home') next = this.min;
+      else if (ev.key === 'End') next = this.max;
+      if (next === null) return;
+
+      ev.preventDefault();
+      ev.stopPropagation();
+      this.$emit(
+        'update:modelValue',
+        Math.min(this.max, Math.max(this.min, next))
+      );
+    },
+
     getNearestSlice(pos) {
       // Invert position: bottom of slider = lower slice numbers
       const sliceEstimate = 1 - pos / this.maxHandlePos;
@@ -162,6 +207,11 @@ export default {
 <style scoped>
 .slice-slider {
   touch-action: none;
+}
+
+.slice-slider:focus-visible {
+  outline: 2px solid rgb(var(--v-theme-secondary));
+  outline-offset: 2px;
 }
 
 .slice-slider-handle {

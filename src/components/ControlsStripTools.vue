@@ -12,6 +12,8 @@
       <menu-control-button
         icon="mdi-circle-half-full"
         :name="`Window & Level [${nameToShortcut['Window & Level']}]`"
+        :aria-label="toolAriaLabel('Window & Level')"
+        :pressed="active"
         :active="active"
         :disabled="noCurrentImage"
         @click="toggle"
@@ -23,6 +25,8 @@
       <control-button
         icon="mdi-cursor-move"
         :name="`Pan [${nameToShortcut['Pan']}]`"
+        :aria-label="toolAriaLabel('Pan')"
+        :pressed="active"
         :buttonClass="['tool-btn', active ? 'tool-btn-selected' : '']"
         :disabled="noCurrentImage"
         @click="toggle"
@@ -32,6 +36,8 @@
       <control-button
         icon="mdi-magnify-plus-outline"
         :name="`Zoom [${nameToShortcut['Zoom']}]`"
+        :aria-label="toolAriaLabel('Zoom')"
+        :pressed="active"
         :buttonClass="['tool-btn', active ? 'tool-btn-selected' : '']"
         :disabled="noCurrentImage"
         @click="toggle"
@@ -44,6 +50,8 @@
       <control-button
         icon="mdi-crosshairs"
         :name="`Crosshairs [${nameToShortcut['Crosshairs']}]`"
+        :aria-label="toolAriaLabel('Crosshairs')"
+        :pressed="active"
         :buttonClass="['tool-btn', active ? 'tool-btn-selected' : '']"
         :disabled="
           noCurrentImage ||
@@ -58,6 +66,8 @@
       <control-button
         icon="mdi-cursor-default"
         :name="`Select [${nameToShortcut['Select']}]`"
+        :aria-label="toolAriaLabel('Select')"
+        :pressed="active"
         :buttonClass="['tool-btn', active ? 'tool-btn-selected' : '']"
         :disabled="noCurrentImage"
         @click="toggle"
@@ -67,6 +77,8 @@
       <control-button
         icon="mdi-brush"
         :name="`Paint [${nameToShortcut['Paint']}]`"
+        :aria-label="toolAriaLabel('Paint')"
+        :pressed="active"
         :buttonClass="['tool-btn', active ? 'tool-btn-selected' : '']"
         :disabled="
           noCurrentImage || isObliqueLayout || isDisallowedOnCine(Tools.Paint)
@@ -81,6 +93,8 @@
       <menu-control-button
         icon="mdi-vector-square"
         :name="`Rectangle [${nameToShortcut['Rectangle']}]`"
+        :aria-label="toolAriaLabel('Rectangle')"
+        :pressed="active"
         :mobileOnlyMenu="true"
         :active="active"
         :disabled="noCurrentImage || isObliqueLayout"
@@ -93,6 +107,8 @@
       <menu-control-button
         icon="mdi-pentagon-outline"
         :name="`Polygon [${nameToShortcut['Polygon']}]`"
+        :aria-label="toolAriaLabel('Polygon')"
+        :pressed="active"
         :mobileOnlyMenu="true"
         :active="active"
         :disabled="noCurrentImage || isObliqueLayout"
@@ -105,6 +121,8 @@
       <menu-control-button
         icon="mdi-ruler"
         :name="`Ruler [${nameToShortcut['Ruler']}]`"
+        :aria-label="toolAriaLabel('Ruler')"
+        :pressed="active"
         :mobileOnlyMenu="true"
         :active="active"
         :disabled="noCurrentImage || isObliqueLayout"
@@ -119,6 +137,8 @@
       <menu-control-button
         icon="mdi-crop"
         :name="`Crop [${nameToShortcut['Crop']}]`"
+        :aria-label="toolAriaLabel('Crop')"
+        :pressed="active"
         :active="active"
         :disabled="
           noCurrentImage || isObliqueLayout || isDisallowedOnCine(Tools.Crop)
@@ -151,6 +171,7 @@ import RectangleControls from '@/src/components/RectangleControls.vue';
 import PolygonControls from '@/src/components/PolygonControls.vue';
 import WindowLevelControls from '@/src/components/tools/windowing/WindowLevelControls.vue';
 import { actionToKey } from '@/src/composables/useKeyboardShortcuts';
+import { formatBinding } from '@/src/utils/keyBindings';
 import { useCurrentImage } from '@/src/composables/useCurrentImage';
 import { useViewStore } from '@/src/store/views';
 
@@ -225,9 +246,15 @@ export default defineComponent({
       };
     });
 
+    type ToolName = keyof (typeof nameToShortcut)['value'];
+    // Tooltips read "Pan [n]"; screen readers get a spoken form instead.
+    const toolAriaLabel = (name: ToolName) =>
+      `${name} tool, shortcut ${formatBinding(nameToShortcut.value[name])}`;
+
     return {
       currentTool,
       setCurrentTool: toolStore.setCurrentTool,
+      toolAriaLabel,
       noCurrentImage,
       isObliqueLayout,
       isDisallowedOnCine,

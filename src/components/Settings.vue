@@ -2,14 +2,22 @@
   <v-card>
     <v-card-title class="d-flex flex-row align-center">Settings</v-card-title>
     <v-card-text>
-      <v-btn
-        class="my-2"
-        @click="openKeyboardShortcuts"
-        prepend-icon="mdi-keyboard"
-        color="secondary"
-      >
-        Keyboard Shortcuts and View Controls
-      </v-btn>
+      <div class="d-flex flex-wrap ga-2 my-2">
+        <v-btn
+          @click="openKeyboardShortcuts"
+          prepend-icon="mdi-keyboard"
+          color="secondary"
+        >
+          Keyboard Shortcuts and View Controls
+        </v-btn>
+        <v-btn
+          @click="openShortcutEditor"
+          prepend-icon="mdi-keyboard-settings-outline"
+          variant="outlined"
+        >
+          Customize shortcuts
+        </v-btn>
+      </div>
       <v-switch
         :label="`Dark Theme (${dark ? 'On' : 'Off'})`"
         v-model="dark"
@@ -45,7 +53,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, watch } from 'vue';
+import { computed, defineComponent, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useTheme } from 'vuetify';
 import { useLocalStorage } from '@vueuse/core';
@@ -64,11 +72,14 @@ export default defineComponent({
   setup() {
     const theme = useTheme();
     const store = useLocalStorage(ThemeStorageKey, theme.global.name.value);
-    const dark = ref(theme.global.name.value === DarkTheme);
-
-    watch(dark, (isDark) => {
-      theme.global.name.value = isDark ? DarkTheme : LightTheme;
-      store.value = theme.global.name.value;
+    // Derived from the theme itself so the switch stays in sync when the
+    // theme is changed elsewhere, e.g. from the command palette.
+    const dark = computed({
+      get: () => theme.global.name.value === DarkTheme,
+      set: (isDark: boolean) => {
+        theme.global.name.value = isDark ? DarkTheme : LightTheme;
+        store.value = theme.global.name.value;
+      },
     });
 
     const errorReportingStore = useErrorReporting();
@@ -80,15 +91,15 @@ export default defineComponent({
     const { disableCameraAutoReset } = storeToRefs(useViewCameraStore());
 
     const keyboardStore = useKeyboardShortcutsStore();
-    const openKeyboardShortcuts = () => {
-      keyboardStore.settingsOpen = true;
-    };
+    const openKeyboardShortcuts = () => keyboardStore.openCheatSheet();
+    const openShortcutEditor = () => keyboardStore.openEditor();
 
     return {
       dark,
       reportingEnabled,
       errorReportingConfigured,
       openKeyboardShortcuts,
+      openShortcutEditor,
       disableCameraAutoReset,
     };
   },

@@ -121,8 +121,10 @@ export default defineComponent({
           >
             <v-row no-gutters class="pa-0" justify="center">
               <div class="thumbnail-container">
+                <!-- Decorative: the series is named below the card. -->
                 <v-img
                   cover
+                  alt=""
                   height="150"
                   width="150"
                   :src="(thumbnailCache || {})[volume.key] || ''"

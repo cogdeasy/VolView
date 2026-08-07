@@ -62,13 +62,19 @@ export default defineComponent({
     const wlWidth = computed(() => wlConfig.value.width ?? 1);
     const wlLevel = computed(() => wlConfig.value.level ?? 0.5);
 
+    // A negative window is how an inverted grayscale ramp is stored. The panel
+    // shows and edits the magnitude, and carries the sign through on write.
+    const inverted = computed(() => wlWidth.value < 0);
+    const withInversion = (width: number) =>
+      inverted.value ? -Math.abs(width) : Math.abs(width);
+
     const formatForDisplay = (value: number) => {
       if (Math.abs(value) < MIN_VALUE) return 0;
       return Math.round(value * 100) / 100;
     };
 
     const displayWidth = computed({
-      get: () => formatForDisplay(wlWidth.value),
+      get: () => formatForDisplay(Math.abs(wlWidth.value)),
       set: (value: number) => {
         const imageID = currentImageID.value;
         const viewID = activeView.value;
@@ -76,7 +82,7 @@ export default defineComponent({
         windowingStore.updateConfig(
           viewID,
           imageID,
-          { width: value, level: wlLevel.value },
+          { width: withInversion(value), level: wlLevel.value },
           true
         );
       },
@@ -103,8 +109,10 @@ export default defineComponent({
         if (config.useAuto) {
           return config.auto;
         }
-        // Otherwise, a specific W/L is active (from preset or manual adjustment).
-        return { width: wlWidth.value, level: wlLevel.value };
+        // Otherwise, a specific W/L is active (from preset or manual
+        // adjustment). Compared by magnitude so the preset stays highlighted
+        // while the image is inverted.
+        return { width: Math.abs(wlWidth.value), level: wlLevel.value };
       },
       set(selection: AutoRangeKey | PresetValue) {
         const imageID = currentImageID.value;
@@ -118,7 +126,7 @@ export default defineComponent({
             viewID,
             imageID,
             {
-              width: selection.width,
+              width: withInversion(selection.width),
               level: selection.level,
             },
             true

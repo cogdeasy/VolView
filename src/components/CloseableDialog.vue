@@ -64,6 +64,7 @@ const maxWidth = computed(() => {
         right: `${props.closeOffsetX}px`,
       }"
       icon="mdi-close"
+      aria-label="Close dialog"
       @click="close"
     />
     <slot :close="close" />
