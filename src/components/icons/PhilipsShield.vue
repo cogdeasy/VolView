@@ -3,8 +3,14 @@ withDefaults(
   defineProps<{
     /** Height of the shield in pixels; the width follows the aspect ratio. */
     size?: number;
+    /**
+     * Accessible name. Omit inside a labelled lockup: the shield is then
+     * decorative and hidden, rather than a second image node beside its own
+     * caption.
+     */
+    label?: string;
   }>(),
-  { size: 28 }
+  { size: 28, label: undefined }
 );
 </script>
 
@@ -14,8 +20,9 @@ withDefaults(
     viewBox="0 0 900 1144"
     :height="size"
     :width="(size * 900) / 1144"
-    role="img"
-    aria-label="Philips"
+    :role="label ? 'img' : undefined"
+    :aria-label="label"
+    :aria-hidden="label ? undefined : true"
     fill="currentColor"
   >
     <path

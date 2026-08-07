@@ -3,8 +3,14 @@ withDefaults(
   defineProps<{
     /** Height of the wordmark in pixels; the width follows the aspect ratio. */
     size?: number;
+    /**
+     * Accessible name. Omit inside a labelled lockup: the wordmark is then
+     * decorative and hidden, rather than a second image node beside its own
+     * caption.
+     */
+    label?: string;
   }>(),
-  { size: 20 }
+  { size: 20, label: undefined }
 );
 </script>
 
@@ -14,8 +20,9 @@ withDefaults(
     viewBox="0 0 900 165"
     :height="size"
     :width="(size * 900) / 165"
-    role="img"
-    aria-label="Philips"
+    :role="label ? 'img' : undefined"
+    :aria-label="label"
+    :aria-hidden="label ? undefined : true"
     fill="currentColor"
   >
     <path

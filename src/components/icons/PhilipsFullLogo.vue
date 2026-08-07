@@ -13,7 +13,7 @@ const logoColor = useBrandLogoColor();
     :aria-label="Brand.productName"
     :style="{ color: logoColor }"
   >
-    <philips-wordmark :size="20" aria-hidden="true" />
+    <philips-wordmark :size="20" />
     <span class="philips-logo__rule" />
     <span class="philips-logo__product" aria-hidden="true">{{
       Brand.productShortName
