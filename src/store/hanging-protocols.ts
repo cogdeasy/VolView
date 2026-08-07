@@ -837,7 +837,12 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
     // silently re-claim them, deferred settings and all.
     [...hungImages.value.entries()]
       .filter(([, info]) => info.protocolId === id)
-      .forEach(([imageID]) => hungImages.value.delete(imageID));
+      .forEach(([imageID]) => {
+        hungImages.value.delete(imageID);
+        // Its writes go with it: a later protocol comparing against what this
+        // one left there would read a reader's edit as its own.
+        forgetWrites(imageID);
+      });
     // Drop the studies that were pinned to it, so they hang by rule again.
     settings.value.overrides = Object.fromEntries(
       Object.entries(settings.value.overrides).filter(
@@ -933,6 +938,12 @@ export const useHangingProtocolStore = defineStore('hangingProtocol', () => {
       restoredImages.value.delete(id);
       hungImages.value.delete(id);
       forgetWrites(id);
+      // The pill must not keep naming — or acting on — a study that is gone:
+      // its buttons would bind every pane to an image that no longer exists.
+      if (applied.value?.imageID === id) {
+        applied.value = null;
+        resetPresentationChrome();
+      }
     });
   });
 

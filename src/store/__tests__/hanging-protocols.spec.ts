@@ -1,5 +1,6 @@
 import { describe, it, beforeEach, expect } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
+import vtkImageData from '@kitware/vtk.js/Common/DataModel/ImageData';
 import {
   MAX_REMEMBERED_OVERRIDES,
   readStoredProtocols,
@@ -7,6 +8,7 @@ import {
   useHangingProtocolStore,
 } from '@/src/store/hanging-protocols';
 import { useDICOMStore } from '@/src/store/datasets-dicom';
+import { useImageCacheStore } from '@/src/store/image-cache';
 import { BUILT_IN_PROTOCOLS } from '@/src/core/hanging-protocols/seeds';
 
 describe('stored protocol list', () => {
@@ -145,6 +147,20 @@ describe('hanging a study by hand', () => {
     expect(store.hungImages.has('image-1')).toBe(false);
     store.reportForImage('image-1');
     expect(store.applied?.protocolId).toBeNull();
+  });
+
+  it('stops naming a study that has been closed', () => {
+    const store = useHangingProtocolStore();
+    useImageCacheStore().addVTKImageData(vtkImageData.newInstance(), 'A', {
+      id: 'image-1',
+    });
+
+    store.applyManually(BUILT_IN_PROTOCOLS[0].id, 'image-1');
+    useImageCacheStore().removeImage('image-1');
+
+    // The pill's buttons act on the study it names, and would bind every pane
+    // to an image that no longer exists.
+    expect(store.applied).toBeNull();
   });
 
   it('does not let a deleted protocol re-claim the study when it comes back', () => {

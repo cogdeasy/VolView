@@ -166,6 +166,13 @@ const unpin = () => {
           elevation="4"
         >
           <div class="text-body-2 mb-2">{{ applied?.explanation }}</div>
+          <div
+            v-if="applied?.reason === 'override' && applied?.criteria.length"
+            class="text-caption text-medium-emphasis mb-1"
+          >
+            Its rules are shown for reference; your choice applies whether or
+            not they hold.
+          </div>
           <v-table v-if="applied?.criteria.length" density="compact">
             <tbody>
               <tr v-for="(criterion, i) in applied?.criteria" :key="i">
