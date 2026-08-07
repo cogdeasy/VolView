@@ -74,7 +74,7 @@ export function useComparisonSync() {
     // must not adopt whatever slot two happened to hold. Nor may a drop put a
     // study in a role the pickers refuse to offer: a cine has no slices to
     // align and its slot renders a player rather than a pane.
-    const adopted = panes.find((pane) => {
+    const diverged = panes.filter((pane) => {
       const shown = shownIn.get(pane.viewID);
       return (
         !!shown &&
@@ -85,15 +85,31 @@ export function useComparisonSync() {
       );
     });
 
-    // One role at a time. A pane handed the study already on the other side
-    // is a swap, not a collapse — the store's setters move the displaced
-    // study across rather than letting one study fill both roles — and a
-    // session restored with the roles the reader saved arrives exactly so,
-    // one pane at a time as each study finishes loading. Changing a role
+    // "Open in all views" hands every slot the same study at once. That is one
+    // choice about what to read, not one per pane: taken a pane at a time it
+    // would land in the current role and then be pushed across into the prior
+    // one by the next pane, leaving the reader's new study captioned as the
+    // old one. It goes to the role the reader reads from, and the panes that
+    // came with it are marked as dealt with so the loop below hands them back
+    // to the study their role holds.
+    const sameStudyEverywhere =
+      diverged.length > 1 &&
+      new Set(diverged.map((pane) => shownIn.get(pane.viewID))).size === 1;
+    const adopted = sameStudyEverywhere
+      ? (diverged.find((pane) => pane.role === 'current') ?? diverged[0])
+      : diverged[0];
+
+    // Otherwise one role at a time. A pane handed the study already on the
+    // other side is a swap, not a collapse — the store's setters move the
+    // displaced study across rather than letting one study fill both roles —
+    // and a session restored with the roles the reader saved arrives exactly
+    // so, one pane at a time as each study finishes loading. Changing a role
     // re-runs this, which settles whatever the change left mismatched.
     if (adopted) {
       const shown = shownIn.get(adopted.viewID)!;
-      boundByPair.set(adopted.viewID, shown);
+      if (sameStudyEverywhere)
+        diverged.forEach((pane) => boundByPair.set(pane.viewID, shown));
+      else boundByPair.set(adopted.viewID, shown);
       if (adopted.role === 'current') comparison.setCurrentImageID(shown);
       else comparison.setPriorImageID(shown);
       return;

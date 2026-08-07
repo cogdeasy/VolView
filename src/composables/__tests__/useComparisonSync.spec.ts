@@ -165,6 +165,35 @@ describe('useComparisonSync — pane bindings', () => {
     expect(viewStore.getView(priorViewID)?.dataID).toBe('current');
   });
 
+  it('reads a study opened in all views as the current one, not the prior', async () => {
+    const viewStore = useViewStore();
+    const comparison = useComparisonStore();
+    seatImage('current', 8);
+    seatImage('prior', 8);
+    seatImage('opened', 8);
+    viewStore.setNamedLayoutsFromConfig(ComparisonLayouts);
+    viewStore.switchToNamedLayout(ComparisonLayoutNames.pair);
+    comparison.setCurrentImageID('current');
+    comparison.setPriorImageID('prior');
+    scope.run(() => useComparisonSync());
+    const viewIDOf = (name: string) =>
+      viewStore.visibleViews.find((view) => view?.name === name)!.id;
+    const currentViewID = viewIDOf(ComparisonViewNames.currentAxial);
+    const priorViewID = viewIDOf(ComparisonViewNames.priorAxial);
+    await nextTick();
+
+    // "Open in all views" from the data panel: every slot at once.
+    viewStore.setDataForAllViews('opened');
+    await nextTick();
+    await nextTick();
+    await nextTick();
+
+    expect(comparison.currentImageID).toBe('opened');
+    expect(comparison.priorImageID).toBe('prior');
+    expect(viewStore.getView(currentViewID)?.dataID).toBe('opened');
+    expect(viewStore.getView(priorViewID)?.dataID).toBe('prior');
+  });
+
   it('refuses a cine dropped on a pane, as the study pickers do', async () => {
     const viewStore = useViewStore();
     const comparison = useComparisonStore();
