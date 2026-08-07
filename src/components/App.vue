@@ -21,7 +21,7 @@
                 <layout-grid v-show="hasData" :layout="layout" />
               </VtkRenderWindowParent>
               <welcome-page
-                v-if="!hasData"
+                v-if="!hasData && !worklistVisible"
                 :loading="showLoading"
                 class="clickable"
                 @click="loadUserPromptedFiles"
@@ -31,6 +31,12 @@
           </div>
         </v-main>
         <controls-modal />
+        <worklist-page
+          v-if="worklistVisible"
+          :has-data="hasData"
+          @open-files="loadUserPromptedFiles"
+          @close="closeWorklist"
+        />
       </v-app>
       <persistent-overlay
         :disabled="!dragHover"
@@ -69,6 +75,8 @@ import {
   loadUrls,
 } from '@/src/actions/loadUserFiles';
 import WelcomePage from '@/src/components/WelcomePage.vue';
+import WorklistPage from '@/src/components/worklist/WorklistPage.vue';
+import { useWorklistStore } from '@/src/store/worklist';
 import { useDICOMStore } from '@/src/store/datasets-dicom';
 import LayoutGrid from '@/src/components/LayoutGrid.vue';
 import ModulePanel from '@/src/components/ModulePanel.vue';
@@ -101,6 +109,7 @@ export default defineComponent({
     PersistentOverlay,
     ControlsModal,
     WelcomePage,
+    WorklistPage,
     AppBar,
     VtkRenderWindowParent,
   },
@@ -108,6 +117,7 @@ export default defineComponent({
   setup() {
     const imageStore = useImageStore();
     const dicomStore = useDICOMStore();
+    const worklistStore = useWorklistStore();
 
     useGlobalErrorHook();
     useKeyboardShortcuts();
@@ -154,9 +164,64 @@ export default defineComponent({
 
     const urlParams = readLaunchParams();
 
+    // Launching with data goes straight to the viewer; the worklist must not
+    // flash in front of it while the URLs load. A config-only launch brings no
+    // studies with it, so it still lands on the worklist.
+    const launchDismissedWorklist = Boolean(urlParams.urls);
+    if (launchDismissedWorklist) {
+      worklistStore.dismissForExternalLoad();
+    }
+
+    // An import started from outside the worklist (drag and drop, the file
+    // dialog, a processing result) takes the reader to the viewer. Keyed on an
+    // import starting, so series landing one by one cannot close a worklist the
+    // reader opened while the import runs. Counted rather than watched as a
+    // boolean, so an import that begins while another is still running counts.
+    // DICOMweb imports bypass this — they call importDataSources directly —
+    // but they are only reachable from the data panel, which means the
+    // worklist is already closed.
+    let launchConfigLoad = false;
+    watch(
+      () => loadDataStore.loadingCount,
+      (count, previous) => {
+        if (count <= previous) return;
+        // The launch-time config load brings no studies with it, so it leaves
+        // the worklist up.
+        if (launchConfigLoad) {
+          launchConfigLoad = false;
+          return;
+        }
+        worklistStore.dismissForExternalLoad();
+      }
+    );
+
+    const display = useDisplay();
+    const leftSideBar = ref(!display.mobile.value);
+
+    // With no study open, leaving the worklist hands the reader to the data
+    // panel, so the drawer has to be up even where it starts closed.
+    function closeWorklist() {
+      worklistStore.hide();
+      if (!hasData.value) leftSideBar.value = true;
+    }
+
     onMounted(async () => {
       await authReady;
-      await loadUrls(urlParams);
+      // Set immediately before the load, which raises the count synchronously,
+      // so the exemption belongs to the config load itself rather than to
+      // whatever import happened to start first.
+      launchConfigLoad = Boolean(urlParams.config);
+      try {
+        await loadUrls(urlParams);
+      } finally {
+        // Disarmed once the launch load is over, so a later import can never
+        // inherit an exemption the config load did not consume.
+        launchConfigLoad = false;
+        // A launch whose URLs brought nothing in has no viewer to show, so the
+        // dismissal it triggered is taken back. Only its own dismissal: one the
+        // reader made while the load ran is theirs to keep.
+        if (launchDismissedWorklist) worklistStore.restoreIfEmpty();
+      }
       // Feature entry points subscribe to this (see launchLoad.ts).
       await signalLaunchLoadComplete();
     });
@@ -183,14 +248,14 @@ export default defineComponent({
 
     // --- //
 
-    const display = useDisplay();
-
     return {
-      leftSideBar: ref(!display.mobile.value),
+      leftSideBar,
+      closeWorklist,
       loadUserPromptedFiles,
       loadFiles,
       hasData,
       showLoading,
+      worklistVisible: computed(() => worklistStore.visible),
       layout: visibleLayout,
     };
   },

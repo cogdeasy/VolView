@@ -15,6 +15,30 @@ export const BrandColors = {
   onDark: '#FFFFFF',
   selectionDark: '#0A3F8F',
   selectionLight: '#CFE0FA',
+  /**
+   * Clinical status colors. Deliberately few and deliberately saturated:
+   * on a reading screen these are the only marks allowed to compete for
+   * attention with the imagery.
+   */
+  status: {
+    /** STAT / critical priority; always carries white text. */
+    critical: '#D6002A',
+    /** Study is being read. */
+    inProgressDark: '#00A3E0',
+    inProgressLight: '#0B5ED7',
+    /** Study has been read. */
+    completeDark: '#4CAF7D',
+    completeLight: '#2E7D52',
+  },
+  /** Chrome for the full-window worklist, per theme. */
+  worklist: {
+    headerDark: '#0C1B2E',
+    headerLight: '#FFFFFF',
+    surfaceDark: '#101820',
+    surfaceLight: '#F4F6F9',
+    rowHoverDark: 'rgba(61, 130, 227, 0.12)',
+    rowHoverLight: 'rgba(11, 94, 215, 0.06)',
+  },
 } as const;
 
 export const Brand = {

@@ -1,19 +1,13 @@
 <script lang="ts">
 import { defineComponent, reactive, computed } from 'vue';
 import ImageListCard from '@/src/components/ImageListCard.vue';
-import {
-  convertSuccessResultToDataSelection,
-  importDataSources,
-} from '@/src/io/import/importDataSources';
-import { remoteFileToDataSource } from '@/src/io/import/dataSource';
-import useVolumeColoringStore from '@/src/store/view-configs/volume-coloring';
+import { loadSampleData } from '@/src/actions/loadSampleData';
 import { SAMPLE_DATA } from '@/src/config';
 import { useMessageStore } from '@/src/store/messages';
 import { SampleDataset } from '@/src/types';
 import { useImageStore } from '@/src/store/datasets-images';
 import { useDICOMStore } from '@/src/store/datasets-dicom';
-import { fetchFile } from '@/src/utils/fetch';
-import { useViewStore } from '@/src/store/views';
+import { useWorklistStore } from '@/src/store/worklist';
 
 enum ProgressState {
   Pending,
@@ -33,7 +27,6 @@ export default defineComponent({
     ImageListCard,
   },
   setup() {
-    const viewStore = useViewStore();
     const status = reactive<{ progress: Progress }>({
       progress: {},
     });
@@ -64,6 +57,8 @@ export default defineComponent({
       }
     });
 
+    const worklistStore = useWorklistStore();
+
     const dicomStore = useDICOMStore();
     dicomStore.$onAction(({ name, args, after }) => {
       if (name === 'deleteVolume') {
@@ -84,34 +79,18 @@ export default defineComponent({
       try {
         progress(Infinity);
 
-        const sampleFile = await fetchFile(sample.url, sample.filename, {
+        const selection = await loadSampleData(sample, {
           progress,
+          downloaded: () => {
+            status.progress[sample.name].state = ProgressState.Done;
+          },
         });
-        status.progress[sample.name].state = ProgressState.Done;
 
-        const [loadResult] = await importDataSources([
-          remoteFileToDataSource(sampleFile, sample.url),
-        ]);
-
-        if (!loadResult) {
-          throw new Error('Did not receive a load result');
-        }
-        if (loadResult.type === 'error') {
-          throw loadResult.error;
-        }
-
-        const selection = convertSuccessResultToDataSelection(loadResult);
         if (selection) {
           loaded.idToURL[selection] = sample.url;
           loaded.urlToID[sample.url] = selection;
-
-          useVolumeColoringStore().setDefaults(selection, {
-            transferFunction: {
-              preset: sample.defaults?.colorPreset,
-            },
-          });
+          worklistStore.noteSampleImported(sample.name, selection);
         }
-        viewStore.setDataForAllViews(selection);
       } catch (error) {
         status.progress[sample.name].state = ProgressState.Error;
         const messageStore = useMessageStore();
@@ -129,7 +108,11 @@ export default defineComponent({
           status.progress[sample.name]?.state === ProgressState.Done;
         const isError =
           status.progress[sample.name]?.state === ProgressState.Error;
-        const isLoaded = !!loaded.urlToID[sample.url];
+        // The worklist downloads the same samples, so its record counts too:
+        // a study opened from there must not be offered for download again.
+        const isLoaded =
+          !!loaded.urlToID[sample.url] ||
+          worklistStore.isSampleLoaded(sample.name);
         const progress =
           isDone || isLoaded
             ? 100

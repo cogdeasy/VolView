@@ -404,6 +404,8 @@ export async function loadFiles(files: File[]) {
 
 export async function loadUserPromptedFiles() {
   const files = await openFileDialog();
+  // Nothing chosen is nothing to import: no loading state, no notification.
+  if (!files.length) return [];
   return loadFiles(files);
 }
 

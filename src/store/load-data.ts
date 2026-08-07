@@ -89,6 +89,7 @@ export function useLoadingNotifications() {
 
   return {
     isLoading,
+    loadingCount,
     startLoading,
     stopLoading,
     setError,
@@ -96,7 +97,7 @@ export function useLoadingNotifications() {
 }
 
 const useLoadDataStore = defineStore('loadData', () => {
-  const { startLoading, stopLoading, setError, isLoading } =
+  const { startLoading, stopLoading, setError, isLoading, loadingCount } =
     useLoadingNotifications();
 
   const segmentGroupExtension = ref('');
@@ -106,6 +107,7 @@ const useLoadDataStore = defineStore('loadData', () => {
     segmentGroupExtension,
     layerExtension,
     isLoading,
+    loadingCount,
     startLoading,
     stopLoading,
     setError,
