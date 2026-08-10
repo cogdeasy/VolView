@@ -28,27 +28,28 @@
       :r="ANNOTATION_TOOL_HANDLE_RADIUS"
       class="handle"
     />
-    <text
+    <annotation-text-s-v-g2-d
       v-if="second"
       :x="second.x"
       :y="second.y"
       :dx="textdx"
       :dy="textdy"
-      :text-anchor="anchor"
-      stroke-width="0.75"
-      stroke="black"
-      fill="white"
-      :font-size="`${textSize}px`"
-      font-weight="bold"
-    >
-      {{ rulerLength }}
-    </text>
+      :anchor="anchor"
+      :lines="textLines"
+      :text-size="textSize"
+    />
   </g>
 </template>
 
 <script lang="ts">
 import { onVTKEvent } from '@/src/composables/onVTKEvent';
-import { ANNOTATION_TOOL_HANDLE_RADIUS } from '@/src/constants';
+import {
+  ANNOTATION_TOOL_HANDLE_RADIUS,
+  ANNOTATION_TOOL_TEXT_OFFSET,
+  ANNOTATION_TOOL_TEXT_SIZE,
+} from '@/src/constants';
+import { formatLength } from '@/src/core/annotations/measurements';
+import AnnotationTextSVG2D from '@/src/components/tools/AnnotationTextSVG2D.vue';
 import { worldToSVG } from '@/src/utils/vtk-helpers';
 import type { Vector3 } from '@kitware/vtk.js/types';
 import {
@@ -71,23 +72,25 @@ type SVGPoint = {
 };
 
 export default defineComponent({
+  components: { AnnotationTextSVG2D },
   props: {
     point1: Array as PropType<Array<number>>,
     point2: Array as PropType<Array<number>>,
     color: String,
     strokeWidth: Number,
     length: Number,
+    labelName: String,
     textOffset: {
       type: Number,
-      default: 8,
+      default: ANNOTATION_TOOL_TEXT_OFFSET,
     },
     textSize: {
       type: Number,
-      default: 14,
+      default: ANNOTATION_TOOL_TEXT_SIZE,
     },
   },
   setup(props) {
-    const { point1, point2, textOffset, length } = toRefs(props);
+    const { point1, point2, textOffset, length, labelName } = toRefs(props);
     const firstPoint = ref<SVGPoint | null>();
     const secondPoint = ref<SVGPoint | null>();
 
@@ -139,9 +142,9 @@ export default defineComponent({
         return null;
       }
       if (second.x > first.x) {
-        return { dx: offset, dy: -offset, anchor: 'start' };
+        return { dx: offset, dy: -offset, anchor: 'start' as const };
       }
-      return { dx: -offset, dy: -offset, anchor: 'end' };
+      return { dx: -offset, dy: -offset, anchor: 'end' as const };
     });
 
     // --- resize --- //
@@ -154,10 +157,15 @@ export default defineComponent({
     return {
       textdx: computed(() => textProperties.value?.dx ?? 0),
       textdy: computed(() => textProperties.value?.dy ?? 0),
-      anchor: computed(() => textProperties.value?.anchor ?? 'start'),
+      anchor: computed(
+        () => textProperties.value?.anchor ?? ('start' as const)
+      ),
       first: firstPoint,
       second: secondPoint,
-      rulerLength: computed(() => length?.value?.toFixed(2) ?? ''),
+      textLines: computed(() => [
+        labelName.value ?? '',
+        length.value == null ? '' : formatLength(length.value),
+      ]),
       ANNOTATION_TOOL_HANDLE_RADIUS,
     };
   },

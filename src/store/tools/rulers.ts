@@ -1,8 +1,8 @@
 import { computed } from 'vue';
 import { defineAnnotationToolStore } from '@/src/utils/defineAnnotationToolStore';
 import type { Vector3 } from '@kitware/vtk.js/types';
-import { distance2BetweenPoints } from '@kitware/vtk.js/Common/Core/Math';
 import { ToolID } from '@/src/types/annotation-tool';
+import { rulerLength } from '@/src/core/annotations/measurements';
 
 import { RULER_LABEL_DEFAULTS } from '@/src/config';
 import { Manifest, StateFile } from '@/src/io/state-file/schema';
@@ -45,7 +45,7 @@ export const useRulerStore = defineAnnotationToolStore('ruler', () => {
     return rulerIDs.value.reduce((lengths, id) => {
       const { firstPoint, secondPoint } = byID[id];
       return Object.assign(lengths, {
-        [id]: Math.sqrt(distance2BetweenPoints(firstPoint, secondPoint)),
+        [id]: rulerLength(firstPoint, secondPoint),
       });
     }, {});
   });

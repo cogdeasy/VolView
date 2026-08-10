@@ -17,12 +17,24 @@
       :stroke-width="strokeWidth"
       fill="none"
     />
+    <annotation-text-s-v-g2-d
+      v-if="textAnchor"
+      :x="textAnchor[0]"
+      :y="textAnchor[1]"
+      :dy="-textOffset"
+      anchor="middle"
+      :lines="textLines"
+    />
   </g>
 </template>
 
 <script lang="ts">
 import { onVTKEvent } from '@/src/composables/onVTKEvent';
-import { ANNOTATION_TOOL_HANDLE_RADIUS } from '@/src/constants';
+import {
+  ANNOTATION_TOOL_HANDLE_RADIUS,
+  ANNOTATION_TOOL_TEXT_OFFSET,
+} from '@/src/constants';
+import AnnotationTextSVG2D from '@/src/components/tools/AnnotationTextSVG2D.vue';
 import { worldToSVG } from '@/src/utils/vtk-helpers';
 import type { Vector2, Vector3 } from '@kitware/vtk.js/types';
 import {
@@ -43,7 +55,9 @@ const POINT_RADIUS = ANNOTATION_TOOL_HANDLE_RADIUS;
 const FINISHABLE_POINT_RADIUS = POINT_RADIUS;
 
 export default defineComponent({
+  components: { AnnotationTextSVG2D },
   props: {
+    labelName: String,
     points: {
       type: Array as PropType<Array<Vector3>>,
       required: true,
@@ -67,7 +81,7 @@ export default defineComponent({
     },
   },
   setup(props) {
-    const { points, movePoint, placing, finishable, showHandles } =
+    const { points, movePoint, placing, finishable, showHandles, labelName } =
       toRefs(props);
 
     const view = inject(VtkViewContext);
@@ -141,8 +155,20 @@ export default defineComponent({
       updatePoints();
     });
 
+    // topmost point of the polygon, so the text sits clear of the shape
+    const textAnchor = computed(() => {
+      if (placing.value || handlePoints.value.length === 0) return null;
+      return handlePoints.value.reduce(
+        (highest, { point }) => (point[1] < highest[1] ? point : highest),
+        handlePoints.value[0].point
+      );
+    });
+
     return {
       devicePixelRatio,
+      textAnchor,
+      textLines: computed(() => [labelName.value ?? '']),
+      textOffset: ANNOTATION_TOOL_TEXT_OFFSET,
       handlePoints,
       linePoints,
       firstHandleVisibility,

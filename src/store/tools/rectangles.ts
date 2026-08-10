@@ -3,6 +3,11 @@ import type { Vector3 } from '@kitware/vtk.js/types';
 import { Manifest, StateFile } from '@/src/io/state-file/schema';
 import { RECTANGLE_LABEL_DEFAULTS } from '@/src/config';
 import { ToolID } from '@/src/types/annotation-tool';
+import {
+  RectangleMeasurements,
+  rectangleMeasurements,
+} from '@/src/core/annotations/measurements';
+import { computed } from 'vue';
 
 import {
   declareAnnotationToolManifestRefs,
@@ -30,6 +35,22 @@ export const useRectangleStore = defineAnnotationToolStore('rectangles', () => {
     newLabelDefault,
   });
 
+  const measurementsByID = computed<Record<string, RectangleMeasurements>>(
+    () => {
+      const byID = toolAPI.toolByID.value;
+      return toolAPI.toolIDs.value.reduce((measurements, id) => {
+        const { frameOfReference, firstPoint, secondPoint } = byID[id];
+        return Object.assign(measurements, {
+          [id]: rectangleMeasurements(
+            frameOfReference,
+            firstPoint,
+            secondPoint
+          ),
+        });
+      }, {});
+    }
+  );
+
   function getPoints(id: ToolID) {
     const tool = toolAPI.toolByID.value[id];
     return [tool.firstPoint, tool.secondPoint];
@@ -48,6 +69,7 @@ export const useRectangleStore = defineAnnotationToolStore('rectangles', () => {
 
   return {
     ...toolAPI,
+    measurementsByID,
     getPoints,
     serialize,
     deserialize,

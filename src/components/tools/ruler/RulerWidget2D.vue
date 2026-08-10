@@ -181,5 +181,6 @@ export default defineComponent({
     :color="ruler.color"
     :strokeWidth="ruler.strokeWidth"
     :length="length"
+    :label-name="ruler.labelName"
   />
 </template>

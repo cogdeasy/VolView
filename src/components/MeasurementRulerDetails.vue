@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useRulerStore } from '@/src/store/tools/rulers';
+import { formatLength } from '@/src/core/annotations/measurements';
 import { AnnotationTool } from '../types/annotation-tool';
 
 defineProps<{
@@ -19,7 +20,7 @@ const toolStore = useRulerStore();
     <v-col>
       Length:
       <span class="value">
-        {{ toolStore.lengthByID[tool.id].toFixed(2) }}mm
+        {{ formatLength(toolStore.lengthByID[tool.id]) }}
       </span>
     </v-col>
   </v-row>
