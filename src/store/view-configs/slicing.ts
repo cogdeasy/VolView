@@ -14,6 +14,7 @@ import { ViewConfig } from '@/src/io/state-file/schema';
 import { SliceConfig } from '@/src/store/view-configs/types';
 import { useImageStore } from '@/src/store/datasets-images';
 import { useViewStore } from '@/src/store/views';
+import { useImageCacheStore } from '@/src/store/image-cache';
 
 export const defaultSliceConfig = (): SliceConfig => ({
   slice: 0,
@@ -26,6 +27,7 @@ export const defaultSliceConfig = (): SliceConfig => ({
 export const useViewSliceStore = defineStore('viewSlice', () => {
   const imageStore = useImageStore();
   const viewStore = useViewStore();
+  const imageCacheStore = useImageCacheStore();
   const configs = reactive<DoubleKeyRecord<SliceConfig>>({});
 
   // Global default applied to slices that do not have a stored config yet.
@@ -116,20 +118,25 @@ export const useViewSliceStore = defineStore('viewSlice', () => {
    * slices configured later in this session.
    */
   const setInterpolateAll = (interpolate: boolean) => {
-    interpolateByDefault.value = interpolate;
     // Materialize a config for every view/image pair, including pairs that
     // were still on the computed default: only stored configs are serialized
-    // into the session file.
+    // into the session file. updateConfig() cannot be used here, since it
+    // drops patches that match the computed default.
     const viewIDs = new Set([...viewStore.viewIDs, ...Object.keys(configs)]);
     viewIDs.forEach((viewID) => {
       const dataIDs = new Set([
-        ...imageStore.idList,
+        ...imageCacheStore.imageIds,
         ...Object.keys(configs[viewID] ?? {}),
       ]);
       dataIDs.forEach((dataID) => {
-        updateConfig(viewID, dataID, { interpolate });
+        patchDoubleKeyRecord(configs, viewID, dataID, {
+          ...defaultSliceConfig(),
+          ...getConfig(viewID, dataID),
+          interpolate,
+        });
       });
     });
+    interpolateByDefault.value = interpolate;
   };
 
   const toggleSyncImages = () => {

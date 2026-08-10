@@ -1,6 +1,7 @@
 import { describe, it, beforeEach, expect } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
 import vtkImageData from '@kitware/vtk.js/Common/DataModel/ImageData';
+import vtkDataArray from '@kitware/vtk.js/Common/Core/DataArray';
 import useViewSliceStore from '@/src/store/view-configs/slicing';
 import { useImageStore } from '@/src/store/datasets-images';
 import { useViewStore } from '@/src/store/views';
@@ -14,6 +15,19 @@ const makeStateFile = (viewIDs: string[] = ['view-1']) =>
       viewByID: Object.fromEntries(viewIDs.map((id) => [id, { id }])),
     },
   }) as unknown as StateFile;
+
+const makeImage = () => {
+  const image = vtkImageData.newInstance();
+  image.setDimensions([4, 4, 4]);
+  image.getPointData().setScalars(
+    vtkDataArray.newInstance({
+      name: 'scalars',
+      numberOfComponents: 1,
+      values: new Uint8Array(4 * 4 * 4),
+    })
+  );
+  return image;
+};
 
 describe('Slice interpolation config', () => {
   beforeEach(() => {
@@ -38,19 +52,24 @@ describe('Slice interpolation config', () => {
 
   it('materializes configs so a toggle-only change is serialized', () => {
     const imageStore = useImageStore();
-    imageStore.addVTKImageData('t2', vtkImageData.newInstance(), {
-      id: 'image-1',
-    });
+    imageStore.addVTKImageData('t2', makeImage(), { id: 'image-1' });
     const viewStore = useViewStore();
+    viewStore.setDataForAllViews('image-1');
     const store = useViewSliceStore();
 
     store.setInterpolateAll(false);
 
+    // every view has a stored config, not just ones the user has interacted with
+    expect(Object.keys(store.configs).sort()).toEqual(
+      [...viewStore.viewIDs].sort()
+    );
+
     const stateFile = makeStateFile(viewStore.viewIDs);
     store.serialize(stateFile);
-    const savedConfig =
-      stateFile.manifest.viewByID![viewStore.viewIDs[0]].config!;
-    expect(savedConfig['image-1'].slice!.interpolate).toBe(false);
+    viewStore.viewIDs.forEach((viewID) => {
+      const savedConfig = stateFile.manifest.viewByID![viewID].config!;
+      expect(savedConfig['image-1'].slice!.interpolate).toBe(false);
+    });
   });
 
   it('round-trips through serialize/deserialize', () => {
