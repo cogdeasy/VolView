@@ -1,6 +1,10 @@
 <template>
   <div class="vtk-container-wrapper volume-viewer-container" tabindex="0">
-    <div class="vtk-container" data-testid="two-view-container">
+    <div
+      class="vtk-container"
+      :class="backgroundClass"
+      data-testid="two-view-container"
+    >
       <v-progress-linear
         v-if="isImageLoading"
         indeterminate
@@ -22,7 +26,8 @@
             :view-id="viewId"
             :image-id="currentImageID"
           ></vtk-base-volume-representation>
-          <vtk-orientation-marker></vtk-orientation-marker>
+          <vtk-orientation-marker v-if="showOrientationBox">
+          </vtk-orientation-marker>
           <crop-tool :view-id="viewId" :image-id="currentImageID"></crop-tool>
           <slot></slot>
         </vtk-volume-view>
@@ -30,25 +35,12 @@
       <view-overlay-grid class="overlay-no-events view-annotations">
         <template v-slot:top-left>
           <div class="annotation-cell">
-            <v-btn
+            <view-camera-menu
               class="pointer-events-all"
-              dark
-              icon
-              size="medium"
-              variant="text"
-              @click="resetCamera"
-            >
-              <v-icon size="medium" class="py-1">
-                mdi-camera-flip-outline
-              </v-icon>
-              <v-tooltip
-                location="right"
-                activator="parent"
-                transition="slide-x-transition"
-              >
-                Reset Camera
-              </v-tooltip>
-            </v-btn>
+              :view-id="viewId"
+              view-type="3D"
+              @reset-camera="resetCamera"
+            />
             <span class="ml-3">{{ currentImageMetadata.name }}</span>
           </div>
         </template>
@@ -84,6 +76,9 @@ import { useResetViewsEvents } from '@/src/components/tools/ResetViews.vue';
 import { onVTKEvent } from '@/src/composables/onVTKEvent';
 import { useViewStore } from '@/src/store/views';
 import ViewTypeSwitcher from '@/src/components/ViewTypeSwitcher.vue';
+import ViewCameraMenu from '@/src/components/ViewCameraMenu.vue';
+import { useViewBackground } from '@/src/composables/useViewBackground';
+import { useViewDisplayStore } from '@/src/store/view-display';
 
 interface Props {
   viewId: string;
@@ -116,6 +111,12 @@ function resetCamera() {
 }
 
 useResetViewsEvents().onClick(resetCamera);
+
+const { backgroundClass } = useViewBackground(viewId, vtkView);
+const displayStore = useViewDisplayStore();
+const showOrientationBox = computed(
+  () => displayStore.getConfig(viewId.value).orientationBox
+);
 
 useWebGLWatchdog(vtkView);
 useViewAnimationListener(vtkView, viewId, viewType);

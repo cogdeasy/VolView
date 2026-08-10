@@ -6,6 +6,7 @@ import { useCineFrame } from '@/src/composables/useCineFrame';
 import DicomQuickInfoButton from '@/src/components/DicomQuickInfoButton.vue';
 import { useImage } from '@/src/composables/useCurrentImage';
 import PlayControls from '@/src/components/PlayControls.vue';
+import { useViewDisplayStore } from '@/src/store/view-display';
 
 type Props = {
   viewId: string;
@@ -18,17 +19,22 @@ const { viewId, imageId } = toRefs(props);
 const { metadata } = useImage(imageId);
 const { frame, frameRange } = useCineFrame(viewId, imageId);
 const frameCount = computed(() => frameRange.value[1] + 1);
+
+const displayStore = useViewDisplayStore();
+const showAnnotations = computed(
+  () => displayStore.getConfig(viewId.value).cornerAnnotations
+);
 </script>
 
 <template>
   <view-overlay-grid class="overlay-no-events view-annotations">
     <template v-slot:top-left>
-      <div class="annotation-cell">
+      <div v-if="showAnnotations" class="annotation-cell">
         <span>{{ metadata.name }}</span>
       </div>
     </template>
     <template v-slot:bottom-left>
-      <div class="annotation-cell">
+      <div v-if="showAnnotations" class="annotation-cell">
         <div>
           <span class="frame-label">
             Frame: {{ frame + 1 }} / {{ frameCount }}
@@ -37,7 +43,7 @@ const frameCount = computed(() => frameRange.value[1] + 1);
       </div>
     </template>
     <template v-slot:top-right>
-      <div class="annotation-cell">
+      <div v-if="showAnnotations" class="annotation-cell">
         <dicom-quick-info-button :image-id="imageId"></dicom-quick-info-button>
       </div>
     </template>

@@ -57,6 +57,46 @@ describe('View store', () => {
     expect(store.activeView).toBe(volumeView.id);
   });
 
+  it('makes a view the only visible one and restores via a named layout', () => {
+    const store = useViewStore();
+    const target = store.visibleViews[2];
+
+    store.makeViewOnly(target.id);
+
+    expect(store.visibleViews.map((view) => view.id)).toEqual([target.id]);
+    expect(store.currentLayoutName).toBeNull();
+    expect(store.activeView).toBe(target.id);
+
+    store.switchToNamedLayout('Four Up');
+
+    expect(store.visibleViews).toHaveLength(4);
+    expect(store.currentLayoutName).toBe('Four Up');
+  });
+
+  it('makes a view primary while keeping the other views visible', () => {
+    const store = useViewStore();
+    const allIDs = store.visibleViews.map((view) => view.id);
+    const target = store.visibleViews[1];
+
+    store.makeViewPrimary(target.id);
+
+    expect(store.visibleViews.map((view) => view.id)).toEqual([
+      target.id,
+      ...allIDs.filter((id) => id !== target.id),
+    ]);
+    expect(store.currentLayoutName).toBeNull();
+  });
+
+  it('ignores layout actions for views that are not visible', () => {
+    const store = useViewStore();
+    const layoutBefore = store.visibleLayout;
+
+    store.makeViewOnly('not-a-view');
+    store.makeViewPrimary('not-a-view');
+
+    expect(store.visibleLayout).toEqual(layoutBefore);
+  });
+
   it('selects a visible view when session data IDs are rebound', () => {
     const store = useViewStore();
     const manifest: Manifest = {

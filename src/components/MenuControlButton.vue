@@ -1,7 +1,9 @@
 <script lang="ts">
 import { watch, ref, computed, defineComponent } from 'vue';
-import { useDisplay } from 'vuetify';
+import { useDisplay, type Anchor } from 'vuetify';
+import type { PropType } from 'vue';
 import ControlButton from './ControlButton.vue';
+import type { Maybe } from '@/src/types';
 
 export default defineComponent({
   name: 'MenuControlButton',
@@ -12,6 +14,8 @@ export default defineComponent({
     active: Boolean,
     disabled: Boolean,
     mobileOnlyMenu: Boolean,
+    // Overrides the side the menu opens on.
+    location: { type: String as PropType<Maybe<Anchor>>, default: null },
   },
   components: {
     ControlButton,
@@ -20,6 +24,10 @@ export default defineComponent({
     const display = useDisplay();
 
     const showLeft = computed(() => !display.mobile.value);
+
+    const menuLocation = computed<Anchor>(
+      () => props.location ?? (showLeft.value ? 'left' : 'right')
+    );
 
     const menuOn = ref(false);
 
@@ -40,7 +48,7 @@ export default defineComponent({
       }
     });
 
-    return { showLeft, menuOn, enableMenu };
+    return { showLeft, menuLocation, menuOn, enableMenu };
   },
 });
 </script>
@@ -50,7 +58,7 @@ export default defineComponent({
     no-click-animation
     :close-on-content-click="false"
     v-model="menuOn"
-    :location="showLeft ? 'left' : 'right'"
+    :location="menuLocation"
     class="overflow-auto"
   >
     <template #activator="{ props }">
