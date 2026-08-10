@@ -30,6 +30,15 @@ export function useViewBackground(
     if (!view) return;
     const [r, g, b, a] = BACKGROUND_COLORS[background.value];
     view.renderer.setBackground(r, g, b, a);
+
+    // Views share one WebGL canvas; each view's own canvas mirrors it through
+    // a 2D drawImage, which composites source-over by default and so keeps the
+    // previous opaque frame when the clear color is transparent.
+    const context2D = view.renderWindowView.getContext2D();
+    if (context2D) {
+      context2D.globalCompositeOperation = a === 0 ? 'copy' : 'source-over';
+    }
+
     view.requestRender({ immediate: true });
   });
 

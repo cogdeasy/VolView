@@ -35,12 +35,15 @@
       <view-overlay-grid class="overlay-no-events view-annotations">
         <template v-slot:top-left>
           <div class="annotation-cell">
-            <view-camera-menu
-              class="pointer-events-all"
-              :view-id="viewId"
-              view-type="3D"
-              @reset-camera="resetCamera"
-            />
+            <!-- v-menu renders no element at the activator position, so the
+                 pointer-events class has to live on a wrapper. -->
+            <span class="pointer-events-all">
+              <view-camera-menu
+                :view-id="viewId"
+                view-type="3D"
+                @reset-camera="resetCamera"
+              />
+            </span>
             <span class="ml-3">{{ currentImageMetadata.name }}</span>
           </div>
         </template>
