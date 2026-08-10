@@ -14,8 +14,8 @@ for the golden-path test.
 ## Running the app
 
 ```bash
-source ~/.nvm/nvm.sh && nvm use 22   # see engines: ^22.12.0 || >=24.0.0
-npm run dev                          # http://localhost:5173, sample data enabled
+source ~/.nvm/nvm.sh && nvm use       # .nvmrc pins 22; see CONTRIBUTING.md
+npm run dev                           # http://localhost:5173, sample data enabled
 ```
 
 Node 20 does not work: `vite` needs `^20.19.0 || >=22.12.0` and `@commitlint/cli` needs
@@ -124,8 +124,9 @@ that is what actually ships.
   assets against `/`. Hosts often serve static files with `{ index: false }` plus one explicit route
   for the entry point, so only the exact configured path works.
 - **Do not drop extra build copies under the host repo's `public/`.** ESLint walks the minified
-  workers and reports hundreds of CommonJS errors unless the directory is ignored in
-  `eslint.config.mjs`. Clean up any temporary copy before finishing.
+  workers and reports hundreds of CommonJS errors unless the directory is ignored in the *host*
+  repo's flat config (`eslint.config.mjs` in `event-driven-devin`; VolView's own is
+  `eslint.config.js`). Clean up any temporary copy before finishing.
 - **Check subpath assets objectively** with the Resource Timing API rather than eyeballing:
   `performance.getEntriesByType('resource').filter(r => r.name.includes('/<subpath>/'))` and assert
   every `responseStatus` is 200.

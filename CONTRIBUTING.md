@@ -4,10 +4,11 @@
 
 Before you begin, make sure your environment matches the following versions:
 
-- **Node.js**: `^22.12.0 || >=24.0.0` (22.x LTS recommended) — enforced by the
-  `engines` field in `package.json`. Node 20 no longer builds: `vite` needs
-  `^20.19.0 || >=22.12.0` and `@commitlint/cli` needs `>=22.12.0`, so the commit
-  hooks fail even on the newest 20.x. Node 21 and 23 are excluded by `vitest`.
+- **Node.js**: `^22.12.0 || >=24.0.0` (22.x LTS recommended; `nvm use` reads
+  `.nvmrc`). This is a development-only requirement — the published package is
+  browser code. Node 20 no longer builds: `vite` needs `^20.19.0 || >=22.12.0`
+  and `@commitlint/cli` needs `>=22.12.0`, so the commit hooks fail even on the
+  newest 20.x. Node 21 and 23 are excluded by `vitest`.
 - **npm**: >= 10.x (ships with Node 22)
 
 Check your versions:
