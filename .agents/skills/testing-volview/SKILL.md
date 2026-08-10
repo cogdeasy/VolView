@@ -14,9 +14,12 @@ for the golden-path test.
 ## Running the app
 
 ```bash
-source ~/.nvm/nvm.sh && nvm use 22   # Vite 8 rejects Node 20.x
+source ~/.nvm/nvm.sh && nvm use 22   # see engines: ^22.12.0 || >=24.0.0
 npm run dev                          # http://localhost:5173, sample data enabled
 ```
+
+Node 20 does not work: `vite` needs `^20.19.0 || >=22.12.0` and `@commitlint/cli` needs
+`>=22.12.0`, so even the newest 20.x fails the commit hooks. 21 and 23 are excluded by `vitest`.
 
 `npm run dev` sets `VITE_SHOW_SAMPLE_DATA=true`, which is what populates the "Sample Data" list in
 the left panel. A dev server may already be running — check with
@@ -33,7 +36,7 @@ HTML — a cheap way to prove you are not testing a stale build.
 - **MRI Cardiac 3D and Cine** (4 MB) — two series, gives 3 slice views + 3D volume render.
 - **3D US Fetus** (8 MB), **Ultrasound Cine** (225 KB).
 - **CTA Head and Neck** (80 MB) — only when you specifically need a large CT / good cinematic
-  renders. Budget ~50 s from click to a fully rendered four-up frame on this box, and expect the
+  renders. Budget ~50 s from click to a fully rendered four-up frame on the Devin VM, and expect the
   whole session to be slow (see "Large volumes and cinematic rendering" below). A numeric progress
   badge appears on the sample card while it downloads, so you can screenshot the in-flight state.
 
@@ -71,6 +74,10 @@ Input bindings traced from source (re-check if these files change):
 
 ## Large volumes and cinematic rendering (GPU-less boxes)
 
+> Timings and coordinates in this section were **observed on the Devin VM** (no GPU, software GL,
+> 1600x1122 Chrome). Treat them as orders of magnitude, not invariants — re-measure on other
+> hardware rather than reporting a deviation as a regression.
+
 This environment has no GPU; vtk.js falls back to software GL. With the 80 MB CT:
 - Each camera move / preset change kicks off a progressive cinematic accumulation that takes ~5–20 s
   to converge. Intermediate frames are blocky or near-black — **wait and re-screenshot before
@@ -103,8 +110,9 @@ This environment has no GPU; vtk.js falls back to software GL. With the 80 MB CT
 
 ## Testing a deployed/production bundle instead of the dev server
 
-VolView builds are sometimes committed into a host app and served from a subpath (e.g. the
-`/philips-radiology/` demo inside the `event-driven-devin` Express app, `PORT=3100 node app/server.js`).
+VolView builds are sometimes committed into a host app and served from a subpath (at the time of
+writing: the `/philips-radiology/` demo inside the `event-driven-devin` Express app, run locally
+with `PORT=3100 node app/server.js` — a separate repo, so check it still exists before relying on it).
 When the change under test is build-time behaviour, test the *committed* artifact, not a scratch copy —
 that is what actually ships.
 
@@ -142,6 +150,9 @@ A build may set `VITE_DEFAULT_URLS` / `VITE_DEFAULT_NAMES` so a bare visit auto-
   `performance.getEntriesByType('resource').filter(r => r.name.includes('<data host>')).length === 0`.
 
 ## Browser-automation quirks (important)
+
+> As above: **observed on the Devin VM**. The scaling factor and screen-size flag follow from this
+> box's Chrome launch options; confirm `window.innerWidth` yourself rather than assuming them.
 
 - **Mouse wheel over vtk.js canvases**: synthetic CDP wheel events (the browser tool's `scroll`)
   do NOT change the slice. Use a real X11 wheel event instead:
