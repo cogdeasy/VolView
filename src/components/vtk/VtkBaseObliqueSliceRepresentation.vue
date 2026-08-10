@@ -3,6 +3,8 @@ import { toRefs, watchEffect, inject } from 'vue';
 import { useImage } from '@/src/composables/useCurrentImage';
 import { useResliceRepresentation } from '@/src/core/vtk/useResliceRepresentation';
 import { useWindowingConfig } from '@/src/composables/useWindowingConfig';
+import { useSliceConfig } from '@/src/composables/useSliceConfig';
+import { InterpolationType } from '@kitware/vtk.js/Rendering/Core/ImageProperty/Constants';
 import { Maybe } from '@/src/types';
 import { VtkViewContext } from '@/src/components/vtk/context';
 import { SlabTypes } from '@kitware/vtk.js/Rendering/Core/ImageResliceMapper/Constants';
@@ -32,6 +34,7 @@ const { imageData } = useImage(imageID);
 
 // bind window configs
 const wlConfig = useWindowingConfig(viewID, imageID);
+const { interpolate } = useSliceConfig(viewID, imageID);
 
 // setup base image
 const sliceRep = useResliceRepresentation(view, imageData);
@@ -60,6 +63,13 @@ watchImmediate([planeNormal, planeOrigin], ([normal, origin]) => {
 watchEffect(() => {
   sliceRep.property.setColorLevel(wlConfig.level.value);
   sliceRep.property.setColorWindow(wlConfig.width.value);
+});
+
+watchEffect(() => {
+  sliceRep.property.setInterpolationType(
+    interpolate.value ? InterpolationType.LINEAR : InterpolationType.NEAREST
+  );
+  view.requestRender();
 });
 
 defineExpose(sliceRep);

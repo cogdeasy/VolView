@@ -21,6 +21,9 @@ export interface SliceConfig {
   min: number;
   max: number;
   syncState: boolean;
+  // Whether the slice is rendered with bilinear interpolation.
+  // When false, voxels are rendered with nearest-neighbor sampling.
+  interpolate: boolean;
 }
 
 export interface VolumeColorConfig {

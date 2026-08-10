@@ -165,6 +165,7 @@ const SliceConfig = z.object({
   min: z.number(),
   max: z.number(),
   syncState: z.boolean(),
+  interpolate: z.boolean().default(true),
 }) satisfies z.ZodType<SliceConfig>;
 
 const CameraConfig = z.object({

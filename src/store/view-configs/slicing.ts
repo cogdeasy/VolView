@@ -1,6 +1,6 @@
 import { clampValue } from '@/src/utils';
 import { defineStore } from 'pinia';
-import { reactive } from 'vue';
+import { reactive, ref } from 'vue';
 import {
   DoubleKeyRecord,
   deleteSecondKey,
@@ -20,6 +20,7 @@ export const defaultSliceConfig = (): SliceConfig => ({
   min: 0,
   max: 1,
   syncState: false,
+  interpolate: true,
 });
 
 export const useViewSliceStore = defineStore('viewSlice', () => {
@@ -27,14 +28,21 @@ export const useViewSliceStore = defineStore('viewSlice', () => {
   const viewStore = useViewStore();
   const configs = reactive<DoubleKeyRecord<SliceConfig>>({});
 
+  // Global default applied to slices that do not have a stored config yet.
+  const interpolateByDefault = ref(defaultSliceConfig().interpolate);
+
   const computeDefaultSliceConfig = (
     viewID: Maybe<string>,
     imageID: Maybe<string>
   ): SliceConfig => {
-    if (!viewID || !imageID) return defaultSliceConfig();
+    const base = {
+      ...defaultSliceConfig(),
+      interpolate: interpolateByDefault.value,
+    };
+    if (!viewID || !imageID) return base;
 
     const view = viewStore.getView(viewID);
-    if (view?.type !== '2D') return defaultSliceConfig();
+    if (view?.type !== '2D') return base;
 
     const { orientation } = view.options;
     const { metadata } = useImage(imageID);
@@ -43,10 +51,10 @@ export const useViewSliceStore = defineStore('viewSlice', () => {
     const dimMax = dimensions[ijkIndex];
 
     return {
+      ...base,
       min: 0,
       slice: Math.ceil((dimMax - 1) / 2),
       max: dimMax - 1,
-      syncState: false,
     };
   };
 
@@ -70,7 +78,8 @@ export const useViewSliceStore = defineStore('viewSlice', () => {
       next.slice === current.slice &&
       next.min === current.min &&
       next.max === current.max &&
-      next.syncState === current.syncState
+      next.syncState === current.syncState &&
+      next.interpolate === current.interpolate
     ) {
       return;
     }
@@ -100,6 +109,19 @@ export const useViewSliceStore = defineStore('viewSlice', () => {
     } else {
       deleteSecondKey(configs, dataID);
     }
+  };
+
+  /**
+   * Sets the interpolation mode for every view/image pair, and for any
+   * slices configured later in this session.
+   */
+  const setInterpolateAll = (interpolate: boolean) => {
+    interpolateByDefault.value = interpolate;
+    Object.keys(configs).forEach((viewID) => {
+      Object.keys(configs[viewID]).forEach((dataID) => {
+        updateConfig(viewID, dataID, { interpolate });
+      });
+    });
   };
 
   const toggleSyncImages = () => {
@@ -146,14 +168,18 @@ export const useViewSliceStore = defineStore('viewSlice', () => {
     Object.entries(config).forEach(([dataID, viewConfig]) => {
       if (viewConfig.slice) {
         updateConfig(viewID, dataID, viewConfig.slice);
+        // keep the global default in sync with the restored session
+        interpolateByDefault.value = viewConfig.slice.interpolate;
       }
     });
   };
 
   return {
     configs,
+    interpolateByDefault,
     getConfig,
     updateConfig,
+    setInterpolateAll,
     resetSlice,
     removeView,
     removeData,

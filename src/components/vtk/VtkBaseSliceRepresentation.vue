@@ -9,6 +9,7 @@ import { LPSAxis } from '@/src/types/lps';
 import { syncRefs } from '@vueuse/core';
 import { vtkFieldRef } from '@/src/core/vtk/vtkFieldRef';
 import { SlicingMode } from '@kitware/vtk.js/Rendering/Core/ImageMapper/Constants';
+import { InterpolationType } from '@kitware/vtk.js/Rendering/Core/ImageProperty/Constants';
 import { Maybe } from '@/src/types';
 import { VtkViewContext } from '@/src/components/vtk/context';
 
@@ -48,6 +49,15 @@ watchEffect(() => {
   const ijkIndex = lpsOrientation[axis.value];
   const mode = [SlicingMode.I, SlicingMode.J, SlicingMode.K][ijkIndex];
   sliceRep.mapper.setSlicingMode(mode);
+});
+
+watchEffect(() => {
+  sliceRep.property.setInterpolationType(
+    sliceConfig.interpolate.value
+      ? InterpolationType.LINEAR
+      : InterpolationType.NEAREST
+  );
+  view.requestRender();
 });
 
 // Cine: the per-view image is a single 2D plane (mapper slice is always 0).
