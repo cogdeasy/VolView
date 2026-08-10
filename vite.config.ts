@@ -13,6 +13,7 @@ import { sentryVitePlugin } from '@sentry/vite-plugin';
 import replace from '@rollup/plugin-replace';
 
 import { config } from './wdio.shared.conf';
+import { Brand, BrandColors } from './src/branding';
 
 function resolveNodeModulePath(moduleName: string) {
   const require = createRequire(import.meta.url);
@@ -48,7 +49,7 @@ function getPackageInfo() {
 
   return {
     versions: {
-      volview: mainPkg.version,
+      app: mainPkg.version,
       'vtk.js': vtkJsPkg.version,
       'itk-wasm': itkWasmPkg.version,
     },
@@ -106,7 +107,7 @@ export default defineConfig({
   },
   define: {
     __VERSIONS__: {
-      volview: pkgInfo.versions.volview,
+      app: pkgInfo.versions.app,
       'vtk.js': pkgInfo.versions['vtk.js'],
       'itk-wasm': pkgInfo.versions['itk-wasm'],
     },
@@ -161,6 +162,13 @@ export default defineConfig({
     createHtmlPlugin({
       minify: true,
       template: 'index.html',
+      inject: {
+        data: {
+          productName: Brand.productName,
+          description: Brand.description,
+          themeColor: BrandColors.primary,
+        },
+      },
     }),
     viteStaticCopy({
       targets: [

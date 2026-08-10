@@ -6,9 +6,14 @@ export const NO_NAME = '(no name)';
 
 // themes
 export const ThemeStorageKey = 'app-theme';
-export const DarkTheme = 'kw-dark';
-export const LightTheme = 'kw-light';
+export const DarkTheme = 'philips-dark';
+export const LightTheme = 'philips-light';
 export const DefaultTheme = DarkTheme;
+/** Theme names persisted by earlier releases, mapped to their replacements. */
+export const LegacyThemes = new Map([
+  ['kw-dark', DarkTheme],
+  ['kw-light', LightTheme],
+]);
 
 export const Messages = {
   WebGLLost: {

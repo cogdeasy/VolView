@@ -5,6 +5,7 @@ import { useDICOMStore } from '@/src/store/datasets-dicom';
 import { useImageCacheStore } from '@/src/store/image-cache';
 import { useSegmentGroupStore } from '@/src/store/segmentGroups';
 import { COMPOUND_EXTENSIONS } from '@/src/utils/path';
+import { Brand } from '@/src/branding';
 
 const MAX_ERROR_LENGTH = 4000;
 
@@ -72,8 +73,8 @@ export const generateBugReport = (error?: Error): string => {
   const sha = __GIT_SHORT_SHA__;
 
   const lines = [
-    '--- VolView Bug Report ---',
-    `Build: volview ${versions.volview} (${sha}) | vtk.js: ${versions['vtk.js']}, itk-wasm: ${versions['itk-wasm']}`,
+    `--- ${Brand.productName} Bug Report ---`,
+    `Build: ${Brand.productName} ${versions.app} (${sha}) | vtk.js: ${versions['vtk.js']}, itk-wasm: ${versions['itk-wasm']}`,
     `Browser: ${getBrowserInfo()}`,
     '',
     'Error:',

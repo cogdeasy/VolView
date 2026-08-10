@@ -4,6 +4,7 @@ import {
   useErrorReporting,
 } from '@/src/utils/errorReporting';
 import { computed } from 'vue';
+import { Brand } from '@/src/branding';
 
 const errorStore = useErrorReporting();
 const reportingEnabled = computed({
@@ -19,8 +20,8 @@ const reportingEnabled = computed({
     <v-card-title>Data Privacy and Security Notice</v-card-title>
     <v-card-text>
       <p class="mb-4">
-        VolView takes data privacy and security seriously. Here is how we keep
-        your data safe.
+        {{ Brand.company }} takes data privacy and security seriously. Here is
+        how {{ Brand.productName }} keeps your data safe.
       </p>
       <ul class="bullet-points">
         <li>
@@ -30,16 +31,16 @@ const reportingEnabled = computed({
         </li>
         <li>
           <span class="font-weight-bold">Error Reporting</span>: We collect
-          error reports in the event that VolView encounters issues. These
-          reports help us improve VolView's stability and only consist of code
-          stack traces where applicable. We do not collect your data, nor any
-          other identifiable information.
+          error reports in the event that {{ Brand.productShortName }}
+          encounters issues. These reports help us improve its stability and
+          only consist of code stack traces where applicable. We do not collect
+          your data, nor any other identifiable information.
         </li>
       </ul>
       <p>
         If you would like to opt-out of error reporting, you may turn it off
         using the following setting. Your choice will be respected for future
-        VolView sessions on this machine.
+        sessions on this machine.
       </p>
       <p class="mt-4 ml-4">
         <v-switch

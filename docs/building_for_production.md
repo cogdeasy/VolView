@@ -1,11 +1,11 @@
 # Building for Production
 
-To build VolView, ensure you have the latest `node.js` and `npm` tools installed. `git` is optional for fetching the VolView sources.
+To build Volume Viewer, ensure you have the latest `node.js` and `npm` tools installed. `git` is optional for fetching the Volume Viewer sources.
 
 To build, run the following commands.
 
 ```bash
-git clone https://github.com/Kitware/VolView.git
+git clone https://github.com/cogdeasy/VolView.git
 cd VolView/
 npm install
 npm run build

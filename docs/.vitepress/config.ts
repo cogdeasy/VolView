@@ -1,41 +1,30 @@
 import { defineConfig } from 'vitepress';
 
-const GA_ID = 'G-MH4N62W0Z9';
-
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-  title: 'VolView',
+  title: 'Philips Volume Viewer',
   base: '/VolView',
   description:
-    'Open-source and freely available radiological viewer that runs in your web browser and provide photo-realistic, interactive, 3D visualizations.',
+    'Radiological viewer that runs in your web browser and provides photo-realistic, interactive, 3D visualizations.',
 
   ignoreDeadLinks: 'localhostLinks',
 
-  head: [
-    ['link', { rel: 'icon', href: '/favicon.ico' }],
-    [
-      'script',
-      {
-        async: 'true',
-        src: `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`,
-      },
-    ],
-    [
-      'script',
-      {},
-      `window.dataLayer = window.dataLayer || [];\nfunction gtag(){dataLayer.push(arguments);}\ngtag('js', new Date());\ngtag('config', '${GA_ID}');`,
-    ],
-  ],
+  head: [['link', { rel: 'icon', href: '/favicon.ico' }]],
 
   themeConfig: {
     logo: './logo.svg',
-    nav: [{ text: 'Live Demo', link: 'https://volview.kitware.app' }],
+    nav: [
+      {
+        text: 'Philips Healthcare',
+        link: 'https://www.philips.com/healthcare',
+      },
+    ],
 
     sidebar: [
       {
         text: 'Introduction',
         items: [
-          { text: 'What is VolView?', link: '/' },
+          { text: 'What is Volume Viewer?', link: '/' },
           { text: 'Quick Start Guide', link: '/quick_start_guide' },
           { text: 'Screenshots', link: '/gallery' },
         ],
@@ -58,7 +47,7 @@ export default defineConfig({
         items: [
           { text: 'Overview', link: '/deployment_overview' },
           { text: 'Building for Production', link: '/building_for_production' },
-          { text: 'Deploying VolView', link: '/deploying_volview' },
+          { text: 'Deploying Volume Viewer', link: '/deploying_volview' },
           { text: 'Authentication & Authorization', link: '/authentication' },
           { text: 'Cross Origin Resource Sharing (CORS)', link: '/cors' },
         ],
@@ -66,11 +55,12 @@ export default defineConfig({
     ],
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/Kitware/VolView' },
+      { icon: 'github', link: 'https://github.com/cogdeasy/VolView' },
     ],
 
     footer: {
-      copyright: 'Copyright © 2020-PRESENT <strong>Kitware, Inc.</strong>',
+      copyright:
+        'Copyright © <strong>Koninklijke Philips N.V.</strong> Derived from VolView by Kitware, Inc.',
     },
   },
 });

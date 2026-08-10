@@ -1,6 +1,6 @@
 # Quick Start Guide
 
-The Welcome screen for VolView is annotated in the image shown below. More information on the components of the welcome screen is provided in the ["Welcome Screen"](welcome_screen.html) documentation.
+The Welcome screen for Volume Viewer is annotated in the image shown below. More information on the components of the welcome screen is provided in the ["Welcome Screen"](welcome_screen.html) documentation.
 
 ![Welcome](./assets/01-volview-welcome-notes.jpg)
 
@@ -13,19 +13,19 @@ Starting from the welcome screen, there are four simple constructs needed to gen
 
 ## 1. Loading Data
 
-VolView accepts DICOM data in a vareity of formats:
+Volume Viewer accepts DICOM data in a vareity of formats:
 
 - Folders: where a folder contains multiple DICOM objects (files)
 - Selections of files: a selection of multiple DICOM files
 - Zipped collections: containing a folder or selection of DICOM files
 
-From the Data tab (default tab when VolView is started) you can drag-and-drop DICOM data in any of the above formats or you can click to bring up a file browser and select your DICOM data. You can also select one of the sample DICOM collections listed, and it will be downloaded onto your machine from [https://data.kitware.com](https://data.kitware.com/#collection/586fef9f8d777f05f44a5c86/folder/634713cf11dab81428208e1e).
+From the Data tab (default tab when Volume Viewer is started) you can drag-and-drop DICOM data in any of the above formats or you can click to bring up a file browser and select your DICOM data. You can also select one of the sample DICOM collections listed, and it will be downloaded onto your machine from [https://data.kitware.com](https://data.kitware.com/#collection/586fef9f8d777f05f44a5c86/folder/634713cf11dab81428208e1e).
 
 [**_Watch the video!_**](https://youtu.be/4PvZd7yTzf0)
 
-VolView can also load many other image data formats. To learn more, see the documentation on ["Loading Data"](loading_data.html).
+Volume Viewer can also load many other image data formats. To learn more, see the documentation on ["Loading Data"](loading_data.html).
 
-**Note:** When new data has been loaded or when switching between tabs there may be a delay of up to 10 second before VolView displays the new data / tab.
+**Note:** When new data has been loaded or when switching between tabs there may be a delay of up to 10 second before Volume Viewer displays the new data / tab.
 
 ## 2. Radiological controls
 
@@ -45,7 +45,7 @@ For information on the toolbar, see the documentation on ["Mouse controls"](mous
 
 ## 3. Rendering controls
 
-VolView reads the DICOM tags of your data to determine appropriate preset parameter values for cinematic volume rendering for your data, but often you will want to tweak those presets to emphasize specific details. We recommend the following sequence of tweaks to improve your visualizations.
+Volume Viewer reads the DICOM tags of your data to determine appropriate preset parameter values for cinematic volume rendering for your data, but often you will want to tweak those presets to emphasize specific details. We recommend the following sequence of tweaks to improve your visualizations.
 
 1. Cinematic volume rendering involves two "transfer functions": one maps the recorded intensity values (e.g., CT hounsfield units) to opacity and the other maps recorded intensity values to color. Both can be adjusted using the controls at the top of the Rendering tab. The graph at the top shows a histogram of the recorded intensity values in light gray and the current opacity transfer function as an overlaid curve in black. In that graph, beneath the black curve, is a depiction of the color transfer function. ![Cinematic](./assets/16-volview-rendering.jpg)
    a. Begin by adjusting the opacity transfer function by a press-and-drag right/left on the top graph. ![Opacity](./assets/17-volview-opacity-notes.jpg)
@@ -66,4 +66,4 @@ VolView reads the DICOM tags of your data to determine appropriate preset parame
 
 ## 4. Saving / loading state
 
-Once you have made the measures and generated the visualizations that you want to store to recall later or share with others, use the icons at the top of the toolbar to Load and Save state files. For more information on the json format of these state files and how they can be used to integrate VolView with workflows and other services, see [State Files](state_files.html).
+Once you have made the measures and generated the visualizations that you want to store to recall later or share with others, use the icons at the top of the toolbar to Load and Save state files. For more information on the json format of these state files and how they can be used to integrate Volume Viewer with workflows and other services, see [State Files](state_files.html).

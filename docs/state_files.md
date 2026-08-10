@@ -1,6 +1,6 @@
 # State Files
 
-VolView state files save your scene configuration: annotations, camera positions, colormaps, layouts, and more. There are two formats:
+Volume Viewer state files save your scene configuration: annotations, camera positions, colormaps, layouts, and more. There are two formats:
 
 ## Zip State Files (`*.volview.zip`)
 
@@ -64,6 +64,6 @@ Example manifest:
 
 ## Loading State Files
 
-- **Drag and drop** onto VolView
+- **Drag and drop** onto Volume Viewer
 - **File browser** via the "Folder" icon below the save button
 - **URL parameter**: `?urls=[https://example.com/session.volview.json]`

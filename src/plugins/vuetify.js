@@ -1,37 +1,35 @@
 import { createVuetify } from 'vuetify';
 import { useLocalStorage } from '@vueuse/core';
 
-import KitwareMark from '@/src/components/icons/KitwareLogoIcon.vue';
+import { BrandColors } from '@/src/branding';
 import {
   DefaultTheme,
   DarkTheme,
   LightTheme,
+  LegacyThemes,
   ThemeStorageKey,
 } from '@/src/constants';
 
 const vuetify = createVuetify({
-  icons: {
-    values: {
-      kitwareMark: {
-        component: KitwareMark,
-      },
-    },
-  },
   theme: {
     defaultTheme: DefaultTheme,
     themes: {
       [DarkTheme]: {
         dark: true,
         colors: {
-          'selection-bg-color': '#01579b',
-          'selection-border-color': '#01579b',
+          primary: BrandColors.primaryLight,
+          secondary: BrandColors.accent,
+          'selection-bg-color': BrandColors.selectionDark,
+          'selection-border-color': BrandColors.selectionDark,
         },
       },
       [LightTheme]: {
         dark: false,
         colors: {
-          'selection-bg-color': '#b3e5fc',
-          'selection-border-color': '#b3e5fc',
+          primary: BrandColors.primary,
+          secondary: BrandColors.accent,
+          'selection-bg-color': BrandColors.selectionLight,
+          'selection-border-color': BrandColors.selectionLight,
           surface: '#f0f0f0',
           'on-surface-variant': '#d0d0d0',
         },
@@ -47,7 +45,9 @@ const vuetify = createVuetify({
 });
 
 const theme = useLocalStorage(ThemeStorageKey, DefaultTheme);
-if (theme.value !== DarkTheme && theme.value !== LightTheme) {
+if (LegacyThemes.has(theme.value)) {
+  theme.value = LegacyThemes.get(theme.value);
+} else if (theme.value !== DarkTheme && theme.value !== LightTheme) {
   theme.value = DefaultTheme;
 }
 vuetify.theme.global.name.value = theme.value;

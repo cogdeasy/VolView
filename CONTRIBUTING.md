@@ -135,14 +135,14 @@ cd path/to/vtk-js/dist/esm
 npm link
 ```
 
-3. Reference the symbolic link in your local VolView build:
+3. Reference the symbolic link in your local Volume Viewer build:
 
 ```bash
 cd path/to/VolView
 npm link --no-save @kitware/vtk.js
 ```
 
-4. Build and run VolView:
+4. Build and run Volume Viewer:
 
 ```bash
 npm run dev

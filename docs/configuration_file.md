@@ -1,6 +1,6 @@
 # Configuration JSON File
 
-By loading a JSON file, you can set VolView's configuration:
+By loading a JSON file, you can set Volume Viewer's configuration:
 
 - View layouts (grid size, view types, or hierarchical layouts)
 - Disabled view types
@@ -18,7 +18,7 @@ https://volview.kitware.com/?config=https://example.com/config.json&urls=https:/
 
 ## View Layouts
 
-Define one or more named layouts using the `layouts` key. VolView will use the first layout as the default. Each named layout will be in the layout selector menu. Layout are specified in three formats:
+Define one or more named layouts using the `layouts` key. Volume Viewer will use the first layout as the default. Each named layout will be in the layout selector menu. Layout are specified in three formats:
 
 ### 1. Grid with View Types (2D String Array)
 
@@ -167,7 +167,7 @@ should use the default labels.
 ## Segment Group File Format
 
 The `segmentGroupSaveFormat` key specifies the file extension of the segment group images
-VolView will include in the volview.zip file.
+Volume Viewer will include in the volview.zip file.
 
 ```json
 {
@@ -183,7 +183,7 @@ hdf5, iwi.cbor, mha, nii, nii.gz, nrrd, vtk
 
 ## Automatic Layers and Segment Groups by File Name
 
-When loading multiple files, VolView can automatically associate related images based on file naming patterns.
+When loading multiple files, Volume Viewer can automatically associate related images based on file naming patterns.
 Example: `base.[extension].nrrd` will match `base.nii`.
 
 The extension must appear anywhere in the filename after splitting by dots, and the filename must start with the same prefix as the base image (everything before the first dot). Files matching `base.[extension]...` will be associated with a base image named `base.*`.
@@ -227,7 +227,7 @@ Defaults to `''` which disables matching.
 ## Keyboard Shortcuts
 
 Configure the keys to activate tools, change selected labels, and more.
-All [shortcut actions](https://github.com/Kitware/VolView/blob/main/src/constants.ts#L53) are under the `ACTIONS` variable.
+All [shortcut actions](https://github.com/cogdeasy/VolView/blob/main/src/constants.ts#L53) are under the `ACTIONS` variable.
 
 To configure a key for an action, add its action name and the key(s) under the `shortcuts` section. For key combinations, use `+` like `Ctrl+f`.
 
