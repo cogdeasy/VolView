@@ -15,6 +15,7 @@ export default defineComponent({
       type: Object as PropType<Layer>,
     },
   },
+  emits: ['remove'],
   setup(props) {
     const { layer } = toRefs(props);
     const imageCacheStore = useImageCacheStore();
@@ -65,11 +66,26 @@ export default defineComponent({
 
 <template>
   <div class="mx-2" v-if="blendConfig">
-    <v-tooltip :text="imageName" location="top">
-      <template v-slot:activator="{ props }">
-        <h4 class="text-ellipsis" v-bind="props">{{ imageName }}</h4>
-      </template>
-    </v-tooltip>
+    <div class="d-flex align-center">
+      <v-tooltip :text="imageName" location="top">
+        <template v-slot:activator="{ props }">
+          <h4 class="text-ellipsis" v-bind="props">{{ imageName }}</h4>
+        </template>
+      </v-tooltip>
+      <v-btn
+        icon
+        size="small"
+        density="compact"
+        variant="text"
+        class="ml-auto flex-shrink-0"
+        :aria-label="`Remove layer ${imageName}`"
+        data-testid="layer-remove-button"
+        @click="$emit('remove')"
+      >
+        <v-icon>mdi-delete</v-icon>
+        <v-tooltip location="top" activator="parent">Remove layer</v-tooltip>
+      </v-btn>
+    </div>
     <!-- padding top so thumb value tip does not overlap image name too much -->
     <v-slider
       class="pt-4"

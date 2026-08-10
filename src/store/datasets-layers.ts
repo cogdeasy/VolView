@@ -5,6 +5,7 @@ import { type DataSelection, getImage } from '@/src/utils/dataSelection';
 import { Maybe } from '@/src/types';
 import { ensureSameSpace } from '@/src/io/resample/resample';
 import { useImageCacheStore } from '@/src/store/image-cache';
+import useLayerColoringStore from '@/src/store/view-configs/layers';
 import { NO_NAME } from '@/src/constants';
 import { useErrorMessage } from '../composables/useErrorMessage';
 import { Manifest, StateFile } from '../io/state-file/schema';
@@ -91,6 +92,10 @@ export const useLayersStore = defineStore('layer', () => {
     parentToLayers[parent] = layers.filter((layer) => layer !== layerToDelete);
 
     imageCacheStore.removeImage(layerToDelete.id);
+    // Layer coloring is keyed by the layer id, which no store cleans up on
+    // image deletion. Without this, re-adding the same parent/source pair
+    // silently inherits the removed layer's opacity and color preset.
+    useLayerColoringStore().removeData(layerToDelete.id);
   }
 
   function getLayers(key: Maybe<DataSelection>) {
