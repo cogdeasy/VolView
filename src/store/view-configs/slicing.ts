@@ -117,8 +117,16 @@ export const useViewSliceStore = defineStore('viewSlice', () => {
    */
   const setInterpolateAll = (interpolate: boolean) => {
     interpolateByDefault.value = interpolate;
-    Object.keys(configs).forEach((viewID) => {
-      Object.keys(configs[viewID]).forEach((dataID) => {
+    // Materialize a config for every view/image pair, including pairs that
+    // were still on the computed default: only stored configs are serialized
+    // into the session file.
+    const viewIDs = new Set([...viewStore.viewIDs, ...Object.keys(configs)]);
+    viewIDs.forEach((viewID) => {
+      const dataIDs = new Set([
+        ...imageStore.idList,
+        ...Object.keys(configs[viewID] ?? {}),
+      ]);
+      dataIDs.forEach((dataID) => {
         updateConfig(viewID, dataID, { interpolate });
       });
     });

@@ -1,14 +1,17 @@
 import { describe, it, beforeEach, expect } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
+import vtkImageData from '@kitware/vtk.js/Common/DataModel/ImageData';
 import useViewSliceStore from '@/src/store/view-configs/slicing';
+import { useImageStore } from '@/src/store/datasets-images';
+import { useViewStore } from '@/src/store/views';
 import type { StateFile } from '@/src/io/state-file/schema';
 
-const makeStateFile = () =>
+const makeStateFile = (viewIDs: string[] = ['view-1']) =>
   ({
     manifest: {
       datasets: [{ id: 'image-1' }],
       views: [],
-      viewByID: { 'view-1': { id: 'view-1' } },
+      viewByID: Object.fromEntries(viewIDs.map((id) => [id, { id }])),
     },
   }) as unknown as StateFile;
 
@@ -31,6 +34,23 @@ describe('Slice interpolation config', () => {
     expect(store.getConfig('view-1', 'image-1').interpolate).toBe(false);
     // an image without a stored config picks up the new default
     expect(store.getConfig('view-2', 'image-2').interpolate).toBe(false);
+  });
+
+  it('materializes configs so a toggle-only change is serialized', () => {
+    const imageStore = useImageStore();
+    imageStore.addVTKImageData('t2', vtkImageData.newInstance(), {
+      id: 'image-1',
+    });
+    const viewStore = useViewStore();
+    const store = useViewSliceStore();
+
+    store.setInterpolateAll(false);
+
+    const stateFile = makeStateFile(viewStore.viewIDs);
+    store.serialize(stateFile);
+    const savedConfig =
+      stateFile.manifest.viewByID![viewStore.viewIDs[0]].config!;
+    expect(savedConfig['image-1'].slice!.interpolate).toBe(false);
   });
 
   it('round-trips through serialize/deserialize', () => {
