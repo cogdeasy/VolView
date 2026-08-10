@@ -93,6 +93,19 @@
   text-overflow: ellipsis;
 }
 
+.view-bg-white .view-annotations {
+  color: black;
+  /* prettier-ignore */
+  text-shadow:  1px  1px white,
+                1px -1px white,
+               -1px -1px white,
+               -1px  1px white,
+                0px  1px white,
+                0px -1px white,
+                1px  0px white,
+               -1px  0px white;
+}
+
 .annotation-cell {
   padding: 4px;
   white-space: nowrap;

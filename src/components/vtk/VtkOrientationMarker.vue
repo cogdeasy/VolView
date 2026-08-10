@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { inject } from 'vue';
+import { inject, onScopeDispose } from 'vue';
 import { VtkViewContext } from '@/src/components/vtk/context';
 import { useOrientationMarker } from '@/src/core/vtk/useOrientationMarker';
 import vtkAnnotatedCubeActor from '@kitware/vtk.js/Rendering/Core/AnnotatedCubeActor';
@@ -13,6 +13,12 @@ AnnotatedCubePresets.applyPreset('default', actor); // applies color
 AnnotatedCubePresets.applyPreset('lps', actor);
 
 useOrientationMarker(actor, view.interactor);
+
+// Removing the marker doesn't dirty the renderer, so the cube would stay
+// painted until the next unrelated render.
+onScopeDispose(() => {
+  view.requestRender({ immediate: true });
+});
 </script>
 
 <template><slot></slot></template>
