@@ -2,7 +2,7 @@
 /* global __VERSIONS__ */
 
 import { useDisplay } from 'vuetify';
-import PhilipsFullLogo from '@/src/components/icons/PhilipsFullLogo.vue';
+import GskFullLogo from '@/src/components/icons/GskFullLogo.vue';
 import { Brand, copyright } from '@/src/branding';
 import { useKeyboardShortcutsStore } from '@/src/store/keyboard-shortcuts';
 
@@ -24,7 +24,7 @@ const versions = {
 <template>
   <v-card>
     <v-card-title class="d-flex flex-row justify-center">
-      <philips-full-logo />
+      <gsk-full-logo />
     </v-card-title>
     <v-alert color="secondary" variant="tonal" class="notice">
       For investigational use only
@@ -144,7 +144,7 @@ const versions = {
           </a>
         </li>
         <li>
-          <span>{{ Brand.company }} Healthcare: </span>
+          <span>{{ Brand.company }} R&amp;D: </span>
           <a
             rel="noopener noreferrer"
             target="_blank"

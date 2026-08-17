@@ -6,30 +6,30 @@
  */
 
 export const BrandColors = {
-  /** Philips Blue (Pantone 2175 C) */
-  primary: '#0B5ED7',
-  primaryDark: '#0A4FB4',
-  primaryLight: '#3D82E3',
-  accent: '#00A3E0',
-  /** Lockup color on dark surfaces, where the brand blue does not read. */
+  /** GSK Orange */
+  primary: '#F36633',
+  primaryDark: '#D9531F',
+  primaryLight: '#F9A31B',
+  accent: '#FA7819',
+  /** Lockup color on dark surfaces, where the brand orange does not read. */
   onDark: '#FFFFFF',
-  selectionDark: '#0A3F8F',
-  selectionLight: '#CFE0FA',
+  selectionDark: '#8A3B12',
+  selectionLight: '#FCE0CE',
 } as const;
 
 export const Brand = {
-  company: 'Philips',
-  companyLegalName: 'Koninklijke Philips N.V.',
-  productName: 'Philips Volume Viewer',
+  company: 'GSK',
+  companyLegalName: 'GSK plc',
+  productName: 'GSK Volume Viewer',
   /** Product name without the company prefix, for use next to the wordmark. */
   productShortName: 'Volume Viewer',
-  tagline: 'Innovation and you',
+  tagline: 'Ahead together',
   description:
-    'Philips Volume Viewer is a browser-based radiological viewer for ' +
+    'GSK Volume Viewer is a browser-based radiological viewer for ' +
     'interactive, cinematic 3D visualization and annotation of DICOM data.',
   urls: {
-    company: 'https://www.philips.com',
-    healthcare: 'https://www.philips.com/healthcare',
+    company: 'https://www.gsk.com',
+    healthcare: 'https://www.gsk.com/en-gb/research-and-development/',
     sourceCode: 'https://github.com/cogdeasy/VolView',
     issues: 'https://github.com/cogdeasy/VolView/issues',
     documentation: 'https://cogdeasy.github.io/VolView',
