@@ -3,8 +3,8 @@ import { ref } from 'vue';
 import { useDisplay } from 'vuetify';
 import CloseableDialog from '@/src/components/CloseableDialog.vue';
 import AboutBox from '@/src/components/AboutBox.vue';
-import PhilipsFullLogo from '@/src/components/icons/PhilipsFullLogo.vue';
-import PhilipsLogo from '@/src/components/icons/PhilipsLogo.vue';
+import GskFullLogo from '@/src/components/icons/GskFullLogo.vue';
+import GskLogo from '@/src/components/icons/GskLogo.vue';
 import { useKeyboardShortcutsStore } from '@/src/store/keyboard-shortcuts';
 
 const emit = defineEmits(['click:left-menu']);
@@ -18,8 +18,8 @@ const keyboardStore = useKeyboardShortcutsStore();
   <v-app-bar app clipped-left :height="48">
     <v-btn icon="mdi-menu" @click="emit('click:left-menu')" />
     <v-toolbar-title class="d-flex flex-row align-center">
-      <philips-logo v-if="mobile" />
-      <philips-full-logo v-else />
+      <gsk-logo v-if="mobile" />
+      <gsk-full-logo v-else />
     </v-toolbar-title>
     <v-btn
       variant="text"

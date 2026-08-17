@@ -2,7 +2,7 @@ import { defineConfig } from 'vitepress';
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-  title: 'Philips Volume Viewer',
+  title: 'GSK Volume Viewer',
   base: '/VolView',
   description:
     'Radiological viewer that runs in your web browser and provides photo-realistic, interactive, 3D visualizations.',
@@ -15,8 +15,8 @@ export default defineConfig({
     logo: './logo.svg',
     nav: [
       {
-        text: 'Philips Healthcare',
-        link: 'https://www.philips.com/healthcare',
+        text: 'GSK R&amp;D',
+        link: 'https://www.gsk.com/en-gb/research-and-development/',
       },
     ],
 
@@ -60,7 +60,7 @@ export default defineConfig({
 
     footer: {
       copyright:
-        'Copyright © <strong>Koninklijke Philips N.V.</strong> Derived from VolView by Kitware, Inc.',
+        'Copyright © <strong>GSK plc</strong> Derived from VolView by Kitware, Inc.',
     },
   },
 });
