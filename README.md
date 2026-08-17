@@ -30,9 +30,9 @@ components in `src/components/icons/` and the favicons in `public/`) re-skins th
 whole application.
 
 The GSK wordmark is a trademark of GSK plc. It is drawn as SVG paths
-(`GskWordmark.vue`) filled with the brand orange gradient, so it renders
-identically on light and dark surfaces; the product name beside it inherits
-`currentColor` and follows the theme.
+(`GskWordmark.vue`) filled with the flat brand orange, so it renders identically
+on light and dark surfaces; the product name beside it inherits `currentColor`
+and follows the theme.
 
 # Origins and Citation
 

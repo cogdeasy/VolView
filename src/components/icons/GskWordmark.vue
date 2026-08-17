@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useId } from 'vue';
+import { Brand } from '@/src/branding';
 
 withDefaults(
   defineProps<{
@@ -14,9 +14,6 @@ withDefaults(
   }>(),
   { size: 20, label: undefined }
 );
-
-/** Unique per instance, so several wordmarks can share a page. */
-const gradientId = `gsk-wordmark-gradient-${useId()}`;
 </script>
 
 <template>
@@ -29,14 +26,9 @@ const gradientId = `gsk-wordmark-gradient-${useId()}`;
     :aria-label="label"
     :aria-hidden="label ? undefined : true"
   >
-    <linearGradient :id="gradientId" x1="100%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#F9A31B" />
-      <stop offset="50%" stop-color="#FA7819" />
-      <stop offset="100%" stop-color="#F0530A" />
-    </linearGradient>
     <g
       transform="translate(0,757) scale(0.1,-0.1)"
-      :fill="`url(#${gradientId})`"
+      :fill="Brand.colors.primary"
       stroke="none"
     >
       <path
