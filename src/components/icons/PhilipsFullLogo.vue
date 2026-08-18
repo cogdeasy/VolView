@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import GskWordmark from '@/src/components/icons/GskWordmark.vue';
+import PhilipsWordmark from '@/src/components/icons/PhilipsWordmark.vue';
 import { Brand } from '@/src/branding';
 import { useBrandLogoColor } from '@/src/composables/useBrandLogoColor';
 
@@ -8,21 +8,21 @@ const logoColor = useBrandLogoColor();
 
 <template>
   <div
-    class="gsk-logo"
+    class="philips-logo"
     role="img"
     :aria-label="Brand.productName"
     :style="{ color: logoColor }"
   >
-    <gsk-wordmark :size="24" />
-    <span class="gsk-logo__rule" />
-    <span class="gsk-logo__product" aria-hidden="true">{{
+    <philips-wordmark :size="20" />
+    <span class="philips-logo__rule" />
+    <span class="philips-logo__product" aria-hidden="true">{{
       Brand.productShortName
     }}</span>
   </div>
 </template>
 
 <style scoped>
-.gsk-logo {
+.philips-logo {
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -30,7 +30,7 @@ const logoColor = useBrandLogoColor();
   line-height: 1;
 }
 
-.gsk-logo__rule {
+.philips-logo__rule {
   width: 1px;
   height: 24px;
   background-color: currentColor;
@@ -38,7 +38,7 @@ const logoColor = useBrandLogoColor();
   margin: 0 2px;
 }
 
-.gsk-logo__product {
+.philips-logo__product {
   font-size: 18px;
   font-weight: 300;
   letter-spacing: 0.02em;
