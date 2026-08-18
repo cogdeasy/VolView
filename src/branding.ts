@@ -39,5 +39,7 @@ export const Brand = {
 } as const;
 
 /** Copyright line shown in the about dialog. */
-export const copyright = () =>
-  `© ${new Date().getFullYear()} ${Brand.companyLegalName}. All rights reserved.`;
+export const copyright = () => {
+  const legalName = Brand.companyLegalName.replace(/\.$/, '');
+  return `© ${new Date().getFullYear()} ${legalName}. All rights reserved.`;
+};
