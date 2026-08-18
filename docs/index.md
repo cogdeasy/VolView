@@ -1,6 +1,6 @@
-# What is GSK Volume Viewer?
+# What is Philips Volume Viewer?
 
-GSK Volume Viewer is a radiological viewer developed for clinical professionals. With Volume Viewer, you can gain a deeper understanding of your data through high-quality, interactive visualizations, including cinematic volume renderings. Since Volume Viewer runs in your browser, you do not need to install software, and your data stays securely on your machine.
+Philips Volume Viewer is a radiological viewer developed for clinical professionals. With Volume Viewer, you can gain a deeper understanding of your data through high-quality, interactive visualizations, including cinematic volume renderings. Since Volume Viewer runs in your browser, you do not need to install software, and your data stays securely on your machine.
 
 ![Welcome](./assets/VolView-Overview.jpg)
 
@@ -16,17 +16,17 @@ Major features of Volume Viewer include:
 
 4. **Simple, Scalable, and Secure**: Simply visit a website to install Volume Viewer. Once it is running, all data handling, processing, and visualization occurs on your machine. Data you load into Volume Viewer never leaves your machine. And Volume Viewer is designed to run on any web browser: from the one on your phone to the one running on your most powerful workstations. It will take advantage of local GPU resources to accelerate its rendering processes, but if none is available, it will still generate the same high quality renderings, albeit a bit slower.
 
-5. **Foundation for the Future**: Volume Viewer is meant to serve as a foundation for future GSK imaging products, supporting client-server workflows and streamlined, task-specific interfaces.
+5. **Foundation for the Future**: Volume Viewer is meant to serve as a foundation for future Philips imaging products, supporting client-server workflows and streamlined, task-specific interfaces.
 
-Volume Viewer is **not FDA approved for any purpose**. For more information, visit [GSK R&D](https://www.gsk.com/en-gb/research-and-development/).
+Volume Viewer is **not FDA approved for any purpose**. For more information, visit [Philips Healthcare](https://www.philips.com/healthcare).
 
 ## Origins
 
-GSK Volume Viewer is derived from [VolView](https://github.com/Kitware/VolView), the open-source radiological viewer developed by Kitware, Inc.
+Philips Volume Viewer is derived from [VolView](https://github.com/Kitware/VolView), the open-source radiological viewer developed by Kitware, Inc.
 
 VolView version 1.1 was released on Sept. 21, 1999 to provide clinical professionals with an intuitive interface to industry-leading volume rendering capabilities. Built using [VTK](https://vtk.org), it was extremely innovative at the time. It provided interactive volume renderings that did not require dedicated systems purchased for big-name medical device manufacturers.
 
-VolView 4.0, released in 2022, is built using the javascript version of VTK (i.e., [vtk.js](https://kitware.github.io/vtk-js/index.html)), runs in web browsers, and provides cinematic volume rendering capabilities that are only broadly available in dedicated systems. GSK Volume Viewer continues that platform with plans to support WebXR for holographic and AR/VR devices as well as companion libraries for advanced image analysis (e.g., [itk.wasm](https://github.com/InsightSoftwareConsortium/itk-wasm)) and AI algorithms (e.g., via [MONAI](https://monai.io)).
+VolView 4.0, released in 2022, is built using the javascript version of VTK (i.e., [vtk.js](https://kitware.github.io/vtk-js/index.html)), runs in web browsers, and provides cinematic volume rendering capabilities that are only broadly available in dedicated systems. Philips Volume Viewer continues that platform with plans to support WebXR for holographic and AR/VR devices as well as companion libraries for advanced image analysis (e.g., [itk.wasm](https://github.com/InsightSoftwareConsortium/itk-wasm)) and AI algorithms (e.g., via [MONAI](https://monai.io)).
 
 ## Roadmap
 

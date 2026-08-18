@@ -1,10 +1,10 @@
-# GSK Volume Viewer
+# Philips Volume Viewer
 
 ![A screenshot of a sample Volume Viewer session](./docs/assets/VolView-Overview.jpg)
 
 ## Introduction
 
-GSK Volume Viewer is a radiological viewer developed for clinical professionals. With Volume Viewer, you can have a deeper visual understanding of your data through interactive, cinematic volume rendering and easily visualize your DICOM data in 3D. Since Volume Viewer runs in your browser, you don’t need to install software and your data stays securely on your machine.
+Philips Volume Viewer is a radiological viewer developed for clinical professionals. With Volume Viewer, you can have a deeper visual understanding of your data through interactive, cinematic volume rendering and easily visualize your DICOM data in 3D. Since Volume Viewer runs in your browser, you don’t need to install software and your data stays securely on your machine.
 
 Major features of Volume Viewer include:
 
@@ -16,7 +16,7 @@ Major features of Volume Viewer include:
 
 4. Simple, Scalable, and Secure: Simply visit a website to install Volume Viewer. Once it is running, all data handling, processing, and visualization occurs on your machine. Data you load into Volume Viewer never leaves your machine. And Volume Viewer is designed to run on any web browser: from the one on your phone to the one running on your most powerful workstations. It will take advantage of local GPU resources to accelerate its rendering processes, but if none is available, it will still generate the same high quality renderings, albeit a bit slower.
 
-5. A foundation for the future: Volume Viewer serves as a foundation for future GSK imaging products, supporting client-server workflows and streamlined, task-specific interfaces.
+5. A foundation for the future: Volume Viewer serves as a foundation for future Philips imaging products, supporting client-server workflows and streamlined, task-specific interfaces.
 
 ## Documentation
 
@@ -29,14 +29,14 @@ module, [`src/branding.ts`](src/branding.ts). Editing that file (plus the logo
 components in `src/components/icons/` and the favicons in `public/`) re-skins the
 whole application.
 
-The GSK wordmark is a trademark of GSK plc. It is drawn as SVG paths
-(`GskWordmark.vue`) filled with the brand orange gradient, so it renders
-identically on light and dark surfaces; the product name beside it inherits
-`currentColor` and follows the theme.
+The Philips shield and wordmark are trademarks of Koninklijke Philips N.V. They
+are drawn as single-color paths (`PhilipsShield.vue`, `PhilipsWordmark.vue`) that
+inherit `currentColor`, so the lockup renders in Philips Blue on light surfaces
+and white on dark ones.
 
 # Origins and Citation
 
-GSK Volume Viewer is derived from [VolView](https://github.com/Kitware/VolView), the open-source radiological viewer developed by Kitware, Inc. The cinematic rendering technique it uses is described in:
+Philips Volume Viewer is derived from [VolView](https://github.com/Kitware/VolView), the open-source radiological viewer developed by Kitware, Inc. The cinematic rendering technique it uses is described in:
 
 [Jiayi Xu, Gaspard Thevenon, Timothee Chabat, Matthew McCormick, Forrest Li,Tom Birdsong,Ken Martin, Yueh Lee, and Stephen Aylward, "Interactive, in-browser cinematic volume rendering of medical images", MICCAI 2022 AE-CAI Workshop, Singapore, Sept 19, 2022, Journal version accepted for publication in Computer Methods in Computer Methods in Biomechanics and Biomedical Engineering](https://workshops.ap-lab.ca/aecai2022/wp-content/uploads/sites/10/2022/09/Paper48_IICVR_camera_ready_paper.pdf):
 
