@@ -27,6 +27,16 @@
       ></v-switch>
 
       <v-switch
+        :label="`Annotation Labels and Measurements (${
+          overlayTextVisible ? 'On' : 'Off'
+        })`"
+        v-model="overlayTextVisible"
+        color="secondary"
+        density="compact"
+        hide-details
+      ></v-switch>
+
+      <v-switch
         v-if="errorReportingConfigured"
         :label="`Error Reporting (${reportingEnabled ? 'On' : 'Off'})`"
         v-model="reportingEnabled"
@@ -52,6 +62,7 @@ import { useLocalStorage } from '@vueuse/core';
 
 import { useKeyboardShortcutsStore } from '@/src/store/keyboard-shortcuts';
 import { useViewCameraStore } from '@/src/store/view-configs/camera';
+import { useAnnotationDisplayStore } from '@/src/store/tools/annotationDisplay';
 import DicomWebSettings from './dicom-web/DicomWebSettings.vue';
 import ServerSettings from './ServerSettings.vue';
 import { DarkTheme, LightTheme, ThemeStorageKey } from '../constants';
@@ -78,6 +89,7 @@ export default defineComponent({
     });
 
     const { disableCameraAutoReset } = storeToRefs(useViewCameraStore());
+    const { overlayTextVisible } = storeToRefs(useAnnotationDisplayStore());
 
     const keyboardStore = useKeyboardShortcutsStore();
     const openKeyboardShortcuts = () => {
@@ -90,6 +102,7 @@ export default defineComponent({
       errorReportingConfigured,
       openKeyboardShortcuts,
       disableCameraAutoReset,
+      overlayTextVisible,
     };
   },
   components: {

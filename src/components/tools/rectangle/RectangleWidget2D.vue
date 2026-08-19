@@ -34,6 +34,7 @@ import { useCineFrame } from '@/src/composables/useCineFrame';
 import { Maybe } from '@/src/types';
 import { whenever } from '@vueuse/core';
 import { toolRenderSlice } from '@/src/core/annotations/locator';
+import { RectangleMeasurements } from '@/src/core/annotations/measurements';
 
 const useStore = useRectangleStore;
 const vtkWidgetFactory = vtkRectangleWidget;
@@ -165,6 +166,9 @@ export default defineComponent({
       secondPoint: computed(() => {
         return visibleStates.secondPoint ? tool.value?.secondPoint : undefined;
       }),
+      measurements: computed<RectangleMeasurements | undefined>(
+        () => toolStore.measurementsByID[toolId.value]
+      ),
     };
   },
 });
@@ -179,5 +183,7 @@ export default defineComponent({
     :color="tool.color"
     :stroke-width="tool.strokeWidth"
     :fill-color="tool.fillColor"
+    :label-name="tool.labelName"
+    :measurements="measurements"
   />
 </template>

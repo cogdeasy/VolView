@@ -183,5 +183,6 @@ export default defineComponent({
     :placing="tool.placing"
     :finishable="editState.finishable"
     :show-handles="showHandles"
+    :label-name="tool.labelName"
   />
 </template>

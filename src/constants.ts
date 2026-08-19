@@ -25,6 +25,11 @@ export const Messages = {
   },
 } as const;
 
+// annotation overlay text
+export const AnnotationOverlayTextStorageKey = 'annotation-overlay-text';
+export const ANNOTATION_TOOL_TEXT_SIZE = 14; // CSS pixels
+export const ANNOTATION_TOOL_TEXT_OFFSET = 8; // CSS pixels
+
 export const ANNOTATION_TOOL_HANDLE_RADIUS = 6; // CSS pixels
 export const PICKABLE_ANNOTATION_TOOL_HANDLE_RADIUS =
   ANNOTATION_TOOL_HANDLE_RADIUS * 2;
