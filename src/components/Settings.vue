@@ -27,6 +27,14 @@
       ></v-switch>
 
       <v-switch
+        :label="`Slice Interpolation (${interpolateSlices ? 'On' : 'Off'})`"
+        v-model="interpolateSlices"
+        color="secondary"
+        density="compact"
+        hide-details
+      ></v-switch>
+
+      <v-switch
         v-if="errorReportingConfigured"
         :label="`Error Reporting (${reportingEnabled ? 'On' : 'Off'})`"
         v-model="reportingEnabled"
@@ -45,13 +53,14 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, watch } from 'vue';
+import { computed, defineComponent, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useTheme } from 'vuetify';
 import { useLocalStorage } from '@vueuse/core';
 
 import { useKeyboardShortcutsStore } from '@/src/store/keyboard-shortcuts';
 import { useViewCameraStore } from '@/src/store/view-configs/camera';
+import useViewSliceStore from '@/src/store/view-configs/slicing';
 import DicomWebSettings from './dicom-web/DicomWebSettings.vue';
 import ServerSettings from './ServerSettings.vue';
 import { DarkTheme, LightTheme, ThemeStorageKey } from '../constants';
@@ -79,6 +88,12 @@ export default defineComponent({
 
     const { disableCameraAutoReset } = storeToRefs(useViewCameraStore());
 
+    const sliceStore = useViewSliceStore();
+    const interpolateSlices = computed({
+      get: () => sliceStore.interpolateByDefault,
+      set: (value: boolean) => sliceStore.setInterpolateAll(value),
+    });
+
     const keyboardStore = useKeyboardShortcutsStore();
     const openKeyboardShortcuts = () => {
       keyboardStore.settingsOpen = true;
@@ -90,6 +105,7 @@ export default defineComponent({
       errorReportingConfigured,
       openKeyboardShortcuts,
       disableCameraAutoReset,
+      interpolateSlices,
     };
   },
   components: {

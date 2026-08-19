@@ -24,10 +24,19 @@ export function useSliceConfig(
       }
     },
   });
+  const interpolate = computed({
+    get: () => config.value.interpolate,
+    set: (val) => {
+      const imageIdVal = unref(imageID);
+      const viewIdVal = unref(viewID);
+      if (!viewIdVal || !imageIdVal) return;
+      store.updateConfig(viewIdVal, imageIdVal, { interpolate: val });
+    },
+  });
   const range = computed((): Vector2 => {
     const { min, max } = config.value;
     return [min, max];
   });
 
-  return { config, slice, range };
+  return { config, slice, range, interpolate };
 }

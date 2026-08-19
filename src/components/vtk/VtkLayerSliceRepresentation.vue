@@ -4,6 +4,7 @@ import { useImage } from '@/src/composables/useCurrentImage';
 import { useSliceRepresentation } from '@/src/core/vtk/useSliceRepresentation';
 import { LPSAxis } from '@/src/types/lps';
 import { SlicingMode } from '@kitware/vtk.js/Rendering/Core/ImageMapper/Constants';
+import { InterpolationType } from '@kitware/vtk.js/Rendering/Core/ImageProperty/Constants';
 import { VtkViewContext } from '@/src/components/vtk/context';
 import vtkColorTransferFunction from '@kitware/vtk.js/Rendering/Core/ColorTransferFunction';
 import vtkPiecewiseFunction from '@kitware/vtk.js/Common/DataModel/PiecewiseFunction';
@@ -62,8 +63,16 @@ watchEffect(() => {
 
 // sync slicing
 const slice = vtkFieldRef(sliceRep.mapper, 'slice');
-const { slice: storedSlice } = useSliceConfig(viewId, parentId);
+const { slice: storedSlice, interpolate } = useSliceConfig(viewId, parentId);
 syncRef(storedSlice, slice, { immediate: true });
+
+// layers follow the base image's interpolation setting
+watchEffect(() => {
+  sliceRep.property.setInterpolationType(
+    interpolate.value ? InterpolationType.LINEAR : InterpolationType.NEAREST
+  );
+  view.requestRender();
+});
 
 // apply layer coloring
 const applyLayerColoring = () => {

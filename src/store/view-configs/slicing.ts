@@ -1,6 +1,6 @@
 import { clampValue } from '@/src/utils';
 import { defineStore } from 'pinia';
-import { reactive } from 'vue';
+import { reactive, ref } from 'vue';
 import {
   DoubleKeyRecord,
   deleteSecondKey,
@@ -14,27 +14,37 @@ import { ViewConfig } from '@/src/io/state-file/schema';
 import { SliceConfig } from '@/src/store/view-configs/types';
 import { useImageStore } from '@/src/store/datasets-images';
 import { useViewStore } from '@/src/store/views';
+import { useImageCacheStore } from '@/src/store/image-cache';
 
 export const defaultSliceConfig = (): SliceConfig => ({
   slice: 0,
   min: 0,
   max: 1,
   syncState: false,
+  interpolate: true,
 });
 
 export const useViewSliceStore = defineStore('viewSlice', () => {
   const imageStore = useImageStore();
   const viewStore = useViewStore();
+  const imageCacheStore = useImageCacheStore();
   const configs = reactive<DoubleKeyRecord<SliceConfig>>({});
+
+  // Global default applied to slices that do not have a stored config yet.
+  const interpolateByDefault = ref(defaultSliceConfig().interpolate);
 
   const computeDefaultSliceConfig = (
     viewID: Maybe<string>,
     imageID: Maybe<string>
   ): SliceConfig => {
-    if (!viewID || !imageID) return defaultSliceConfig();
+    const base = {
+      ...defaultSliceConfig(),
+      interpolate: interpolateByDefault.value,
+    };
+    if (!viewID || !imageID) return base;
 
     const view = viewStore.getView(viewID);
-    if (view?.type !== '2D') return defaultSliceConfig();
+    if (view?.type !== '2D') return base;
 
     const { orientation } = view.options;
     const { metadata } = useImage(imageID);
@@ -43,10 +53,10 @@ export const useViewSliceStore = defineStore('viewSlice', () => {
     const dimMax = dimensions[ijkIndex];
 
     return {
+      ...base,
       min: 0,
       slice: Math.ceil((dimMax - 1) / 2),
       max: dimMax - 1,
-      syncState: false,
     };
   };
 
@@ -70,7 +80,8 @@ export const useViewSliceStore = defineStore('viewSlice', () => {
       next.slice === current.slice &&
       next.min === current.min &&
       next.max === current.max &&
-      next.syncState === current.syncState
+      next.syncState === current.syncState &&
+      next.interpolate === current.interpolate
     ) {
       return;
     }
@@ -100,6 +111,32 @@ export const useViewSliceStore = defineStore('viewSlice', () => {
     } else {
       deleteSecondKey(configs, dataID);
     }
+  };
+
+  /**
+   * Sets the interpolation mode for every view/image pair, and for any
+   * slices configured later in this session.
+   */
+  const setInterpolateAll = (interpolate: boolean) => {
+    // Materialize a config for every view/image pair, including pairs that
+    // were still on the computed default: only stored configs are serialized
+    // into the session file. updateConfig() cannot be used here, since it
+    // drops patches that match the computed default.
+    const viewIDs = new Set([...viewStore.viewIDs, ...Object.keys(configs)]);
+    viewIDs.forEach((viewID) => {
+      const dataIDs = new Set([
+        ...imageCacheStore.imageIds,
+        ...Object.keys(configs[viewID] ?? {}),
+      ]);
+      dataIDs.forEach((dataID) => {
+        patchDoubleKeyRecord(configs, viewID, dataID, {
+          ...defaultSliceConfig(),
+          ...getConfig(viewID, dataID),
+          interpolate,
+        });
+      });
+    });
+    interpolateByDefault.value = interpolate;
   };
 
   const toggleSyncImages = () => {
@@ -146,14 +183,18 @@ export const useViewSliceStore = defineStore('viewSlice', () => {
     Object.entries(config).forEach(([dataID, viewConfig]) => {
       if (viewConfig.slice) {
         updateConfig(viewID, dataID, viewConfig.slice);
+        // keep the global default in sync with the restored session
+        interpolateByDefault.value = viewConfig.slice.interpolate;
       }
     });
   };
 
   return {
     configs,
+    interpolateByDefault,
     getConfig,
     updateConfig,
+    setInterpolateAll,
     resetSlice,
     removeView,
     removeData,
