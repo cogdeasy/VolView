@@ -14,6 +14,7 @@ const { getImage, ensureSameSpace, untilLoaded, imageCache } = vi.hoisted(
     untilLoaded: vi.fn(),
     imageCache: {
       getImageMetadata: vi.fn(),
+      getVtkImageData: vi.fn(),
       addVTKImageData: vi.fn(),
       removeImage: vi.fn(),
       onImageDeleted: vi.fn(() => () => {}),
@@ -21,7 +22,10 @@ const { getImage, ensureSameSpace, untilLoaded, imageCache } = vi.hoisted(
   })
 );
 
-vi.mock('@/src/utils/dataSelection', () => ({ getImage }));
+vi.mock('@/src/utils/dataSelection', () => ({
+  getImage,
+  isDicomImage: () => false,
+}));
 vi.mock('@/src/io/resample/resample', () => ({ ensureSameSpace }));
 vi.mock('@/src/composables/untilLoaded', () => ({ untilLoaded }));
 vi.mock('@/src/store/image-cache', () => ({
@@ -29,6 +33,9 @@ vi.mock('@/src/store/image-cache', () => ({
 }));
 
 import { useLayersStore } from '@/src/store/datasets-layers';
+import useLayerColoringStore, {
+  defaultLayersConfig,
+} from '@/src/store/view-configs/layers';
 
 const imageWithBounds = (bounds: number[]) => ({ getBounds: () => bounds });
 
@@ -93,6 +100,25 @@ describe('useLayersStore.remove', () => {
 
     expect(store.getLayers('parent')).toHaveLength(0);
     expect(imageCache.removeImage).toHaveBeenCalledWith('parent::source');
+  });
+
+  it('drops the layer coloring config so a re-added layer starts from defaults', async () => {
+    // The layer coloring config is keyed by layer id, and layer ids are
+    // derived from the parent/source pair — so a stale config would be
+    // inherited verbatim when the same layer is added again.
+    const store = useLayersStore();
+    const coloringStore = useLayerColoringStore();
+    await store.addLayer('parent', 'source');
+    coloringStore.updateBlendConfig('view-1', 'parent::source', {
+      opacity: 0.9,
+    });
+
+    store.deleteLayer('parent', 'source');
+
+    expect(coloringStore.configs['view-1']?.['parent::source']).toBeUndefined();
+    expect(
+      coloringStore.getConfig('view-1', 'parent::source').blendConfig.opacity
+    ).toBe(defaultLayersConfig().blendConfig.opacity);
   });
 
   it('removing a layer source prunes it from every parent layer list', async () => {
