@@ -189,6 +189,10 @@ const applyLabels = (manifest: Config) => {
   ) => {
     const labelsOrFallback = defaultLabelsIfUndefined(maybeLabels);
     if (!labelsOrFallback) return;
+    // Tools share one label registry by default. A config that names labels for
+    // this tool specifically is asking for a per-tool set, so opt out first;
+    // a tool falling back to `defaultLabels` stays on the shared registry.
+    if (maybeLabels) store.useOwnLabels();
     store.clearDefaultLabels();
     store.mergeLabels(labelsOrFallback);
   };

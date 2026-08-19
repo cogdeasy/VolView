@@ -101,8 +101,8 @@ const annotationsFile = (): WireFile => ({
   schemaVersion: 1,
   space: 'LPS',
   labels: {
-    // The SAME name in two namespaces with different styles — legal, because
-    // the stores are independent.
+    // The SAME name in two namespaces with different styles — legal on the
+    // wire, but the stores share one label registry, so it lands as one label.
     rulers: { roi: { color: '#ff0000', strokeWidth: 3 } },
     rectangles: { roi: { color: '#00ff00', fillColor: '#00ff0033' } },
     polygons: { lesion: { color: '#0000ff' } },
@@ -289,20 +289,20 @@ describe('applyIntent — add-annotations', () => {
     expect(toolCounts()).toEqual({ rulers: 0, rectangles: 0, polygons: 0 });
   });
 
-  it('keeps a label name that repeats across kinds independent per store', async () => {
+  it('unifies a label name that repeats across kinds into one shared label', async () => {
     await applyIntent(intent(), context(IMAGE_ID));
 
     const ruler = onlyTool(useRulerStore());
     const rectangle = onlyTool(useRectangleStore());
     expect(ruler.labelName).toBe('roi');
     expect(rectangle.labelName).toBe('roi');
-    expect(ruler.label).not.toBe(rectangle.label);
+    // One name is one label now that the tools share a registry, so the wire's
+    // per-kind namespaces collapse: styles merge, later kinds winning.
+    expect(ruler.label).toBe(rectangle.label);
 
-    // addTool re-reads the style from the merged label, so these ARE the
-    // namespaced styles that landed.
-    expect(ruler.color).toBe('#ff0000');
-    expect(ruler.strokeWidth).toBe(3);
     expect(rectangle.color).toBe('#00ff00');
+    expect(ruler.color).toBe(rectangle.color);
+    expect(ruler.strokeWidth).toBe(3);
     expect(rectangle.fillColor).toBe('#00ff0033');
     expect(onlyTool(usePolygonStore()).color).toBe('#0000ff');
   });

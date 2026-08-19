@@ -1,5 +1,6 @@
 import { Maybe, UnwrapAll } from '@/src/types';
-import { ref } from 'vue';
+import { computed, ref, watch, type Ref } from 'vue';
+import { defineStore, storeToRefs } from 'pinia';
 import { TOOL_COLORS } from '@/src/config';
 import { useIdStore } from '../id';
 
@@ -13,13 +14,57 @@ export type Labels<Props> = Record<string, Label<Props>>;
 
 type LabelID = string;
 
+// The mutable state behind a label picker. Annotation tools point at the shared
+// set (see useSharedLabelSetStore) so a label added with one tool exists for the
+// others, including a single color cursor so new labels never collide. A tool
+// only gets its own set when a config JSON gives it tool-specific labels.
+type LabelSet = {
+  labels: Ref<Labels<any>>;
+  // Flag to indicate if should clear existing labels
+  defaultLabels: Ref<boolean>;
+  nextColorIndex: Ref<number>;
+};
+
+const makeLabelSet = (): LabelSet => ({
+  labels: ref<Labels<any>>({}),
+  defaultLabels: ref(true),
+  nextColorIndex: ref(0),
+});
+
+// A store (not a module-level ref) so the shared labels are scoped to the
+// active pinia, like every other piece of session state.
+export const useSharedLabelSetStore = defineStore('sharedLabelSet', () =>
+  makeLabelSet()
+);
+
+const sharedLabelSet = (): LabelSet => storeToRefs(useSharedLabelSetStore());
+
 // param newLabelDefault should contain all label controlled props
 // of the tool so placing tool does hold any last active label props.
 export const useLabels = <Props>(newLabelDefault: Props) => {
   type ToolLabel = Label<Props>;
   type ToolLabels = Labels<Props>;
 
-  const labels = ref<ToolLabels>({});
+  const ownLabelSet = makeLabelSet();
+  const detached = ref(false);
+  const labelSet = () => (detached.value ? ownLabelSet : sharedLabelSet());
+
+  // Detach from the shared registry: this tool keeps its own label set from
+  // here on. Only for config-supplied tool-specific labels.
+  const useOwnLabels = () => {
+    detached.value = true;
+  };
+
+  // A label from another tool does not carry this tool's controlled props
+  // (a ruler label has no fillColor), so they are filled in on read.
+  const labels = computed<ToolLabels>(() =>
+    Object.fromEntries(
+      Object.entries(labelSet().labels.value).map(([id, label]) => [
+        id,
+        { ...labelDefault, ...newLabelDefault, ...label } as ToolLabel,
+      ])
+    )
+  );
 
   const activeLabel = ref<string | undefined>();
   // Accepts undefined so a caller that must not disturb the picker — applying a
@@ -28,49 +73,64 @@ export const useLabels = <Props>(newLabelDefault: Props) => {
     activeLabel.value = id;
   };
 
-  let nextToolColorIndex = 0;
+  // Another tool may delete the label this tool has selected.
+  watch(labels, (current) => {
+    const active = activeLabel.value;
+    if (active === undefined || active === '' || active in current) return;
+    const [first] = Object.keys(current);
+    setActiveLabel(first ?? '');
+  });
 
   const addLabel = (label: ToolLabel = {}) => {
+    const set = labelSet();
     const id = useIdStore().nextId();
-    labels.value[id] = {
-      ...labelDefault,
-      ...newLabelDefault,
-      color: TOOL_COLORS[nextToolColorIndex],
-      ...label,
+    set.labels.value = {
+      ...set.labels.value,
+      [id]: {
+        ...labelDefault,
+        ...newLabelDefault,
+        color: TOOL_COLORS[set.nextColorIndex.value],
+        ...label,
+      },
     };
 
-    nextToolColorIndex = (nextToolColorIndex + 1) % TOOL_COLORS.length;
+    set.nextColorIndex.value =
+      (set.nextColorIndex.value + 1) % TOOL_COLORS.length;
 
     setActiveLabel(id);
     return id;
   };
 
   const deleteLabel = (id: LabelID) => {
-    if (!(id in labels.value)) throw new Error('Label does not exist');
+    const set = labelSet();
+    if (!(id in set.labels.value)) throw new Error('Label does not exist');
 
-    delete labels.value[id];
-    labels.value = { ...labels.value }; // trigger reactive update for measurement list
+    const rest = { ...set.labels.value };
+    delete rest[id];
+    set.labels.value = rest; // new object triggers measurement list update
 
     // pick another active label if deleted was active
     if (id === activeLabel.value) {
-      const labelIDs = Object.keys(labels.value);
+      const labelIDs = Object.keys(set.labels.value);
       if (labelIDs.length !== 0) setActiveLabel(labelIDs[0]);
       else setActiveLabel('');
     }
   };
 
   const updateLabel = (id: LabelID, patch: ToolLabel) => {
-    if (!(id in labels.value)) throw new Error('Label does not exist');
+    const set = labelSet();
+    if (!(id in set.labels.value)) throw new Error('Label does not exist');
 
-    labels.value = { ...labels.value, [id]: { ...labels.value[id], ...patch } };
+    set.labels.value = {
+      ...set.labels.value,
+      [id]: { ...set.labels.value[id], ...patch },
+    };
   };
 
-  // Flag to indicate if should clear existing labels
-  const defaultLabels = ref(true);
-
   const clearDefaultLabels = () => {
-    if (defaultLabels.value) labels.value = {};
-    defaultLabels.value = false;
+    const set = labelSet();
+    if (set.defaultLabels.value) set.labels.value = {};
+    set.defaultLabels.value = false;
   };
 
   const findLabel = (name: Maybe<string>) => {
@@ -92,6 +152,9 @@ export const useLabels = <Props>(newLabelDefault: Props) => {
     if (matchingName) {
       const [existingID] = matchingName;
       updateLabel(existingID, label);
+      // A merge is as much a pick as an add: the label another tool already
+      // created must become this tool's active label too.
+      setActiveLabel(existingID);
       return existingID;
     }
 
@@ -110,6 +173,22 @@ export const useLabels = <Props>(newLabelDefault: Props) => {
     );
   };
 
+  /*
+   * Seed a tool's built-in default labels.
+   *
+   * Tool stores are created lazily, so a store can come up after a config or a
+   * restored session has already replaced the shared labels — its defaults
+   * must not resurrect a label set the user never asked for.
+   */
+  const mergeDefaultLabels = (initialLabels: Maybe<ToolLabels>) => {
+    if (labelSet().defaultLabels.value) {
+      mergeLabels(initialLabels);
+      return;
+    }
+    const [first] = Object.keys(labels.value);
+    if (first) setActiveLabel(first);
+  };
+
   return {
     labels,
     activeLabel,
@@ -121,8 +200,10 @@ export const useLabels = <Props>(newLabelDefault: Props) => {
     // job's annotations result maps wire label NAMES to store label ids.
     mergeLabel,
     mergeLabels,
+    mergeDefaultLabels,
     findLabel,
     clearDefaultLabels,
+    useOwnLabels,
   };
 };
 

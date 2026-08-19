@@ -92,7 +92,7 @@ export const useAnnotationTool = <
     ...annotationToolLabelDefault,
     ...newLabelDefault,
   });
-  labels.mergeLabels(initialLabels);
+  labels.mergeDefaultLabels(initialLabels);
 
   function makePropsFromLabel(label: string | undefined) {
     if (!label) return { labelName: '' };
@@ -197,9 +197,16 @@ export const useAnnotationTool = <
     if (serialized?.labels) {
       labels.clearDefaultLabels();
     }
+    // Serialized label ids are per-tool, and the tools now share one label
+    // registry, so a session that saved the same label name under three tools
+    // must restore as one label. Merging by name (rather than adding) does
+    // that, and keeps the id remapping this deserialize already relied on —
+    // the serialized shape is unchanged, so older session files still load.
     const labelIDMap = Object.fromEntries(
       Object.entries(serialized?.labels ?? {}).map(([id, label]) => {
-        const newID = labels.addLabel(label); // side effect in Array.map
+        const newID = label.labelName
+          ? labels.mergeLabel(label) // side effect in Array.map
+          : labels.addLabel(label);
         return [id, newID];
       })
     );
