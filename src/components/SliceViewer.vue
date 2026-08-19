@@ -8,16 +8,11 @@
     @focusout="hover = false"
   >
     <div class="vtk-gutter mt-1">
-      <v-btn dark icon size="medium" variant="text" @click="resetCamera">
-        <v-icon size="medium" class="py-1">mdi-camera-flip-outline</v-icon>
-        <v-tooltip
-          location="right"
-          activator="parent"
-          transition="slide-x-transition"
-        >
-          Reset Camera
-        </v-tooltip>
-      </v-btn>
+      <view-camera-menu
+        :view-id="viewId"
+        view-type="2D"
+        @reset-camera="resetCamera"
+      />
       <slice-slider
         v-model="currentSlice"
         class="slice-slider"
@@ -27,7 +22,11 @@
         :handle-height="20"
       />
     </div>
-    <div class="vtk-container" data-testid="two-view-container">
+    <div
+      class="vtk-container"
+      :class="backgroundClass"
+      data-testid="two-view-container"
+    >
       <v-progress-linear
         v-if="isImageLoading"
         indeterminate
@@ -196,6 +195,8 @@ import { onVTKEvent } from '@/src/composables/onVTKEvent';
 import { useViewStore } from '@/src/store/views';
 import { ViewInfo2D } from '@/src/types/views';
 import { get2DViewingVectors } from '@/src/utils/getViewingVectors';
+import ViewCameraMenu from '@/src/components/ViewCameraMenu.vue';
+import { useViewBackground } from '@/src/composables/useViewBackground';
 
 type Props = {
   viewId: string;
@@ -233,6 +234,8 @@ function resetCamera() {
 }
 
 useResetViewsEvents().onClick(resetCamera);
+
+const { backgroundClass } = useViewBackground(viewId, vtkView);
 
 useWebGLWatchdog(vtkView);
 useViewAnimationListener(vtkView, viewId, '2D');

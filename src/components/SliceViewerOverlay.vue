@@ -10,6 +10,7 @@ import DicomQuickInfoButton from '@/src/components/DicomQuickInfoButton.vue';
 import ViewTypeSwitcher from '@/src/components/ViewTypeSwitcher.vue';
 import { useImage } from '@/src/composables/useCurrentImage';
 import { computed } from 'vue';
+import { useViewDisplayStore } from '@/src/store/view-display';
 
 type Props = {
   viewId: string;
@@ -45,27 +46,32 @@ const LOCKED_ORIENTATION_SUFFIXES = [
 const isLockedOrientationView = computed(() =>
   LOCKED_ORIENTATION_SUFFIXES.some((suffix) => viewId.value.includes(suffix))
 );
+
+const displayStore = useViewDisplayStore();
+const showAnnotations = computed(
+  () => displayStore.getConfig(viewId.value).cornerAnnotations
+);
 </script>
 
 <template>
   <view-overlay-grid class="overlay-no-events view-annotations">
     <template v-slot:top-left>
-      <div class="annotation-cell">
+      <div v-if="showAnnotations" class="annotation-cell">
         <span>{{ metadata.name }}</span>
       </div>
     </template>
     <template v-slot:top-center>
-      <div class="annotation-cell">
+      <div v-if="showAnnotations" class="annotation-cell">
         <span>{{ topLabel }}</span>
       </div>
     </template>
     <template v-slot:middle-left>
-      <div class="annotation-cell">
+      <div v-if="showAnnotations" class="annotation-cell">
         <span>{{ leftLabel }}</span>
       </div>
     </template>
     <template v-slot:bottom-left>
-      <div class="annotation-cell">
+      <div v-if="showAnnotations" class="annotation-cell">
         <div v-if="sliceConfig">
           <span class="slice-label">
             Slice: {{ slice + 1 }}/{{ sliceRange[1] + 1 }}
@@ -77,7 +83,7 @@ const isLockedOrientationView = computed(() =>
       </div>
     </template>
     <template v-slot:top-right>
-      <div class="annotation-cell">
+      <div v-if="showAnnotations" class="annotation-cell">
         <dicom-quick-info-button :image-id="imageId"></dicom-quick-info-button>
       </div>
     </template>

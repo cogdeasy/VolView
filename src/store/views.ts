@@ -300,6 +300,52 @@ export const useViewStore = defineStore('view', () => {
     });
   }
 
+  function visibleSlotIndices() {
+    const slots: number[] = [];
+    iterLayout(layout.value, (item) => slots.push(item.slotIndex));
+    return slots;
+  }
+
+  /**
+   * Makes the given view the large view on the left, with the other currently
+   * visible views stacked in a column on the right.
+   */
+  function makeViewPrimary(viewID: string) {
+    const slots = visibleSlotIndices();
+    const primarySlot = slots.find(
+      (slotIndex) => layoutSlots.value[slotIndex] === viewID
+    );
+    if (primarySlot === undefined) return;
+
+    const otherSlots = slots.filter((slotIndex) => slotIndex !== primarySlot);
+    const items: LayoutItem[] = [{ type: 'slot', slotIndex: primarySlot }];
+    if (otherSlots.length) {
+      items.push({
+        type: 'layout',
+        direction: 'column',
+        items: otherSlots.map((slotIndex) => ({
+          type: 'slot' as const,
+          slotIndex,
+        })),
+      });
+    }
+
+    applyLayoutChange({ direction: 'row', items }, { layoutName: null });
+  }
+
+  /** Makes the given view the only visible view. */
+  function makeViewOnly(viewID: string) {
+    const slotIndex = visibleSlotIndices().find(
+      (index) => layoutSlots.value[index] === viewID
+    );
+    if (slotIndex === undefined) return;
+
+    applyLayoutChange(
+      { direction: 'column', items: [{ type: 'slot', slotIndex }] },
+      { layoutName: null }
+    );
+  }
+
   function setDataForView(viewID: string, dataID: Maybe<string>) {
     const view = viewByID[viewID];
     if (!view) return;
@@ -435,6 +481,8 @@ export const useViewStore = defineStore('view', () => {
     replaceView,
     setLayout,
     setLayoutFromGrid,
+    makeViewPrimary,
+    makeViewOnly,
     setNamedLayoutsFromConfig,
     switchToNamedLayout,
     setActiveView,

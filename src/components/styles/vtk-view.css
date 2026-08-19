@@ -19,6 +19,20 @@
   z-index: 0;
 }
 
+/* Background modes. The gradient is painted by CSS behind a transparent
+   canvas clear color, since vtk.js only clears with a solid color. */
+.view-bg-black {
+  background: black;
+}
+
+.view-bg-white {
+  background: white;
+}
+
+.view-bg-gradient {
+  background: linear-gradient(180deg, #3c4a5a 0%, #0d1117 100%);
+}
+
 .vtk-sub-container {
   position: absolute;
   width: 100%;
@@ -77,6 +91,19 @@
   /* handle text overflow */
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.view-bg-white .view-annotations {
+  color: black;
+  /* prettier-ignore */
+  text-shadow:  1px  1px white,
+                1px -1px white,
+               -1px -1px white,
+               -1px  1px white,
+                0px  1px white,
+                0px -1px white,
+                1px  0px white,
+               -1px  0px white;
 }
 
 .annotation-cell {

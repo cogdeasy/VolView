@@ -93,6 +93,8 @@ export const DefaultNamedLayouts: Record<string, LayoutConfig> = {
     ],
   },
   'Axial Only': [['axial']],
+  'Coronal Only': [['coronal']],
+  'Sagittal Only': [['sagittal']],
   '3D Only': [['volume']],
   Oblique: [['oblique']],
   '3D Primary': {
@@ -102,6 +104,26 @@ export const DefaultNamedLayouts: Record<string, LayoutConfig> = {
       {
         direction: 'column',
         items: ['axial', 'coronal', 'sagittal'],
+      },
+    ],
+  },
+  'Coronal Primary': {
+    direction: 'row',
+    items: [
+      'coronal',
+      {
+        direction: 'column',
+        items: ['axial', 'sagittal'],
+      },
+    ],
+  },
+  'Sagittal Primary': {
+    direction: 'row',
+    items: [
+      'sagittal',
+      {
+        direction: 'column',
+        items: ['axial', 'coronal'],
       },
     ],
   },
